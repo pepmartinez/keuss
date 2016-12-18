@@ -1,0 +1,28 @@
+{
+  "name": "jobq",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+  },
+  "dependencies": {
+    "async": "2.1.2",
+    "mongodb": "2.2.11",
+    "lodash": "4.16.4",
+    "express": "4.14.0",
+    "winston": "2.2.0",
+    "jade": "1.11.0",
+    "body-parser ": "1.15.2",
+    "uuid": "2.0.3",
+    "redis": "2.6.3",
+    "commander": "2.9.0",
+    "pretty-hrtime": "1.0.3"
+  },
+  "devDependencies": {
+    "mocha":"3.1.2",
+    "should":"11.1.1",
+    "random-to":"0.0.2"
+  },
+  "scripts": {
+    "test": "mocha --reporter spec --check-leaks --no-timeouts test/"
+  }
+}
