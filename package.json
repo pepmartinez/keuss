@@ -16,6 +16,9 @@
     "email" : "pep.martinez@gmail.com"
   },
   "license" : "GPL-3.0",
+  "bin": {
+    "keuss":"./index.js"
+  },
   "dependencies": {
     "async": "2.1.2",
     "mongodb": "2.2.11",

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 
 var http =    require ('http');
 var BaseApp = require ('./app');
