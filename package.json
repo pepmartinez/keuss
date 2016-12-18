@@ -1,9 +1,21 @@
 {
-  "name": "jobq",
+  "name": "keuss",
   "version": "0.0.1",
-  "private": true,
-  "scripts": {
+  "keywords": ["queue", "job"],
+  "homepage":"https://github.com/pepmartinez/keuss",
+  "bugs": {
+    "url" : "https://github.com/pepmartinez/keuss/issues",
+    "email" : "pep.martinez@gmail.com"
   },
+  "repository": { 
+    "type" : "git",
+    "url" : "https://github.com/pepmartinez/keuss.git"
+  },
+  "author": { 
+    "name" : "Jose Luis Martinez Juan",
+    "email" : "pep.martinez@gmail.com"
+  },
+  "license" : "GPL-3.0",
   "dependencies": {
     "async": "2.1.2",
     "mongodb": "2.2.11",
