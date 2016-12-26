@@ -1,7 +1,7 @@
 'use strict';
 
 var MemStats = require ('./stats/mem');
-var WithLog =  require ('./WithLog');
+var WithLog =  require ('./utils/WithLog');
 
 
 class Queue extends WithLog {

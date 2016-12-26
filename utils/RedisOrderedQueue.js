@@ -1,7 +1,7 @@
 'use strict';
 
 
-var async =        require ('async');
+var async = require ('async');
 
 const _s_lua_code_push = `
   -- qname in KEYS[1]

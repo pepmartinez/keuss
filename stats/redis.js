@@ -3,7 +3,7 @@
 var _ =     require ('lodash');
 
 var RedisConn =  require ('../utils/RedisConn');
-var WithLog =    require ('../WithLog');
+var WithLog =    require ('../utils/WithLog');
 
 var _s_rediscl = undefined;
 var _s_opts = undefined;

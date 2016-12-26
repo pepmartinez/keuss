@@ -2,7 +2,7 @@
 
 var should =  require ('should');
 
-var WithLog = require ('../WithLog');
+var WithLog = require ('../utils/WithLog');
 
 class fake_logger {
   constructor () {
@@ -19,12 +19,12 @@ class fake_logger {
 //    console.log.apply (console.log, args);
   }
   
-  error ()   {this._actual_log (arguments); this._called++}
-  warn ()    {this._actual_log (arguments); this._called++}
-  info ()    {this._actual_log (arguments); this._called++}
-  verbose () {this._actual_log (arguments); this._called++}
-  debug ()   {this._actual_log (arguments); this._called++}
-  silly ()   {this._actual_log (arguments); this._called++}
+  error ()   {this._actual_log (arguments); this._called++;}
+  warn ()    {this._actual_log (arguments); this._called++;}
+  info ()    {this._actual_log (arguments); this._called++;}
+  verbose () {this._actual_log (arguments); this._called++;}
+  debug ()   {this._actual_log (arguments); this._called++;}
+  silly ()   {this._actual_log (arguments); this._called++;}
 }
 
 class subject extends WithLog {

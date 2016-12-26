@@ -3,7 +3,7 @@
 var async =   require ('async');
 var _ =       require ('lodash');
 
-var WithLog = require ('./WithLog');
+var WithLog = require ('./utils/WithLog');
 var Config =  require ('./config');
 
 

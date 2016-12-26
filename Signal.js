@@ -1,6 +1,6 @@
 'use strict';
 
-var WithLog = require ('./WithLog');
+var WithLog = require ('./utils/WithLog');
 
 
 class Signal extends WithLog {

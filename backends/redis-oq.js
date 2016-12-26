@@ -6,7 +6,7 @@ var uuid =  require ('uuid');
 
 var AsyncQueue =        require ('../AsyncQueue');
 var RedisConn =         require ('../utils/RedisConn');
-var RedisOrderedQueue = require ('../RedisOrderedQueue');
+var RedisOrderedQueue = require ('../utils/RedisOrderedQueue');
 
 
 //////////////////////////////////////////////////////////////////
