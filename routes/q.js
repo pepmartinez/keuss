@@ -146,7 +146,7 @@ function get_router (scope)
   router.put ('/:type/:q', function (req, res) {
     var q = ensure_queue (scope, req);
     var opts = req.query || {};
-    
+    console.log ('body: ', req.body)
     q.push (req.body || req.text, opts, function (err, id) {
       if (err) {
         res.status(500).send (err);

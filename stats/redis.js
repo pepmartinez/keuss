@@ -1,9 +1,9 @@
 'use strict';
 
-var redis = require ('redis');
 var _ =     require ('lodash');
 
-var WithLog = require ('../WithLog');
+var RedisConn =  require ('../utils/RedisConn');
+var WithLog =    require ('../WithLog');
 
 var _s_rediscl = undefined;
 var _s_opts = undefined;
@@ -24,20 +24,7 @@ class RedisStats extends WithLog {
     }
     
     this._rediscl = _s_rediscl;
-    
-    // local cache
     this._cache = {};
-    
-    var self = this;
-    this._flusher = setInterval (function () {
-      _.forEach (self._cache, function (value, key) {
-        if (value) {
-          self._rediscl.hincrby (self._name, key, value);
-          self._verbose ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
-          self._cache[key] = 0;
-        }
-      });
-    }, this._opts.flush_period || 100);
     
     this._verbose ('created redis stats on key [%s]', this._name);
   }
@@ -46,29 +33,8 @@ class RedisStats extends WithLog {
   
   static init (opts) {
     _s_opts = opts || {};
-    
-    _s_opts.retry_strategy = function (options) {
-      console.log ('redis-stats: redis reconnect!', options)
-
-      if (options.total_retry_time > 1000 * 60 * 60) {
-        // End reconnecting after a specific timeout and flush all commands with a individual error 
-        return new Error('Retry time exhausted');
-      }
-      
-      // reconnect after 
-      return Math.max(options.attempt * 100, 3000);
-    }
-    
-    _s_rediscl = redis.createClient (this._opts);
-    
-    _s_rediscl.on ('ready',        function ()    {console.log ('RedisStats: rediscl ready')});
-    _s_rediscl.on ('conenct',      function ()    {console.log ('RedisStats: rediscl connect')});
-    _s_rediscl.on ('reconnecting', function ()    {console.log ('RedisStats: rediscl reconnecting')});
-    _s_rediscl.on ('error',        function (err) {console.log ('RedisStats: rediscl error: ' + err)});
-    _s_rediscl.on ('end',          function ()    {console.log ('RedisStats: rediscl end')});
-    
+    _s_rediscl = RedisConn.conn (_s_opts);
   }
-  
   
   values (cb) {
     this._rediscl.hgetall (this._name, function (err, v) {
@@ -85,34 +51,59 @@ class RedisStats extends WithLog {
     });
   }
   
+
+  _ensureFlush () {
+    if (this._flusher) return;
+    var self = this;
+
+    this._flusher = setTimeout (function () {
+      _.forEach (self._cache, function (value, key) {
+        if (value) {
+          self._rediscl.hincrby (self._name, key, value);
+          self._verbose ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
+          self._cache[key] = 0;
+        }
+      });
+
+      self._flusher = undefined;
+    }, this._opts.flush_period || 100);
+  }
+
+  _cancelFlush () {
+    if (this._flusher) {
+      clearTimeout (this._flusher);
+      this._flusher = undefined;
+    }
+  }
+
+
   incr (v, delta, cb) {
-    if ((delta == null) || (delta == undefined)) delta = 1;
+    if ((delta === null) || (delta === undefined)) delta = 1;
     
     if (!this._cache[v]) {
       this._cache[v] = 0;
     }
     
     this._cache[v] += delta;
+    this._ensureFlush ();
 
     if (cb) cb ();
   }
   
   decr (v, delta, cb) {
-    if ((delta == null) || (delta == undefined)) delta = 1;
+    if ((delta === null) || (delta === undefined)) delta = 1;
     this.incr (v, -delta, cb);
   }
   
   clear (cb) {
+    this._cancelFlush ();
     this._cache = {};
     var self = this;
+
     this._rediscl.del (this._name, function (err, res) {
       if (cb) cb (err);
     });
-    
   } 
-  
-  
-  // TODO stop timer on destroy
 }
 
 

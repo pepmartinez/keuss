@@ -1,0 +1,9 @@
+curl -v -X PUT -H 'Content-Type: application/json' --data-bin '{"a":66, "b": "uuuu"}' http://localhost:3444/q/redis:oq/kansa
+curl -v -X PUT -H 'Content-Type: application/json' --data-bin '{"a":66, "b": "uuuu"}' http://localhost:3444/q/mongo:simple/sunor
+
+curl -v http://localhost:3444/q/redis:oq/kansa
+
+curl -v http://localhost:3444/q/mongo:simple/sunor?reserve=1
+curl -v -X PATCH http://localhost:3444/q/mongo:simple/sunor/commit/584c82e93a0f36371e23eba1
+curl -v -X PATCH http://localhost:3444/q/mongo:simple/sunor/rollback/584c85abd4b98838cbff1574
+

@@ -2,17 +2,17 @@
 
 var async = require ('async');
 var _ =     require ('lodash');
-var redis = require ('redis');
 var uuid =  require ('uuid');
 
 var AsyncQueue =        require ('../AsyncQueue');
+var RedisConn =         require ('../utils/RedisConn');
 var RedisOrderedQueue = require ('../RedisOrderedQueue');
 
 
 //////////////////////////////////////////////////////////////////
 // static data
-var _s_rediscl = undefined;
-var _s_opts = undefined;
+var _s_rediscl = null;
+var _s_opts = null;
 
 
 class RedisOQ extends AsyncQueue {
@@ -27,8 +27,6 @@ class RedisOQ extends AsyncQueue {
     super (name, opts);
     
     this._roq = new RedisOrderedQueue (this._name);
-    
-    this.setLevel ('verbose')
   }
   
   
@@ -145,33 +143,13 @@ class RedisOQ extends AsyncQueue {
 
   ////////////////////////////////////////////////////////////////////////////////
   // statics
-  
+   
   //////////////////////////////////////////////////////////////////
   static init (opts, cb) {
   //////////////////////////////////////////////////////////////////
     _s_opts = opts;
     if (!_s_opts) _s_opts = {};
-  
-    _s_opts.retry_strategy = function (options) {
-      console.log ('redis-oq: redis reconnect!', options)
-
-      if (options.total_retry_time > 1000 * 60 * 60) {
-        // End reconnecting after a specific timeout and flush all commands with a individual error 
-        return new Error('Retry time exhausted');
-      }
-      
-      // reconnect after 
-      return Math.max(options.attempt * 100, 3000);
-    }
-    
-    _s_rediscl = redis.createClient (_s_opts);
-   
-    _s_rediscl.on ('ready',        function ()    {console.log ('Redis-oq: rediscl ready')});
-    _s_rediscl.on ('conenct',      function ()    {console.log ('Redis-oq: rediscl connect')});
-    _s_rediscl.on ('reconnecting', function ()    {console.log ('Redis-oq: rediscl reconnecting')});
-    _s_rediscl.on ('error',        function (err) {console.log ('Redis-oq: rediscl error: ' + err)});
-    _s_rediscl.on ('end',          function ()    {console.log ('Redis-oq: rediscl end')});
-    
+    _s_rediscl = RedisConn.conn (_s_opts);
     RedisOrderedQueue.init (_s_rediscl, cb);
   }
   

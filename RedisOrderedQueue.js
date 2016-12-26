@@ -1,8 +1,7 @@
 'use strict';
 
 
-var async = require ('async');
-var prettyHrtime = require('pretty-hrtime');
+var async =        require ('async');
 
 const _s_lua_code_push = `
   -- qname in KEYS[1]
@@ -81,7 +80,7 @@ class RedisOrderedQueue {
     var self = this;
     this._rediscl.evalsha (_s_sha_push, 1, this._name, id, mature, obj, function (err, res) {
       if (err) {
-        if (err.code == 'NOSCRIPT') {
+        if (err.message.split(' ')[0] == 'NOSCRIPT') {
           RedisOrderedQueue.init (_s_rediscl, function (err) {
             if (err) {
               return done (err);
@@ -105,7 +104,7 @@ class RedisOrderedQueue {
     var self = this;
     this._rediscl.evalsha (_s_sha_pop, 1, this._name, function (err, res) {
       if (err) {
-        if (err.code == 'NOSCRIPT') {
+        if (err.message.split(' ')[0] == 'NOSCRIPT') {
           RedisOrderedQueue.init (_s_rediscl, function (err) {
             if (err) {
               return done (err);

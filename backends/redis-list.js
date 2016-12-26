@@ -2,15 +2,15 @@
 
 var async = require ('async');
 var _ =     require ('lodash');
-var redis = require ('redis');
 
+var RedisConn =  require ('../utils/RedisConn');
 var AsyncQueue = require ('../AsyncQueue');
 
 
 //////////////////////////////////////////////////////////////////
 // static data
-var _s_rediscl = undefined;
-var _s_opts = undefined;
+var _s_rediscl = null;
+var _s_opts = null;
 
 
 class RedisListQueue extends AsyncQueue {
@@ -24,7 +24,7 @@ class RedisListQueue extends AsyncQueue {
     
     super (name, opts);
     
-    this._redis_l_name = 'jobq:q:list:' + this._name
+    this._redis_l_name = 'jobq:q:list:' + this._name;
   }
   
   
@@ -128,27 +128,7 @@ class RedisListQueue extends AsyncQueue {
   //////////////////////////////////////////////////////////////////
     _s_opts = opts;
     if (!_s_opts) _s_opts = {};
-    
-    _s_opts.retry_strategy = function (options) {
-      console.log ('redis-list: redis reconnect!', options)
-
-      if (options.total_retry_time > 1000 * 60 * 60) {
-        // End reconnecting after a specific timeout and flush all commands with a individual error 
-        return new Error('Retry time exhausted');
-      }
-      
-      // reconnect after 
-      return Math.max(options.attempt * 100, 3000);
-    }
-    
-    _s_rediscl = redis.createClient (_s_opts);
-    
-    _s_rediscl.on ('ready',        function ()    {console.log ('Redis-list: rediscl ready')});
-    _s_rediscl.on ('conenct',      function ()    {console.log ('Redis-list: rediscl connect')});
-    _s_rediscl.on ('reconnecting', function ()    {console.log ('Redis-list: rediscl reconnecting')});
-    _s_rediscl.on ('error',        function (err) {console.log ('Redis-list: rediscl error: ' + err)});
-    _s_rediscl.on ('end',          function ()    {console.log ('Redis-list: rediscl end')});
-
+    _s_rediscl = RedisConn.conn (_s_opts);
     cb ();
   }
   
@@ -174,7 +154,7 @@ class RedisListQueue extends AsyncQueue {
       var colls = [];
       
       collections.forEach (function (coll) {
-        colls.push (coll.substring (12))
+        colls.push (coll.substring (12));
       });
       
       cb (null, colls);

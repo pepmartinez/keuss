@@ -2,5 +2,4 @@
 * add at-least-one semantics for queues (reserve/commit/rollback)
 * bridges?
 * deadletter (tied to at-least-one)?
-* stats.redis: stop timer on destroy
-* stats.redis: stop/start timer on demand
+
