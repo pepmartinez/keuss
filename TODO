@@ -1,5 +1,9 @@
 * signal queue creation or read queues on refresh?
 * add at-least-one semantics for queues (reserve/commit/rollback)
+  + added base
+  + added to mongo
+  + add to redis-oq
+  + add to redis-list?
 * bridges?
 * deadletter (tied to at-least-one)?
 

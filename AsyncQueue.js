@@ -143,10 +143,17 @@ class AsyncQueue extends Queue {
     }
     
     // get delay from either params or config
-    var delay = opts.delay || this.delay;
-    var mature = delay ? Queue.nowPlusSecs (delay) : Queue.now ();
-    
-    // build payload for mongodb
+    var mature = null;
+
+    if (opts.mature) {
+      mature = new Date (opts.mature * 1000);
+    }
+    else {
+      var delay = opts.delay || this.delay;
+      mature = delay ? Queue.nowPlusSecs (delay) : Queue.now ();
+    }
+
+    // build payload
     var msg = {
       mature  : mature,
       payload  : payload,

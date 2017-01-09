@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "0.0.1",
+  "version": "0.0.1-test00002",
   "keywords": ["queue", "job"],
   "homepage":"https://github.com/pepmartinez/keuss",
   "bugs": {
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "async": "2.1.2",
-    "mongodb": "2.2.11",
+    "mongodb": "2.2.19",
     "lodash": "4.16.4",
     "express": "4.14.0",
     "winston": "2.2.0",

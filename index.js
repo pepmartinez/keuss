@@ -9,7 +9,8 @@ BaseApp (function (err, app) {
   }
   
   var server = http.createServer (app);
-  server.listen (3444);
-
-  console.log ('jobq server listening at port %s', 3444);
+  
+  server.listen (3444, function () {
+    console.log ('keuss server listening at port %s', 3444);
+  });
 });
