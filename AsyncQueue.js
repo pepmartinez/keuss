@@ -159,8 +159,6 @@ class AsyncQueue extends Queue {
       payload  : payload,
       tries: opts.tries || 0
     }
-
-    if (opts._id) msg._id = opts._id;
     
     var self = this;
     
