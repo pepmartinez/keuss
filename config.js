@@ -32,7 +32,7 @@ var config = {
       factory: 'mongo',
 //      disable: true,
       config: {
-        url: 'mongodb://localhost:27017/jobq'
+        url: 'mongodb://localhost:27017/keuss'
       }
     },
     {

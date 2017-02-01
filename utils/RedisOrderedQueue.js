@@ -10,17 +10,17 @@ const _s_lua_code_push = `
   -- val in ARGV[3]
   
   -- insert obj in hash by id
-  redis.call ('HSET', 'jobq:q:ordered_queue:hash:' .. KEYS[1], ARGV[1], ARGV[3])
+  redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], ARGV[1], ARGV[3])
   
   -- insert id+mature in index
-  return redis.call ('ZADD', 'jobq:q:ordered_queue:index:' .. KEYS[1], ARGV[2], ARGV[1])
+  return redis.call ('ZADD', 'keuss:q:ordered_queue:index:' .. KEYS[1], ARGV[2], ARGV[1])
 `;
 
 const _s_lua_code_pop = `
   -- qname in KEYS[1]
   
   -- get older (lower mature) id from index
-  local z_res = redis.call ('ZRANGE', 'jobq:q:ordered_queue:index:' .. KEYS[1], 0, 0, 'WITHSCORES')
+  local z_res = redis.call ('ZRANGE', 'keuss:q:ordered_queue:index:' .. KEYS[1], 0, 0, 'WITHSCORES')
   
   if (z_res[1] == nil) then
     return nil
@@ -30,11 +30,11 @@ const _s_lua_code_pop = `
 --  local mature = z_res[2]
   
   -- get val by id from hash
-  local val = redis.call ('HGET', 'jobq:q:ordered_queue:hash:' .. KEYS[1], id)
+  local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
   
   -- delete from index, hash
-  redis.call ('ZREM', 'jobq:q:ordered_queue:index:' .. KEYS[1], id)
-  redis.call ('HDEL', 'jobq:q:ordered_queue:hash:' .. KEYS[1], id)
+  redis.call ('ZREM', 'keuss:q:ordered_queue:index:' .. KEYS[1], id)
+  redis.call ('HDEL', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
   
   return { id, z_res[2], val }
 `;
@@ -128,7 +128,7 @@ class RedisOrderedQueue {
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
-    this._rediscl.zcard ('jobq:q:ordered_queue:index:' + this._name,  callback);
+    this._rediscl.zcard ('keuss:q:ordered_queue:index:' + this._name,  callback);
   }
   
   
@@ -137,7 +137,7 @@ class RedisOrderedQueue {
   size (callback) {
   //////////////////////////////////
     var now = new Date();
-    this._rediscl.zcount ('jobq:q:ordered_queue:index:' + this._name, '-inf', now.getTime(), callback);
+    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, '-inf', now.getTime(), callback);
   }
   
   
@@ -146,7 +146,7 @@ class RedisOrderedQueue {
   schedSize (callback) {
   //////////////////////////////////
     var now = new Date();
-    this._rediscl.zcount ('jobq:q:ordered_queue:index:' + this._name, now.getTime(), '+inf', callback);
+    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, now.getTime(), '+inf', callback);
   }
   
   
@@ -154,7 +154,7 @@ class RedisOrderedQueue {
   // get first 
   peek (callback) {
   //////////////////////////////////
-    this._rediscl.zrange ('jobq:q:ordered_queue:index:' + this._name, 0, 0, 'WITHSCORES', callback);
+    this._rediscl.zrange ('keuss:q:ordered_queue:index:' + this._name, 0, 0, 'WITHSCORES', callback);
   }
 }
 

@@ -8,7 +8,7 @@ class RPSSignal extends Signal {
   constructor (master, opts) {
     super (master, opts);
     
-    this._channel = 'jobq:q:signal:' + master.type () + ':' + master.name ();
+    this._channel = 'keuss:q:signal:' + master.type () + ':' + master.name ();
     this._opts = opts || {};
 
     this._rediscl_pub = RedisConn.conn (this._opts);

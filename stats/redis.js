@@ -16,7 +16,7 @@ var _s_opts = undefined;
 class RedisStats extends WithLog {
   constructor (name, opts) {
     super (opts);
-    this._name = 'jobq:stats:' + name;
+    this._name = 'keuss:stats:' + name;
     this._opts = opts || {};
     
     if (!_s_rediscl) {

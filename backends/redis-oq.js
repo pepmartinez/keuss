@@ -168,7 +168,7 @@ class RedisOQ extends AsyncQueue {
   //////////////////////////////////////////////////////////////////
   static list (cb) {
   //////////////////////////////////////////////////////////////////
-    _s_rediscl.keys ('jobq:q:ordered_queue:index:?*', function (err, collections) {
+    _s_rediscl.keys ('keuss:q:ordered_queue:index:?*', function (err, collections) {
       if (err) {
         return cb (err);
       }
@@ -176,7 +176,7 @@ class RedisOQ extends AsyncQueue {
       var colls = [];
       
       collections.forEach (function (coll) {
-        colls.push (coll.substring (27))
+        colls.push (coll.substring (28))
       });
       
       cb (null, colls);

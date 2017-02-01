@@ -238,7 +238,7 @@ class SimpleMongoQueue extends AsyncQueue {
   //////////////////////////////////////////////////////////////////
     _s_opts = opts;
     if (!_s_opts) _s_opts = {};
-    var m_url = _s_opts.url || 'mongodb://localhost:27017/jobq';
+    var m_url = _s_opts.url || 'mongodb://localhost:27017/keuss';
     
     MongoClient.connect (m_url, function (err, db) {
       _s_mongo_conn = db;

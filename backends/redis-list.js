@@ -24,7 +24,7 @@ class RedisListQueue extends AsyncQueue {
     
     super (name, opts);
     
-    this._redis_l_name = 'jobq:q:list:' + this._name;
+    this._redis_l_name = 'keuss:q:list:' + this._name;
   }
   
   
@@ -146,7 +146,7 @@ class RedisListQueue extends AsyncQueue {
   //////////////////////////////////////////////////////////////////
   static list (cb) {
   //////////////////////////////////////////////////////////////////
-    _s_rediscl.keys ('jobq:q:list:?*', function (err, collections) {
+    _s_rediscl.keys ('keuss:q:list:?*', function (err, collections) {
       if (err) {
         return cb (err);
       }
@@ -154,7 +154,7 @@ class RedisListQueue extends AsyncQueue {
       var colls = [];
       
       collections.forEach (function (coll) {
-        colls.push (coll.substring (12));
+        colls.push (coll.substring (13));
       });
       
       cb (null, colls);
