@@ -146,18 +146,26 @@ class RedisListQueue extends AsyncQueue {
   //////////////////////////////////////////////////////////////////
   static list (cb) {
   //////////////////////////////////////////////////////////////////
+    var colls = [];
+    
     _s_rediscl.keys ('keuss:q:list:?*', function (err, collections) {
-      if (err) {
-        return cb (err);
-      }
-      
-      var colls = [];
-      
+      if (err) return cb (err);
+
       collections.forEach (function (coll) {
         colls.push (coll.substring (13));
       });
+
+      // add "keuss:stats:redis:list:*" to try to add empty queues
+      _s_rediscl.keys ('keuss:stats:redis:list:?*', function (err, collections) {
+        if (err) return cb (err);
+
+        collections.forEach (function (coll) {
+          var qname = coll.substring (23);
+          if (_.indexOf (colls, qname) == -1) colls.push (qname);
+        });
       
-      cb (null, colls);
+        cb (null, colls);
+      });
     });
   }
 };
