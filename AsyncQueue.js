@@ -40,7 +40,6 @@ class AsyncQueue extends Queue {
     
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
-//    this._stats.incr ('consumers', 0);
   }
   
   
@@ -202,12 +201,11 @@ class AsyncQueue extends Queue {
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-        self._verbose  ('get: timed out %d msecs on consumer %s', opts.timeout, cid);
+        self._verbose ('get: timed out %d msecs on consumer %s', opts.timeout, cid);
 
         consumer_data.callback = null;
         self._consumers_by_tid.delete (consumer_data.tid);
-//        self._stats.decr ('consumers');
-        
+
         callback ({
           timeout: true, 
           cid: consumer_data.cid, 
@@ -219,7 +217,6 @@ class AsyncQueue extends Queue {
     
     this._consumers_by_order.push (consumer_data);
     this._consumers_by_tid.set (tid, consumer_data);
-//    this._stats.incr ('consumers');
     
     this._verbose  ('get: added consumer %s (tid %s)', consumer_data.cid, consumer_data.tid);
     
@@ -275,7 +272,6 @@ class AsyncQueue extends Queue {
       
       // remove from map
       this._consumers_by_tid.delete (tid);
-//      this._stats.decr ('consumers');
       
       this._verbose  ('cancel: cancelled %s. consumers left waiting: %d, total consumers: %d', tid, this._consumers_by_order.length, this.nConsumers ());
     }

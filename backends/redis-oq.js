@@ -90,6 +90,9 @@ class RedisOQ extends AsyncQueue {
       }
       else {
         var pl = JSON.parse (res[2]);
+
+        // TODO check res has 2, and parses as json
+
         pl.mature = new Date (parseInt (res[1]));
         pl._id = res[0];
         self._verbose  ('get: final pl to return is %j', pl, {});

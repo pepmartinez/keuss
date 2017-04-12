@@ -2,12 +2,6 @@
 var autorefresh = false;
 var qtable = null;
 
-/////////////////////////////////////////
-function load_last_refresh (){
-/////////////////////////////////////////
-  $('#last-refresh').html (new Date().toTimeString());
-}
-
 
 function getTimeDelta (ts) {
   if ((ts == null) || (ts == undefined)) {
@@ -52,18 +46,6 @@ function refresh (){
 
 
 /////////////////////////////////////////
-function autoRefresh() {
-/////////////////////////////////////////
-  window.setTimeout(function() {
-    if (autorefresh) {
-      refresh()
-    }
-    autoRefresh();
-    }, 15000);
-}
-
-
-/////////////////////////////////////////
 $(function() {
 /////////////////////////////////////////
   console.log ('ready!');
@@ -75,26 +57,12 @@ $(function() {
     refresh ();
   });
   
-  $('#autorefresh-btn').click(function( eventObject ) {
-    console.log ('autorefresh-btn clicked');
-    var btn = $('#autorefresh-btn');
-    if (autorefresh) {
-      autorefresh = false;
-      btn.html ('Enable Autorefresh');
-    } else {
-      autorefresh = true;
-      btn.html ('Disable Autorefresh');
-    }
-  });
-  
   $('#qtable')
   .on ('error.dt', function ( e, settings, techNote, message ) {
     $('#error-text').html (message);
     $('#error-panel').show ();
   })
   .on ('xhr.dt', function (e, settings, json, xhr ) {
-    load_last_refresh();
-    
     if (xhr.status != 200) {
       var xhr_txt = 'readyState: ' + xhr.readyState + 
       ' responseJSON: ' + xhr.responseJSON + 
@@ -115,7 +83,6 @@ $(function() {
     select: 'single',
     ajax: '/q?array=1',
     columns: [
-      {data: 'type'},
       {data: 'id'},
       {data: 'stats.put', defaultContent: '-'},
       {data: 'stats.get', defaultContent: '-'},

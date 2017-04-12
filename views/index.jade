@@ -13,10 +13,6 @@ block pageContent
       #navbar-collapse(class='collapse navbar-collapse')
         ul(class='nav navbar-nav navbar-right')
           li
-            p.navbar-text#last-refresh
-          li
-            button(type='button' id='autorefresh-btn' class='btn btn-default navbar-btn') Enable Autorefresh
-          li
             button(type='button' id='refresh-btn' class='btn btn-default navbar-btn') Refresh
     
   div(id='error-panel' class='panel panel-danger' style='display:none')
@@ -31,7 +27,6 @@ block pageContent
       table(id='qtable' class='table table-striped table-bordered table-hover' style='width:100%')
         thead
           tr
-            th Type
             th Id
             th Put
             th Got
