@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "keywords": ["queue", "job"],
   "homepage":"https://github.com/pepmartinez/keuss",
   "bugs": {
@@ -23,15 +23,10 @@
     "async": "2.1.5",
     "mongodb": "2.2.24",
     "lodash": "4.17.4",
-    "express": "4.15.2",
     "winston": "2.3.1",
-    "jade": "1.11.0",
-    "body-parser ": "1.15.2",
     "uuid": "3.0.1",
     "ioredis": "2.5.0",
-    "commander": "2.9.0",
-    "pretty-hrtime": "1.0.3",
-    "express-basic-auth":"1.0.1"
+    "commander": "2.9.0"
   },
   "devDependencies": {
     "mocha":"3.2.0",
