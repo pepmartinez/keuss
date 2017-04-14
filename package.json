@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "keywords": ["queue", "job"],
   "homepage":"https://github.com/pepmartinez/keuss",
   "bugs": {
@@ -16,9 +16,6 @@
     "email" : "pep.martinez@gmail.com"
   },
   "license" : "GPL-3.0",
-  "bin": {
-    "keuss":"./index.js"
-  },
   "dependencies": {
     "async": "2.1.5",
     "mongodb": "2.2.24",
