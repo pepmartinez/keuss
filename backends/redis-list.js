@@ -7,23 +7,15 @@ var RedisConn =  require ('../utils/RedisConn');
 var AsyncQueue = require ('../AsyncQueue');
 
 
-//////////////////////////////////////////////////////////////////
-// static data
-var _s_rediscl = null;
-var _s_opts = null;
-
-
 class RedisListQueue extends AsyncQueue {
   
   //////////////////////////////////////////////
-  constructor (name, opts) {
+  constructor (name, factory, opts) {
   //////////////////////////////////////////////
-    if (!_s_rediscl) {
-      throw new Error ('Redis not initialized, call init()');
-    }
-    
     super (name, opts);
-    
+
+    this._factory = factory;
+    this._rediscl = factory._rediscl;
     this._redis_l_name = 'keuss:q:list:' + this._name;
   }
   
@@ -52,7 +44,7 @@ class RedisListQueue extends AsyncQueue {
       tries:   entry.tries
     };
     
-    _s_rediscl.lpush (this._redis_l_name, JSON.stringify (pl), function (err, res) {
+    this._rediscl.lpush (this._redis_l_name, JSON.stringify (pl), function (err, res) {
       if (err) {
         return callback (err);
       }
@@ -68,7 +60,7 @@ class RedisListQueue extends AsyncQueue {
   get (callback) {
   /////////////////////////////////////////
     var self = this;
-    _s_rediscl.rpop (this._redis_l_name, function (err, res) {
+    this._rediscl.rpop (this._redis_l_name, function (err, res) {
       if (err) {
         return callback (err);
       }
@@ -92,7 +84,7 @@ class RedisListQueue extends AsyncQueue {
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
-    _s_rediscl.llen (this._redis_l_name,  callback);
+    this._rediscl.llen (this._redis_l_name,  callback);
   }
   
   
@@ -100,7 +92,7 @@ class RedisListQueue extends AsyncQueue {
   // queue size NOT including non-mature elements
   size (callback) {
   //////////////////////////////////
-    _s_rediscl.llen (this._redis_l_name,  callback);
+    this._rediscl.llen (this._redis_l_name,  callback);
   }
   
   
@@ -118,37 +110,36 @@ class RedisListQueue extends AsyncQueue {
   //////////////////////////////////
     callback (null, null)
   }
-    
-    
-  ////////////////////////////////////////////////////////////////////////////////
-  // statics
-  
-  //////////////////////////////////////////////////////////////////
-  static init (opts, cb) {
-  //////////////////////////////////////////////////////////////////
-    _s_opts = opts;
-    if (!_s_opts) _s_opts = {};
-    _s_rediscl = RedisConn.conn (_s_opts);
-    cb ();
-  }
-  
-  
-  //////////////////////////////////////////////////////////////////
-  static end (cb) {
-  //////////////////////////////////////////////////////////////////
-    if (_s_rediscl) _s_rediscl.quit();
+};
+
+class Factory {
+  constructor (opts, cb) {
+    this._opts = opts;
+    if (!this._opts) this._opts = {};
+    this._rediscl = RedisConn.conn (this._opts);
     
     if (cb) {
       return cb ();
     }
   }
-  
-  //////////////////////////////////////////////////////////////////
-  static list (cb) {
-  //////////////////////////////////////////////////////////////////
-    var colls = [];
+
+  queue (name, opts) {
+    return new RedisListQueue (name, this, opts);
+  }
+
+  close (cb) {
+    if (this._rediscl) this._rediscl.quit();
     
-    _s_rediscl.keys ('keuss:q:list:?*', function (err, collections) {
+    if (cb) {
+      return cb ();
+    }
+  }
+
+  list (cb) {
+    var colls = [];
+    var self = this;
+
+    this._rediscl.keys ('keuss:q:list:?*', function (err, collections) {
       if (err) return cb (err);
 
       collections.forEach (function (coll) {
@@ -156,7 +147,7 @@ class RedisListQueue extends AsyncQueue {
       });
 
       // add "keuss:stats:redis:list:*" to try to add empty queues
-      _s_rediscl.keys ('keuss:stats:redis:list:?*', function (err, collections) {
+      self._rediscl.keys ('keuss:stats:redis:list:?*', function (err, collections) {
         if (err) return cb (err);
 
         collections.forEach (function (coll) {
@@ -168,10 +159,10 @@ class RedisListQueue extends AsyncQueue {
       });
     });
   }
-};
+}
 
 
-module.exports = RedisListQueue;
+module.exports = Factory;
 
 
 

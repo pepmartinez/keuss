@@ -5,6 +5,7 @@ var winston = require ('winston');
 
 var MQ = require ('../backends/redis-oq');
 
+var factory = null;
 
 describe ('Redis OrderedQueue backend', function () {
 
@@ -25,16 +26,16 @@ describe ('Redis OrderedQueue backend', function () {
       ]
     });
     
-    MQ.init (opts, done);
+    factory = new MQ (opts, done);
   });
   
   
   after (function (done) {
-    MQ.end (done);
+    factory.close (done);
   });
   
   it ('queue is created empty and ok', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     should.equal (q.nextMatureDate (), null);
     q.name ().should.equal ('test_queue');
     
@@ -50,7 +51,7 @@ describe ('Redis OrderedQueue backend', function () {
   });
   
   it ('sequential push & pops with no delay, go as expected', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
@@ -96,7 +97,7 @@ describe ('Redis OrderedQueue backend', function () {
   
   
   it ('sequential push & pops with delays, go as expected', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:2}, cb)},
@@ -152,7 +153,7 @@ describe ('Redis OrderedQueue backend', function () {
   
   
   it ('timed-out pops work as expected', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:6}, cb)},
@@ -212,7 +213,7 @@ describe ('Redis OrderedQueue backend', function () {
   
   
   it ('pop cancellation works as expected', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:6}, cb)},
@@ -252,7 +253,7 @@ describe ('Redis OrderedQueue backend', function () {
   
   
   it ('simultaneous timed out pops on delayed items go in the expected order', function (done){
-    var q = new MQ('test_queue');
+    var q = factory.queue('test_queue');
     
     var hrTime = process.hrtime()
     

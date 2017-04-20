@@ -1,8 +1,5 @@
 'use strict';
 
-
-var async = require ('async');
-
 const _s_lua_code_push = `
   -- qname in KEYS[1]
   -- id in ARGV[1]
@@ -40,87 +37,28 @@ const _s_lua_code_pop = `
 `;
 
 
-var _s_sha_push = undefined;
-var _s_sha_pop =  undefined;
-
-var _s_rediscl = undefined;
-
-function _s_load (lua_code, done) {
-  _s_rediscl.script ('load', lua_code, done);
-}
-
-
 class RedisOrderedQueue {
-  constructor (name) {
-    this._rediscl = _s_rediscl;
+  constructor (name, factory) {
+    this._factory = factory;
+    this._rediscl = factory._rediscl;
     this._name = name;
   }
   
-  static init (rediscl, done) {
-    _s_rediscl = rediscl;
-    var self = this;
-    async.series ([
-      function (cb) {_s_load (_s_lua_code_push, cb)},
-      function (cb) {_s_load (_s_lua_code_pop, cb)}
-    ], function (err, res) {
-      if (err) {
-        return done (err);
-      }
-      
-      _s_sha_push = res [0];
-      _s_sha_pop =  res [1];
-      
-      console.log ('RedisOQ funcs loaded');
-      
-      done ();
-    });
-  }
-  
   push (id, mature, obj, done) {
-    var self = this;
-    this._rediscl.evalsha (_s_sha_push, 1, this._name, id, mature, obj, function (err, res) {
-      if (err) {
-        if (err.message.split(' ')[0] == 'NOSCRIPT') {
-          RedisOrderedQueue.init (_s_rediscl, function (err) {
-            if (err) {
-              return done (err);
-            }
-            
-            self.push (id, mature, obj, done);
-          });
-        }
-        else {
-          done (err);
-        }
-      }
-      else {
-        // res is '1'
-        done (null, res);
-      }
+    this._rediscl.roq_push (this._name, id, mature, obj, function (err, res) {
+      if (err) return done (err);
+      
+      // res is 1
+      done (null, res);
     });
   }
   
   pop (done) {
-    var self = this;
-    this._rediscl.evalsha (_s_sha_pop, 1, this._name, function (err, res) {
-      if (err) {
-        if (err.message.split(' ')[0] == 'NOSCRIPT') {
-          RedisOrderedQueue.init (_s_rediscl, function (err) {
-            if (err) {
-              return done (err);
-            }
-            
-            self.pop (done);
-          });
-        }
-        else {
-          done (err);
-        }
-      }
-      else {
-        // res is [id, mature, text]
-        done (null, res);
-      }
+    this._rediscl.roq_pop (this._name, function (err, res) {
+      if (err) return done (err);
+
+      // res is [id, mature, text]
+      done (null, res);
     });
   }
   
@@ -159,4 +97,24 @@ class RedisOrderedQueue {
 }
 
 
-module.exports = RedisOrderedQueue;
+class Factory {
+  constructor (rediscl) {
+    this._rediscl = rediscl;
+    
+    this._rediscl.defineCommand('roq_push', {
+      numberOfKeys: 1,
+      lua: _s_lua_code_push
+    });
+
+    this._rediscl.defineCommand('roq_pop', {
+      numberOfKeys: 1,
+      lua: _s_lua_code_pop
+    });
+  }
+
+  roq (name) {
+    return new RedisOrderedQueue (name, this);
+  }
+}
+
+module.exports = Factory;

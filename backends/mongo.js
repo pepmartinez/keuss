@@ -10,24 +10,15 @@ var AsyncQueue = require ('../AsyncQueue');
 var Queue =      require ('../Queue');
 
 
-//////////////////////////////////////////////////////////////////
-// static data
-var _s_mongo_conn = null;
-var _s_opts = null;
-
-
 class SimpleMongoQueue extends AsyncQueue {
   
   //////////////////////////////////////////////
-  constructor (name, opts) {
+  constructor (name, factory, opts) {
   //////////////////////////////////////////////
-    if (!_s_mongo_conn) {
-      throw new Error ('MongoDB not initialized, call init()');
-    }
-    
     super (name, opts);
-    
-    this._col = _s_mongo_conn.collection (name);
+
+    this._factory = factory;
+    this._col = factory._mongo_conn.collection (name);
     this.ensureIndexes (function (err) {});
   }
   
@@ -228,42 +219,40 @@ class SimpleMongoQueue extends AsyncQueue {
       return cb (err);
     })
   }
-  
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  // statics
-  
-  //////////////////////////////////////////////////////////////////
-  static init (opts, cb) {
-  //////////////////////////////////////////////////////////////////
-    _s_opts = opts;
-    if (!_s_opts) _s_opts = {};
-    var m_url = _s_opts.url || 'mongodb://localhost:27017/keuss';
+};
+
+
+class Factory {
+  constructor (opts, cb) {
+    this._opts = opts;
+    if (!this._opts) this._opts = {};
+    var m_url = this._opts.url || 'mongodb://localhost:27017/keuss';
     
+    var self = this;
     MongoClient.connect (m_url, function (err, db) {
-      _s_mongo_conn = db;
+      self._mongo_conn = db;
       cb (err);
     });
   }
-  
-  
-  //////////////////////////////////////////////////////////////////
-  static end (cb) {
-  //////////////////////////////////////////////////////////////////
-    if (_s_mongo_conn) {
-      _s_mongo_conn.close ();
-      _s_mongo_conn = null;
+
+  queue (name, opts) {
+    return new SimpleMongoQueue (name, this, opts);
+  }
+
+  close (cb) {
+    if (this._mongo_conn) {
+      this._mongo_conn.close ();
+      this._mongo_conn = null;
     } 
     
     if (cb) {
       return cb ();
     }
   }
-  
-  //////////////////////////////////////////////////////////////////
-  static list (cb) {
-  //////////////////////////////////////////////////////////////////
-    _s_mongo_conn.collections (function (err, collections) {
+
+
+  list (cb) {
+    this._mongo_conn.collections (function (err, collections) {
       if (err) {
         return cb (err);
       }
@@ -277,10 +266,11 @@ class SimpleMongoQueue extends AsyncQueue {
       cb (null, colls);
     });
   }
-};
+}
 
 
-module.exports = SimpleMongoQueue;
+
+module.exports = Factory;
 
 
 

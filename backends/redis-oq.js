@@ -9,24 +9,16 @@ var RedisConn =         require ('../utils/RedisConn');
 var RedisOrderedQueue = require ('../utils/RedisOrderedQueue');
 
 
-//////////////////////////////////////////////////////////////////
-// static data
-var _s_rediscl = null;
-var _s_opts = null;
-
-
 class RedisOQ extends AsyncQueue {
   
   //////////////////////////////////////////////
-  constructor (name, opts) {
+  constructor (name, factory, opts) {
   //////////////////////////////////////////////
-    if (!_s_rediscl) {
-      throw new Error ('Redis not initialized, call init()');
-    }
-    
     super (name, opts);
     
-    this._roq = new RedisOrderedQueue (this._name);
+    this._factory = factory;
+    this._rediscl = factory._rediscl;
+    this._roq = factory._roq_factory.roq (this._name);
   }
   
   
@@ -143,29 +135,6 @@ class RedisOQ extends AsyncQueue {
     });
   }
 
-
-  ////////////////////////////////////////////////////////////////////////////////
-  // statics
-   
-  //////////////////////////////////////////////////////////////////
-  static init (opts, cb) {
-  //////////////////////////////////////////////////////////////////
-    _s_opts = opts;
-    if (!_s_opts) _s_opts = {};
-    _s_rediscl = RedisConn.conn (_s_opts);
-    RedisOrderedQueue.init (_s_rediscl, cb);
-  }
-  
-  
-  //////////////////////////////////////////////////////////////////
-  static end (cb) {
-  //////////////////////////////////////////////////////////////////
-    if (_s_rediscl) _s_rediscl.quit();
-    
-    if (cb) {
-      return cb ();
-    }
-  }
   
   
   //////////////////////////////////////////////////////////////////
@@ -196,9 +165,58 @@ class RedisOQ extends AsyncQueue {
 };
 
 
-module.exports = RedisOQ;
+
+class Factory {
+  constructor (opts, cb) {
+    this._opts = opts;
+    if (!this._opts) this._opts = {};
+    this._rediscl = RedisConn.conn (this._opts);
+    this._roq_factory = new RedisOrderedQueue (this._rediscl);
+
+    if (cb) {
+      return cb ();
+    }
+  }
+
+  queue (name, opts) {
+    return new RedisOQ (name, this, opts);
+  }
+
+  close (cb) {
+    if (this._rediscl) this._rediscl.quit();
+    
+    if (cb) {
+      return cb ();
+    }
+  }
+
+  list (cb) {
+    var colls = [];
+    var self = this;
+
+    this._rediscl.keys ('keuss:q:ordered_queue:index:?*', function (err, collections) {
+      if (err) return cb (err);
+      
+      collections.forEach (function (coll) {
+        colls.push (coll.substring (28))
+      });
+
+      // add "keuss:stats:redis:list:*" to try to add empty queues
+      this._rediscl.keys ('keuss:stats:redis:oq:?*', function (err, collections) {
+        if (err) return cb (err);
+
+        collections.forEach (function (coll) {
+          var qname = coll.substring (21);
+          if (_.indexOf (colls, qname) == -1) colls.push (qname);
+        });
+      
+        cb (null, colls);
+      });
+    });
+  }
+}
 
 
-
+module.exports = Factory;
 
 
