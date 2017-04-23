@@ -223,16 +223,9 @@ class SimpleMongoQueue extends AsyncQueue {
 
 
 class Factory {
-  constructor (opts, cb) {
+  constructor (opts, mongo_conn) {
     this._opts = opts;
-    if (!this._opts) this._opts = {};
-    var m_url = this._opts.url || 'mongodb://localhost:27017/keuss';
-    
-    var self = this;
-    MongoClient.connect (m_url, function (err, db) {
-      self._mongo_conn = db;
-      cb (err);
-    });
+    this._mongo_conn = mongo_conn;
   }
 
   queue (name, opts) {
@@ -268,9 +261,17 @@ class Factory {
   }
 }
 
+function creator (opts, cb) {
+  var _opts = opts || {};
+  var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
+    
+  MongoClient.connect (m_url, function (err, db) {
+    if (err) return cb (err);
+    return cb (null, new Factory (_opts, db));
+  });
+}
 
-
-module.exports = Factory;
+module.exports = creator;
 
 
 

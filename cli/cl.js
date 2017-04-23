@@ -110,7 +110,7 @@ function produce_loop (q, n) {
 }
 
 
-MQ.init ({logger: logger}, function (err) {
+MQ ({logger: logger}, function (err, factory) {
   if (err) {
     return logger.error ('MQ.init: %s', err, {});
   }
@@ -139,7 +139,7 @@ MQ.init ({logger: logger}, function (err) {
   
   logger.verbose ('MQ.init: creating queue with options %j', q_opts, {});
   
-  var q = new MQ ('test', q_opts);
+  var q = factory.queue ('test', q_opts);
   
   if (program.consumer) {
     logger.verbose ('MQ.init: initiating consume loop');

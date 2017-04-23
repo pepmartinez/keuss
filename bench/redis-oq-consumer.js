@@ -37,7 +37,7 @@ var opts = {
   logger: logger
 };
     
-MQ.init (opts, function (err) {
+MQ (opts, function (err, factory) {
   if (err) {
     return logger.error (err);
   }
@@ -52,7 +52,7 @@ MQ.init (opts, function (err) {
     }
   };
 
-  var q = new MQ ('test_queue', q_opts);
+  var q = factory.queue ('test_queue', q_opts);
 
   run_consumer (q);
 });

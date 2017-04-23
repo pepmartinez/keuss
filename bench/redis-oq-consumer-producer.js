@@ -48,12 +48,12 @@ var opts = {
   logger: logger
 };
     
-MQ.init (opts, function (err) {
+MQ (opts, function (err, factory) {
   if (err) {
     return logger.error (err);
   }
 
-  var q = new MQ('test_queue', opts);
+  var q = factory.queue('test_queue', opts);
 
   run_consumer (q);
   run_producer (q);

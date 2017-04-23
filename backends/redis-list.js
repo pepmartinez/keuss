@@ -113,14 +113,9 @@ class RedisListQueue extends AsyncQueue {
 };
 
 class Factory {
-  constructor (opts, cb) {
-    this._opts = opts;
-    if (!this._opts) this._opts = {};
-    this._rediscl = RedisConn.conn (this._opts);
-    
-    if (cb) {
-      return cb ();
-    }
+  constructor (opts, rediscl) {
+    this._opts = opts || {};
+    this._rediscl = rediscl;
   }
 
   queue (name, opts) {
@@ -162,7 +157,14 @@ class Factory {
 }
 
 
-module.exports = Factory;
+function creator (opts, cb) {
+  var _opts = opts || {};
+  var _rediscl = RedisConn.conn (_opts);
+    
+  return cb (null, new Factory (_opts, _rediscl));
+}
+
+module.exports = creator;
 
 
 

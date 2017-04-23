@@ -26,7 +26,11 @@ describe ('MongoDB queue backend', function () {
       ]
     });
     
-    factory = new MQ (opts, done);
+    MQ (opts, function (err, fct) {
+      if (err) return done (err);
+      factory = fct;
+      done();
+    });
   });
   
   

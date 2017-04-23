@@ -167,15 +167,10 @@ class RedisOQ extends AsyncQueue {
 
 
 class Factory {
-  constructor (opts, cb) {
-    this._opts = opts;
-    if (!this._opts) this._opts = {};
-    this._rediscl = RedisConn.conn (this._opts);
-    this._roq_factory = new RedisOrderedQueue (this._rediscl);
-
-    if (cb) {
-      return cb ();
-    }
+  constructor (opts, rediscl, roq_factory) {
+    this._opts = opts || {};
+    this._rediscl = rediscl;
+    this._roq_factory = roq_factory;
   }
 
   queue (name, opts) {
@@ -217,6 +212,13 @@ class Factory {
 }
 
 
-module.exports = Factory;
+function creator (opts, cb) {
+  var _opts = opts || {};
+  var _rediscl = RedisConn.conn (_opts);
+  var _roq_factory = new RedisOrderedQueue (_rediscl);
+  return cb (null, new Factory (_opts, _rediscl, _roq_factory));
+}
+
+module.exports = creator;
 
 
