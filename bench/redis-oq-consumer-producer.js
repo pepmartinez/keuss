@@ -37,7 +37,7 @@ function run_producer (q) {
 
     setTimeout (function () {
       run_producer (q);
-    }, (random.from0to (30) + 100) * 1000);
+    }, (random.from0to (30) + 100) * 10);
   });
 }
 

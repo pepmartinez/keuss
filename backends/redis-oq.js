@@ -201,7 +201,7 @@ class Factory {
       });
 
       // add "keuss:stats:redis:list:*" to try to add empty queues
-      this._rediscl.keys ('keuss:stats:redis:oq:?*', function (err, collections) {
+      self._rediscl.keys ('keuss:stats:redis:oq:?*', function (err, collections) {
         if (err) return cb (err);
 
         collections.forEach (function (coll) {
