@@ -184,6 +184,10 @@ class Factory {
       return cb ();
     }
   }
+  
+  type () {
+    return RedisOQ.Type ();
+  }
 
   list (cb) {
     var colls = [];

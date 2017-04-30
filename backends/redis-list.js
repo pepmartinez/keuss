@@ -129,6 +129,10 @@ class Factory {
       return cb ();
     }
   }
+  
+  type () {
+    return RedisListQueue.Type ();
+  }
 
   list (cb) {
     var colls = [];

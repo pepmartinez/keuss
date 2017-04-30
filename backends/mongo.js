@@ -242,7 +242,10 @@ class Factory {
       return cb ();
     }
   }
-
+  
+  type () {
+    return SimpleMongoQueue.Type ();
+  }
 
   list (cb) {
     this._mongo_conn.collections (function (err, collections) {
