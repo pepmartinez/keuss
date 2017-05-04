@@ -119,7 +119,9 @@ class Factory {
   }
 
   queue (name, opts) {
-    return new RedisListQueue (name, this, opts);
+    var full_opts = {}
+    _.merge(full_opts, this._opts, opts);
+    return new RedisListQueue (name, this, full_opts);
   }
 
   close (cb) {
@@ -163,9 +165,9 @@ class Factory {
 
 function creator (opts, cb) {
   var _opts = opts || {};
-  var _rediscl = RedisConn.conn (_opts);
+  var rediscl = RedisConn.conn (_opts);
     
-  return cb (null, new Factory (_opts, _rediscl));
+  return cb (null, new Factory (_opts, rediscl));
 }
 
 module.exports = creator;

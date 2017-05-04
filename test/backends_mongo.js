@@ -15,7 +15,7 @@ describe ('MongoDB queue backend', function () {
     opts.logger = new (winston.Logger)({
       transports: [
         new (winston.transports.Console)({
-          level: 'verbose',
+          level: 'info',
           timestamp: function() {return new Date ();},
           formatter: function (options) {
             // Return string will be passed to logger. 

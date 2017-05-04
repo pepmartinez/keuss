@@ -229,7 +229,9 @@ class Factory {
   }
 
   queue (name, opts) {
-    return new SimpleMongoQueue (name, this, opts);
+    var full_opts = {}
+    _.merge(full_opts, this._opts, opts);
+    return new SimpleMongoQueue (name, this, full_opts);
   }
 
   close (cb) {
