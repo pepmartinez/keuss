@@ -1,12 +1,12 @@
 'use strict';
 
 class MemStats {
-  constructor () {
+  constructor (factory) {
+    this._factory = factory;
     this._s = {};
   }
   
-  static type () {return 'mem'}
-  static init (opts) {}
+  type () {return this._factory.type ()}
   
   values (cb) {
     cb (null, this._s);
@@ -33,5 +33,16 @@ class MemStats {
   } 
 }
 
+class MemStatsFactory {
+  constructor (opts) {
+  }
 
-module.exports = MemStats;
+  static Type () {return 'mem'}
+  type () {return Type ()}
+
+  stats () {
+    return new MemStats (this);
+  }
+}
+
+module.exports = MemStatsFactory;

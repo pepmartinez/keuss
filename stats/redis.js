@@ -9,32 +9,21 @@ var _s_rediscl = undefined;
 var _s_opts = undefined;
 
 /*
- * 
  * redis using HINCRBY
- * 
- */
+*/
 class RedisStats extends WithLog {
-  constructor (name, opts) {
+  constructor (name, factory, opts) {
     super (opts);
     this._name = 'keuss:stats:' + name;
     this._opts = opts || {};
-    
-    if (!_s_rediscl) {
-      RedisStats.init (opts);
-    }
-    
-    this._rediscl = _s_rediscl;
+    this._factory = factory
+    this._rediscl = factory._rediscl;
     this._cache = {};
     
     this._verbose ('created redis stats on key [%s]', this._name);
   }
   
-  static type () {return 'redis'}
-  
-  static init (opts) {
-    _s_opts = opts || {};
-    _s_rediscl = RedisConn.conn (_s_opts);
-  }
+  type () {return this._factory.type ()}
   
   values (cb) {
     this._rediscl.hgetall (this._name, function (err, v) {
@@ -106,5 +95,18 @@ class RedisStats extends WithLog {
   } 
 }
 
+class RedisStatsFactory {
+  constructor (opts) {
+    this._opts = opts || {};
+    this._rediscl = RedisConn.conn (this._opts);
+  }
 
-module.exports = RedisStats;
+  static Type () {return 'redis'}
+  type () {return Type ()}
+
+  stats (name) {
+    return new RedisStats (name, this);
+  }
+}
+
+module.exports = RedisStatsFactory;

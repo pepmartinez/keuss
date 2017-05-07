@@ -7,20 +7,20 @@ var Redis = require ('../stats/redis');
 var name = 'test-stats';
 
 function run_tests_on_class (CL) {
-  describe (CL.type () + ' stats provider', function () {
+  describe (CL.Type () + ' stats provider', function () {
     
     before (function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       mem.clear (done);
     });
     
     after  (function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       mem.clear (done);
     });
     
     it ('creates ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       mem.values (function (err, vals) {
         vals.should.eql ({});
         done (err);
@@ -28,7 +28,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('initializes ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.incr ('v1', 1, cb)},
@@ -45,7 +45,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('increments (default by 1) ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -63,7 +63,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('increments (explicit deltas) ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -81,7 +81,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('decrements (default by 1) ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -99,7 +99,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('decrements (explicit deltas) ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -123,7 +123,7 @@ function run_tests_on_class (CL) {
     });
     
     it ('clears ok', function (done) {
-      var mem = new CL (name);
+      var mem = new CL ().stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},

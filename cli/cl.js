@@ -132,8 +132,9 @@ MQ ({logger: logger}, function (err, factory) {
   }
   
   if (program.stats) {
+    var stats_provider = require ('../stats/' + program.stats);
     q_opts.stats = {
-      provider: require ('../stats/' + program.stats)
+      provider: new stats_provider ()
     }
   }
   

@@ -32,7 +32,8 @@ class Queue extends WithLog {
     this._name = name;
     
     // stats
-    this._stats = new (this._opts.stats.provider || MemStats) (this.type () + ':' + this.name (), this._opts.stats.opts);
+    var stats_factory = this._opts.stats.provider || new MemStats;
+    this._stats = stats_factory.stats (this.type () + ':' + this.name (), this._opts.stats.opts);
     
     // most mature
     this._next_mature_t = null;
