@@ -126,8 +126,9 @@ MQ ({logger: logger}, function (err, factory) {
   }
   
   if (program.signaller) {
+    var signal_provider = require ('../signal/' + program.signaller);
     q_opts.signaller = {
-      provider: require ('../signal/' + program.signaller)
+      provider: new signal_provider ()
     }
   }
   

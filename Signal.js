@@ -18,8 +18,7 @@ class Signal extends WithLog {
     
     this._verbose ('Signaller created with bufferTime %d msecs', this._bufferTime);
   }
-  
-  
+
   signalInsertion (mature, cb) {
     var emit = false;
     

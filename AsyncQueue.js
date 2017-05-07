@@ -36,7 +36,8 @@ class AsyncQueue extends Queue {
     this._opts.signaller.opts.logger = this.logger();
     this._opts.signaller.opts.level = this.level();
     
-    this._signaller = new (this._opts.signaller.provider || LocalSignal) (this, this._opts.signaller.opts);
+    var signaller_factory = this._opts.signaller.provider || new LocalSignal ();
+    this._signaller = signaller_factory.signal (this, this._opts.signaller.opts);
     
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);

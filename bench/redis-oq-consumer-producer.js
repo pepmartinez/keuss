@@ -24,9 +24,9 @@ function run_consumer (q) {
     logger.verbose ('consumer: got err %j', err, {});
     logger.verbose ('consumer: got res %j', res, {});
 
-    setTimeout (function () {
+//    setTimeout (function () {
       run_consumer (q);
-    }, random.from0to (2000) + 100);
+//    }, random.from0to (2000) + 100);
   });
 }
 
@@ -37,15 +37,23 @@ function run_producer (q) {
 
     setTimeout (function () {
       run_producer (q);
-    }, (random.from0to (30) + 100) * 10);
+    }, (random.from0to (10) + 1) * 1000);
   });
 }
 
 
 var MQ = require ('../backends/redis-oq');
+var redis_signaller = require ('../signal/redis-pubsub');
+var redis_stats = require ('../stats/redis');
 
 var opts = {
-  logger: logger
+  logger: logger,
+  signaller: {
+    provider: new redis_signaller ()
+  },
+  stats: {
+    provider: new redis_stats ()
+  }
 };
     
 MQ (opts, function (err, factory) {
@@ -53,7 +61,7 @@ MQ (opts, function (err, factory) {
     return logger.error (err);
   }
 
-  var q = factory.queue('test_queue', opts);
+  var q = factory.queue('bench_test_queue', opts);
 
   run_consumer (q);
   run_producer (q);

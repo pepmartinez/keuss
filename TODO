@@ -6,5 +6,4 @@
 * bridges?
 * deadletter (tied to at-least-one)?
 * allow passing redis conn/obj (ioredis Redis or Cluster) on anything using redis
-* proper factory on signal
 * queue traversal/query
