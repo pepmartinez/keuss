@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "keywords": ["queue", "job"],
   "homepage":"https://github.com/pepmartinez/keuss",
   "bugs": {

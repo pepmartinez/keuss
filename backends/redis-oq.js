@@ -220,7 +220,7 @@ class Factory {
 
 function creator (opts, cb) {
   var _opts = opts || {};
-  var _rediscl = RedisConn.conn (_opts);
+  var _rediscl = RedisConn.conn (_opts.redis);
   var _roq_factory = new RedisOrderedQueue (_rediscl);
   return cb (null, new Factory (_opts, _rediscl, _roq_factory));
 }

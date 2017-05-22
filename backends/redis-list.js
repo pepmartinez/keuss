@@ -165,7 +165,7 @@ class Factory {
 
 function creator (opts, cb) {
   var _opts = opts || {};
-  var rediscl = RedisConn.conn (_opts);
+  var rediscl = RedisConn.conn (_opts.redis);
     
   return cb (null, new Factory (_opts, rediscl));
 }
