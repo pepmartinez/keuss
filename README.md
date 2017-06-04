@@ -135,7 +135,7 @@ MQ (f_opts, function (err, factory) {
   // queues created by factory here will use a redis pubsub signaller, hosted at redis at localhost, db 6
 ```
 
-
+The signaller has no public api *per se*; it is considered just a piece of infrastructure to glue queues together
 
 ### Stats
 Stats factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result fo the *new* operation is indeed the factory; the result of the require is therefore a *metafactory*
@@ -163,7 +163,7 @@ var f_opts = {
 MQ (f_opts, function (err, factory) {
   // queues created by factory here will use a redis-backed stats, hosted at redis at localhost, db 6
 ```
-
+Stats objects, as of now, store the numer of elements inserted and the number of elements extracted; they are created behind the scenes and tied to queue instances, and the stats-related interface is in fact part fo the queues' interface
 
 ### Queue API
 
@@ -332,3 +332,6 @@ Mostly all objects that are created with a *opts* object can receive and use a [
 Even when using signallers, get operations on queue never block or wait forever; waiting get operations rearm themselves 
 every 15000 millisec (or whatever specified in the *pollInterval*). This feature provides the ability to work with more than one process 
 without signallers, geting a maximum latency of *pollInterval* millisecs, but also provides a safe backup in the event of signalling lost for whatever reason
+
+## Examples
+A set of funcioning examples can be found inside the *examples* directory
