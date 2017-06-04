@@ -1,7 +1,7 @@
 # keuss
 Job Queues on selectable backends (for now: mongodb, redis) for node.js
 
-Still alpha, basic structure in flux
+Still beta, basic structure may be in flux
 
 ## About
 Keuss is an attempt or experiment to provide a serverless, persistent and high-available 
@@ -73,43 +73,6 @@ npm install keuss
 
 ## Usage
 
-### Quickstart
-```javascript
-// create a simple producer on top of redis-list, no signaller, in-mem stats
-var MQ = require ('keuss/backends/redis-list');
-
-var factory_opts = {};
-    
-// initialize factory    
-MQ (factory_opts, function (err, factory) {
-  if (err) {
-    return console.err (err);
-  }
-
-  // factory ready, create one queue
-  var q_opts = {};
-  var q = factory.queue ('test_queue', q_opts);
-
-  // insert element
-  q.push ({a:1, b:'666'}, function (err, res) {
-    if (err) {
-      return console.err (err);
-    }
-
-    // element inserted at this point. pop it again
-    var pop_opts = {};
-    q.pop ('consumer-one', pop_opts, function (err, res) {
-      if (err) {
-        return console.err (err);
-      }
-
-      console.log ('got this: ', res.payload);
-    });
-  });
-});
-
-```
-
 ### Factory API
 Backends, which work as queue factories, have the following operations
 
@@ -122,7 +85,7 @@ MQ (opts, function (err, factory) {
 })
 ```
 
-where 'opts' is an object containing default values for queue creation, plus the following backend-dependent values:
+where 'opts' is an object containing default values for queue creation (such as pollInterval, signaller or stats), plus the following backend-dependent values:
 * backend *mongo*
    * url: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`
 * backends *redis-list* and *redis-oq*
@@ -139,15 +102,68 @@ Where:
 * options: the options passed at backend initialization are used as default values:
   * pollInterval: rearm or poll period in millisecs for get operations, defaults to 15000 (see *Working with no signallers* below)
   * signaller: signaller to use for the queue
-    * provider: signaller factory (require)
+    * provider: signaller factory
     * opts: options for the signaller factory (see below)
   * stats: stats store to use for this queue
-    * provider: stats factory (require)
+    * provider: stats factory
     * opts: options for the stats factory (see below)
 
 ### Signaller
+Signaller factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result fo the *new* operation is indeed the factory; the result of the require is therefore a *metafactory*
+
+```javascript
+var signal_redis_pubsub = require ('../signal/redis-pubsub');
+
+var local_redis_opts = {
+  Redis: {
+    port: 6379,
+    host: 'localhost',
+    db: 6
+  }
+};
+
+var f_opts = {
+  signaller: {
+    provider: new signal_redis_pubsub (local_redis_opts)
+  }
+  .
+  .
+  .
+}
+
+MQ (f_opts, function (err, factory) {
+  // queues created by factory here will use a redis pubsub signaller, hosted at redis at localhost, db 6
+```
+
+
 
 ### Stats
+Stats factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result fo the *new* operation is indeed the factory; the result of the require is therefore a *metafactory*
+
+```javascript
+var local_redis_pubsub = require ('../signal/redis-pubsub');
+
+var local_redis_opts = {
+  Redis: {
+    port: 6379,
+    host: 'localhost',
+    db: 6
+  }
+};
+
+var f_opts = {
+  stats: {
+    provider: new signal_redis_pubsub (local_redis_opts)
+  }
+  .
+  .
+  .
+}
+
+MQ (f_opts, function (err, factory) {
+  // queues created by factory here will use a redis-backed stats, hosted at redis at localhost, db 6
+```
+
 
 ### Queue API
 
@@ -177,9 +193,10 @@ q.size (function (err, res){
 })
 ```
 res contains the number of elements in the queue that are already elligible (that is, excluding scheduled elements with a schedule time in the future)
+
 #### Total Queue occupation
 ```javascript
-totalSize (function (err, res){
+q.totalSize (function (err, res){
   ...
 })
 ```
@@ -187,21 +204,129 @@ res contains the number of elements in the queue (that is, including scheduled e
 
 #### Time of schedule of next message
 ```javascript
-next_t (function (err, res){
+q.next_t (function (err, res){
   ...
 })
 ```
 Returns a Date, or null if queue is empty. Queues with no support for schedule/delay always return null
-#### push (payload, opts, callback) {
-#### pop (cid, opts, callback) {
-#### cancel (tid, opts) {
-#### reserve (function (err, res)   
-#### ok (id, cb) {
-####  ko (id, cb) {
+
+#### Add element to queue
+```javascript
+q.push (payload, opts, function (err, res) {
+  ...
+})
+```
+Adds payload to the queue, calls passed callback upon completion. Callback's *res* will contain the id assigned to the inserted element, if the backup provides one
+
+Possible opts:
+* **mature**: unix timestamp where the element would be elligible for extraction. It is guaranteed that the element won't be extracted before this time 
+* **delay**: delay in seconds to calculate the mature timestamp, if mature is not provided. For example, a delay=120 guarantees the element won't be extracted until 120 secs have elapsed *at least*
+* **tries**: value to initialize the retry counter, defaults to 0 (still no retries). 
+
+*note*: mature and delay have no effect if the backend does not support delay/schedule
+
+#### Get element from queue
+```javascript
+var tr = q.pop (cid, opts, function (err, res) {
+  ...
+})
+```
+Obtains an element from the queue. Callback is called with the element obtained if any, or if an error happened. If defined, the operation will wait for *opts.timeout* seconds for an element to appear in the queue before bailing out (with both err and res being null). However, it immediately returns an id that can be used to cancel the operation at anytime
+
+*cid* is an string that identifies the consumer entity, which is considered to be a simple label
+
+Possible opts:
+* **timeout**: milliseconds to wat for an elligible element to appear in the queue to be returned. If not defined it will wait forever
+* **reserve**: if true the element is only reserved, not completely returned. This means either *ok* or *ko* operations are needed upon the obtained element once processed, otherwise the element will be rolled back (and made available again) at some point in the future (this is only available on backends capable of reserve/commit)
+
+#### Cancel a pending Pop
+```javascript
+var tr = q.pop (cid, opts, function (err, res) {...});
+.
+.
+.
+q.cancel (tr);
+```
+Cancels a pending pop operation, identified by the value returned by pop()
+
+#### Commit a reserved element
+```javascript
+q.ok (id, function (err, res) {
+  ...
+})
+```
+commits a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively erases the element from the queue
+
+#### Rolls back a reserved element
+```javascript
+q.ko (id, function (err, res) {
+  ...
+})
+```
+rolls back a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively makes the element available again at the queue, but it's up to the backend to decide whether to apply a delay to it (as if it were inserted with opts.delay)
 
 ### Redis connections
+Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will 
+create it from the opts object passed:
+* if opts is a function, it is executed. It is expected to return a redis connection
+* if it's an object and contains a 'Redis' field, this field is used to create a new ioredis Redis object, as in *return new Redis (opts.Redis)*
+* if it's an object and contains a 'Cluster' field, this field is used to create a new ioredis Redis.Cluster object, as in *return new Redis.Cluster (opts.Cluster)*
+* else, a ioredis Redis object is created with opts as param, as in *return new Redis (opts)*
+
+Examples:
+* default options
+  ```javascript
+  var MQ = require ('keuss/backends/redis-list');
+  var factory_opts = {};
+       
+  MQ (factory_opts, function (err, factory) {
+    ...
+  });
+  ```
+* specific redis params for ioredis Redis client
+  ```javascript
+  var MQ = require ('keuss/backends/redis-list');
+  var factory_opts = {
+    redis: {
+      Redis: {
+        port: 12293,
+        host: 'some-redis-instance.somewhere.com',
+        family: 4,
+        password: 'xxxx',
+        db: 0
+      }
+    }
+  };
+       
+  MQ (factory_opts, function (err, factory) {
+    ...
+  });
+  ```
+* use a factory function
+  ```javascript
+  var MQ = require ('keuss/backends/redis-list');
+  var Redis = require ('ioredis');
+  var factory_opts = {
+    redis: function () {
+      return new Redis ({
+        port: 12293,
+        host: 'some-redis-instance.somewhere.com',
+        family: 4,
+        password: 'xxxx',
+        db: 0
+      })
+    }
+  };
+       
+  MQ (factory_opts, function (err, factory) {
+    ...
+  });
+  ```
 
 ### Logging
+Mostly all objects that are created with a *opts* object can receive and use a [winston](https://github.com/winstonjs/winston) logger as *opts.logger*
+
+### Reserve & (commit | rollback)
 
 ### Working with no signallers
 Even when using signallers, get operations on queue never block or wait forever; waiting get operations rearm themselves 

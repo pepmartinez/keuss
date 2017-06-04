@@ -1,7 +1,9 @@
-// redis-list: create a consumer and a producer
-var MQ = require ('../backends/redis-list');
+// mongodb: create a consumer and a producer
+var MQ = require ('../backends/mongo');
 
-var factory_opts = {};
+var factory_opts = {
+  url: 'mongodb://localhost/qeus'
+};
     
 // initialize factory 
 MQ (factory_opts, function (err, factory) {
