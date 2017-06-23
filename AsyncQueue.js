@@ -42,7 +42,7 @@ class AsyncQueue extends Queue {
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
   }
-  
+
   
   ////////////////////////////////////////////////////////////////////////////
   // expected redefinitions on subclasses
@@ -338,6 +338,8 @@ class AsyncQueue extends Queue {
     }
     
     var delta = this._nextDelta ();
+
+    //|| TODO cap out delta to a max of 5 or 10 min
     var self = this;
     this._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
     this._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
@@ -412,8 +414,10 @@ class AsyncQueue extends Queue {
     
     var self = this;
     var getOrReserve_cb = function (err, result) {
-        self._verbose  ('_getOrFail: get res is %j', result, {});
+      self._verbose  ('_getOrFail: get res is %j', result, {});
       
+      self._next_mature_t = null;
+
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         self._verbose  ('_getOrFail: consumer %s (tid %s) was cancelled, ignoring it...', consumer.cid, consumer.tid);
@@ -422,8 +426,7 @@ class AsyncQueue extends Queue {
       
       // TODO eat up errors?
       if (err) {
-        self._error  ('_getOrFail: err %s', err, {});
-        self._next_mature_t = null;
+        self._error ('_getOrFail: err %s', err, {});
 
         if (consumer.cleanup_timeout) {
           clearTimeout (consumer.cleanup_timeout);
@@ -432,7 +435,6 @@ class AsyncQueue extends Queue {
       
         // remove from map
         self._consumers_by_tid.delete (consumer.tid);
-//        self._stats.decr ('consumers');
         consumer.callback (err);
         
         if (self._getOrFail_timeout) {
@@ -442,10 +444,9 @@ class AsyncQueue extends Queue {
         self._getOrFail ();
         return;
       }
-      
+
       if (!result) {
         // queue is empty: rearm
-        self._next_mature_t = null;
         return self._rearm_getOrFail (consumer);
       }
       
@@ -459,7 +460,6 @@ class AsyncQueue extends Queue {
         return self._reinsertAndRearm (result, consumer);
       }
       else {
-        self._next_mature_t = null;
         self._verbose  ('_getOrFail: element is mature by %d msecs, return it', delta);
         self._stats.incr ('get');
         
@@ -470,7 +470,6 @@ class AsyncQueue extends Queue {
         
         // remove from map
         self._consumers_by_tid.delete (consumer.tid);
-//        self._stats.decr ('consumers');
         consumer.callback (null, result);  
 
         if (self._getOrFail_timeout) {
