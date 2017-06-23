@@ -3,6 +3,47 @@ Job Queues on selectable backends (for now: mongodb, redis) for node.js
 
 Still beta, basic structure may be in flux
 
+# Contents
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+
+- [About](#about)
+  - [Concepts](#concepts)
+    - [Queue](#queue)
+    - [Storage](#storage)
+    - [Signaller](#signaller)
+    - [Stats](#stats)
+  - [How all fits together](#how-all-fits-together)
+- [Install](#install)
+- [Usage](#usage)
+  - [Factory API](#factory-api)
+    - [Initialization](#initialization)
+    - [Queue creation](#queue-creation)
+  - [Signaller](#signaller-1)
+  - [Stats](#stats-1)
+  - [Queue API](#queue-api)
+    - [Get Stats](#get-stats)
+    - [Queue name](#queue-name)
+    - [Queue type](#queue-type)
+    - [Queue occupation](#queue-occupation)
+    - [Total Queue occupation](#total-queue-occupation)
+    - [Time of schedule of next message](#time-of-schedule-of-next-message)
+    - [Add element to queue](#add-element-to-queue)
+    - [Get element from queue](#get-element-from-queue)
+    - [Cancel a pending Pop](#cancel-a-pending-pop)
+    - [Commit a reserved element](#commit-a-reserved-element)
+    - [Rolls back a reserved element](#rolls-back-a-reserved-element)
+  - [Redis connections](#redis-connections)
+  - [Logging](#logging)
+  - [Reserve & (commit | rollback)](#reserve--commit--rollback)
+  - [Working with no signallers](#working-with-no-signallers)
+- [Examples](#examples)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 ## About
 Keuss is an attempt or experiment to provide a serverless, persistent and high-available 
 queue middleware supporting delays, using mongodb and redis to provide most of the backend 
