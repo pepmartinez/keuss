@@ -10,9 +10,9 @@ class RPSSignal extends Signal {
     
     this._channel = 'keuss:q:signal:' + queue.type () + ':' + queue.name ();
     this._opts = opts || {};
-
-    this._rediscl_pub = this._factory._rediscl_pub;
-    this._rediscl_sub = this._factory._rediscl_sub;
+    
+    this._rediscl_pub = RedisConn.conn (this._opts);
+    this._rediscl_sub = RedisConn.conn (this._opts);
     
     this._rediscl_sub.subscribe (this._channel);
 
@@ -37,9 +37,6 @@ class RPSSignal extends Signal {
 class RPSSignalFactory {
   constructor (opts) {
     this._opts = opts || {};
-
-    this._rediscl_pub = RedisConn.conn (this._opts);
-    this._rediscl_sub = RedisConn.conn (this._opts);
   }
 
   static Type () {return 'signal:redis-pubsub'}
