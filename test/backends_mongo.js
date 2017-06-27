@@ -69,7 +69,7 @@ describe ('MongoDB queue backend', function () {
         cb();
       })},
       function (cb) {q.next_t (function (err, res) {
-        res.getTime().should.be.approximately (new Date().getTime (), 100);
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
         cb();
       })},
       function (cb) {q.pop ('c1', cb)},
@@ -131,7 +131,7 @@ describe ('MongoDB queue backend', function () {
         cb();
       })},
       function (cb) {q.next_t (function (err, res) {
-        res.getTime().should.be.approximately (new Date().getTime () + 1000, 100);
+        res.getTime().should.be.approximately (new Date().getTime () + 1000, 500);
         cb();
       })},
       function (cb) {q.pop ('c2', function (err, ret) {

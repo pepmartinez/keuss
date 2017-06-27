@@ -59,7 +59,7 @@ class SimpleMongoQueue extends AsyncQueue {
   get (callback) {
   /////////////////////////////////////////
     var self = this;
-    this._col.findOneAndDelete ({}, {sort: {mature : 1}}, function (err, result) {
+    this._col.findOneAndDelete ({mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, function (err, result) {
       if (err) {
         return callback (err);
       }
@@ -77,6 +77,10 @@ class SimpleMongoQueue extends AsyncQueue {
     
     var delay = this._opts.reserve_delay || 120;
     
+    var query = {
+      mature: {$lte: Queue.nowPlusSecs (0)}
+    };
+
     var update = {
       $set: {mature: Queue.nowPlusSecs (delay), reserved: new Date ()},
       $inc: {tries: 1}
@@ -87,7 +91,7 @@ class SimpleMongoQueue extends AsyncQueue {
       returnOriginal: true
     };
     
-    this._col.findOneAndUpdate ({}, update, opts, function (err, result) {
+    this._col.findOneAndUpdate (query, update, opts, function (err, result) {
       if (err) {
         return callback (err);
       }

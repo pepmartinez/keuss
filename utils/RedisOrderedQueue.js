@@ -15,6 +15,7 @@ const _s_lua_code_push = `
 
 const _s_lua_code_pop = `
   -- qname in KEYS[1]
+  -- mature_mark in ARGV[1]
   
   -- get older (lower mature) id from index
   local z_res = redis.call ('ZRANGE', 'keuss:q:ordered_queue:index:' .. KEYS[1], 0, 0, 'WITHSCORES')
@@ -24,7 +25,12 @@ const _s_lua_code_pop = `
   end
   
   local id = z_res[1]
---  local mature = z_res[2]
+  local mature = z_res[2]
+
+  if (mature > ARGV[1]) then
+    -- head is not mature, just end
+    return nil
+  end
   
   -- get val by id from hash
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
@@ -54,7 +60,7 @@ class RedisOrderedQueue {
   }
   
   pop (done) {
-    this._rediscl.roq_pop (this._name, function (err, res) {
+    this._rediscl.roq_pop (this._name, new Date().getTime (), function (err, res) {
       if (err) return done (err);
 
       // res is [id, mature, text]
@@ -74,8 +80,7 @@ class RedisOrderedQueue {
   // queue size NOT including non-mature elements
   size (callback) {
   //////////////////////////////////
-    var now = new Date();
-    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, '-inf', now.getTime(), callback);
+    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, '-inf', new Date().getTime(), callback);
   }
   
   
@@ -83,8 +88,7 @@ class RedisOrderedQueue {
   // queue size of non-mature elements only
   schedSize (callback) {
   //////////////////////////////////
-    var now = new Date();
-    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, now.getTime(), '+inf', callback);
+    this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, new Date().getTime(), '+inf', callback);
   }
   
   

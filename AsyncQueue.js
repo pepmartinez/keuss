@@ -305,16 +305,30 @@ class AsyncQueue extends Queue {
 
 
   /////////////////////////////
-  _nextDelta () {
+  _nextDelta (cb) {
   /////////////////////////////
     if (!this._next_mature_t) {
-      this._verbose  ('_nextDelta: default delta is %d msecs', this._pollInterval);
-      return this._pollInterval;
+      var self = this;
+
+      this.next_t (function (err, res) {
+        if (err) return cb (this._pollInterval);
+
+        if (res) {
+          var delta = res - Queue.now ().getTime();
+          self._verbose  ('_nextDelta: got from queue.next_t to be %d msecs', delta);
+          return cb (delta);
+        }
+        else {
+          self._verbose  ('_nextDelta: null queue.next_t, use default poll interval (%d msecs)', self._pollInterval);
+          return cb (self._pollInterval);
+        }
+      });
     }
-      
-    var delta = this._next_mature_t - Queue.now ().getTime();
-    this._verbose  ('_nextDelta: explicit delta is %d msecs', delta);
-    return delta;
+    else {
+      var delta = this._next_mature_t - Queue.now ().getTime();
+      this._verbose  ('_nextDelta: explicit delta is %d msecs', delta);
+      return cb (delta);
+    }
   }
   
   
@@ -322,7 +336,7 @@ class AsyncQueue extends Queue {
   // return consumer to wset and rearm _getOrFail_timeout
   _rearm_getOrFail (consumer) {
   //////////////////////////////////
-    // queue is empty: push consumer again
+    // queue is empty or non-mature: push consumer again
     if (consumer) {
       this._consumers_by_order.push (consumer);
       this._verbose  ('_rearm_getOrFail: consumer %s (tid %s) returned to wset', consumer.cid, consumer.tid);
@@ -336,13 +350,13 @@ class AsyncQueue extends Queue {
     if (!this._getOrFail_timeout) {
       clearTimeout (this._getOrFail_timeout);
     }
-    
-    var delta = this._nextDelta ();
-
-    //|| TODO cap out delta to a max of 5 or 10 min
+     
     var self = this;
-    this._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
-    this._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
+    this._nextDelta (function (delta) {
+      //|| TODO cap out delta to a max of 5 or 10 min
+      self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
+      self._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
+    });
   }
   
   
