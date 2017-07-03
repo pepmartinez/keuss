@@ -314,6 +314,7 @@ class AsyncQueue extends Queue {
         if (err) return cb (this._pollInterval);
 
         if (res) {
+          self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
           self._verbose  ('_nextDelta: got from queue.next_t to be %d msecs', delta);
           return cb (delta);
@@ -353,7 +354,7 @@ class AsyncQueue extends Queue {
      
     var self = this;
     this._nextDelta (function (delta) {
-      //|| TODO cap out delta to a max of 5 or 10 min
+      // TODO cap out delta to a max of 5 or 10 min
       self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
       self._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
     });
@@ -435,7 +436,11 @@ class AsyncQueue extends Queue {
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         self._verbose  ('_getOrFail: consumer %s (tid %s) was cancelled, ignoring it...', consumer.cid, consumer.tid);
-        return self._reinsertAndRearm (result);
+
+        // do not reinsert if it's using reserve
+        if (!(consumer.reserve)) {
+          return self._reinsertAndRearm (result);
+        }
       }
       
       // TODO eat up errors?
