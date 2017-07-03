@@ -1,25 +1,37 @@
 'use strict';
 
+var mitt = require ('mitt');
+
 var Signal = require ('../Signal');
 
 class LocalSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
     this._factory = factory;
+    this._channel = 'keuss:q:signal:' + queue.type () + ':' + queue.name ();
+
+    var self = this;
+    this._factory._emitter.on (this._channel, function (message) {
+      var mature = message;
+      self._verbose ('got mitt event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
+      self._master.signalInsertion (new Date (mature));
+    });
+
     this._verbose ('created local signaller on queue [%s]', queue.name());
   }
   
   type () {return LocalSignalFactory.Type ()}
   
   emitInsertion (mature, cb) {
-    this._verbose ('calling master.emitInsertion(%d)', mature);
-    this._master.signalInsertion (mature, cb);
+    // convey to local through mitt
+    this._factory._emitter.emit (this._channel, mature.getTime ());
   }
 }
 
 
 class LocalSignalFactory {
   constructor (opts) {
+    this._emitter = mitt();
   }
 
   static Type () {return 'signal:local'}
@@ -29,5 +41,6 @@ class LocalSignalFactory {
     return new LocalSignal (queue, this, opts);
   }
 }
+
 
 module.exports = LocalSignalFactory;
