@@ -13,7 +13,7 @@ class WithLog {
     
     this._name = this._opts.name; 
     this._logger = this._opts.logger;
-    this._level = this._opts.level || LEVELS.verbose;
+    this._level = this._opts.level || LEVELS.info;
   }
   
   logger () {return this._logger}  

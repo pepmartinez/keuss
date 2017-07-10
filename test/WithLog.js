@@ -44,7 +44,7 @@ describe ('WithLog base class', function () {
     s._warn ('elles %s %d', 'etwetrew', 666);
     s._error ('elles %s %d', 'etwetrew', 666);
     
-    fl.called().should.equal(4);
+    fl.called().should.equal(3);
   });
   
   it ('logs ok on set level (silly)', function () {
@@ -100,7 +100,7 @@ describe ('WithLog base class', function () {
     s._warn ('elles %s %d', 'etwetrew', 666);
     s._error ('elles %s %d', 'etwetrew', 666);
     
-    fl.called().should.equal(4);
+    fl.called().should.equal(3);
   });
   
   it ('logs ok with name', function () {
@@ -113,6 +113,6 @@ describe ('WithLog base class', function () {
     s._warn ('elles %s %d', 'etwetrew', 666);
     s._error ('elles %s %d', 'etwetrew', 666);
     
-    fl.called().should.equal(4);
+    fl.called().should.equal(3);
   });
 });
