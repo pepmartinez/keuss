@@ -83,7 +83,7 @@ class RedisOQ extends AsyncQueue {
       else {
         var pl = JSON.parse (res[2]);
 
-        // TODO check res has 2, and parses as json
+        // TODO check res has #2, and parses as json
 
         pl.mature = new Date (parseInt (res[1]));
         pl._id = res[0];
@@ -92,7 +92,73 @@ class RedisOQ extends AsyncQueue {
       }
     });
   }
+
+
+  /////////////////////////////////////////
+  // reserve element: call cb (err, pl) where pl has an id
+  reserve (callback) {
+  /////////////////////////////////////////
+    var self = this;
+    var delay = this._opts.reserve_delay || 120;
+
+    this._roq.reserve (delay*1000, function (err, res) {
+      if (err) {
+        return callback (err);
+      }
+        
+      // res is [id, mature, text]
+      self._verbose  ('reserve: obtained %j', res, {});
+        
+      if (!res) {
+        callback (null, null);
+      }
+      else {
+        var pl = JSON.parse (res[2]);
   
+        // TODO check res has #2, and parses as json
+  
+        pl.mature = new Date (parseInt (res[1]));
+        pl._id = res[0];
+        self._verbose  ('reserve: final pl to return is %j', pl, {});
+        callback (null, pl);
+      }
+    });
+  }
+
+    
+  /////////////////////////////////////////
+  // commit previous reserve, by p.id: call cb (err, true|false), true if element committed
+  commit (id, callback) {
+  /////////////////////////////////////////
+    var self = this;
+
+    this._roq.commit (id, function (err, res) {
+      if (err) {
+        return callback (err);
+      }
+
+      self._verbose  ('commit: res is', res, {});
+      return callback (null, res != null)
+    });
+  }
+    
+
+  /////////////////////////////////////////
+  // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
+  rollback (id, callback) {
+  /////////////////////////////////////////
+    var self = this;
+
+    this._roq.rollback (id, function (err, res) {
+      if (err) {
+        return callback (err);
+      }
+
+      self._verbose  ('rollback: res is', res, {});
+      return callback (null, res != null)
+    });
+  }
+
   
   //////////////////////////////////
   // queue size including non-mature elements

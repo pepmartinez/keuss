@@ -5,6 +5,7 @@ var winston = require ('winston');
 
 var MQ = require ('../backends/redis-oq');
 
+
 var factory = null;
 
 describe ('Redis OrderedQueue backend', function () {
@@ -15,7 +16,7 @@ describe ('Redis OrderedQueue backend', function () {
     opts.logger = new (winston.Logger)({
       transports: [
         new (winston.transports.Console)({
-          level: 'info',
+          level: 'verbose',
           timestamp: function() {return new Date ();},
           formatter: function (options) {
             // Return string will be passed to logger. 
@@ -312,5 +313,191 @@ describe ('Redis OrderedQueue backend', function () {
   });
     
 
+  
+  it ('should do raw reserve & commit as expected', function (done){
+    var q = factory.queue('test_queue');
+    var id = null;
+    
+    async.series([
+      function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
+        cb();
+      })},
+      function (cb) {q.reserve (function (err, res) {
+        id = res._id;
+        res.payload.should.eql ({elem:1, pl:'twetrwte'});
+        res.tries.should.equal (0);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime () + 120000, 500);
+        cb();
+      })},
+      function (cb) {q.commit (id, function (err, res) {
+        res.should.equal (true);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        should.equal (res, null);
+        cb();
+      })}
+    ], function(err, results) {
+      done();
+    });
+  });
+    
+  it ('should do raw reserve & rollback as expected', function (done){
+    var q = factory.queue('test_queue');
+    var id = null;
+    
+    async.series([
+      function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
+        cb();
+      })},
+      function (cb) {q.reserve (function (err, res) {
+        id = res._id;
+        res.payload.should.eql ({elem:1, pl:'twetrwte'});
+        res.tries.should.equal (0);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime () + 120000, 500);
+        cb();
+      })},
+      function (cb) {q.rollback (id, function (err, res) {
+        res.should.equal (true);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
+        cb();
+      })},
+      function (cb) {q.commit (id, function (err, res) {
+        res.should.equal (false);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
+        cb();
+      })},
+      function (cb) {q.get (function (err, res) {
+        res._id.should.eql (id);
+        res.payload.should.eql ({elem:1, pl:'twetrwte'});
+//        res.tries.should.equal (1);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        should.equal (res, null);
+        cb();
+      })}
+    ], function(err, results) {
+      done();
+    });
+  });
+  
+  
+  it ('should do get.reserve & ok as expected', function (done){
+    var q = factory.queue('test_queue');
+    var id = null;
+    
+    async.series([
+      function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
+      function (cb) {q.pop ('c1', {reserve: true}, function (err, res) {
+        id = res._id;
+        res.payload.should.eql ({elem:1, pl:'twetrwte'});
+        res.tries.should.equal (0);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (1);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        res.getTime().should.be.approximately (new Date().getTime () + 120000, 500);
+        cb();
+      })},
+      function (cb) {q.ok (id, function (err, res) {
+        res.should.equal (true);
+        cb ();
+      })},
+      function (cb) {q.size (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.totalSize (function (err, size) {
+        size.should.equal (0);
+        cb();
+      })},
+      function (cb) {q.next_t (function (err, res) {
+        should.equal (res, null);
+        cb();
+      })}
+    ], function(err, results) {
+      done();
+    });
+  });
   
 });
