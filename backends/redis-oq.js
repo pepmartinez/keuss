@@ -51,14 +51,14 @@ class RedisOQ extends AsyncQueue {
     
     var id = entry.id || uuid.v4();
     var mature = entry.mature || Queue.now ();
-    self._verbose  ('insert: id is %s, mature is %s', id, mature);
+    self._verbose ('insert: id is %s, mature is %s', id, mature);
     
     this._roq.push (id, mature.getTime (), JSON.stringify (pl), function (err, res) {
       if (err) {
         return callback (err);
       }
       
-      self._verbose  ('insert: inserted payload %j', pl, {});
+      self._verbose ('insert: inserted payload %j', pl, {});
       callback (null, res);
     });
   }

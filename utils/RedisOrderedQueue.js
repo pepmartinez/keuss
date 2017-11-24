@@ -35,11 +35,6 @@ const _s_lua_code_pop = `
   -- get val by id from hash
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
 
-  if (string.sub (val, 1,2) == '* ') then
-    -- already reserved one
-    val = string.sub (val, 2)
-  end 
-
   -- delete from index, hash
   redis.call ('ZREM', 'keuss:q:ordered_queue:index:' .. KEYS[1], id)
   redis.call ('HDEL', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
@@ -72,13 +67,12 @@ const _s_lua_code_reserve = `
   
   -- get val by id from hash
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
+  local obj_val = cjson.decode (val)
 
-  if (string.sub (val, 1,2) == '* ') then
-    -- already reserved one
-    val = string.sub (val, 2)
-  else  
-    -- mark val in hash as 'reserved'
-    redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, '* ' .. val)
+  if (not (obj_val.reserved)) then
+    -- mark as reserved
+    obj_val.reserved = true
+    redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, cjson.encode (obj_val))
   end
 
   return { id, z_res[2], val }
@@ -96,7 +90,9 @@ const _s_lua_code_commit = `
   end
 
   -- check if it was reserved
-  if (string.sub (val, 1,2) ~= '* ') then
+  local obj_val = cjson.decode (val)
+  
+  if (not (obj_val.reserved)) then
     -- not a reserved one
     return nil
   end
@@ -119,8 +115,10 @@ const _s_lua_code_rollback = `
   if (val == nil) then
     return nil
   end
+
+  local obj_val = cjson.decode (val)
   
-  if (string.sub (val, 1,2) ~= '* ') then
+  if (not (obj_val.reserved)) then
     -- not a reserved one
     return nil
   end
@@ -129,7 +127,8 @@ const _s_lua_code_rollback = `
   redis.call ('ZADD', 'keuss:q:ordered_queue:index:' .. KEYS[1], 'XX', ARGV[2], id)
 
   -- reset val
-  redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, string.sub (val, 2))
+  obj_val.reserved = false
+  redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, cjson.encode (obj_val))
 
   return id
 `;
