@@ -1,5 +1,8 @@
 'use strict';
 
+var uuid =  require ('uuid');
+
+
 const _s_lua_code_push = `
   -- qname in KEYS[1]
   -- id in ARGV[1]
@@ -39,7 +42,7 @@ const _s_lua_code_pop = `
   redis.call ('ZREM', 'keuss:q:ordered_queue:index:' .. KEYS[1], id)
   redis.call ('HDEL', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
   
-  return { id, z_res[2], val }
+  return val
 `;
 
 const _s_lua_code_reserve = `
@@ -75,7 +78,7 @@ const _s_lua_code_reserve = `
     redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, cjson.encode (obj_val))
   end
 
-  return { id, z_res[2], val }
+  return val
 `;
 
 const _s_lua_code_commit = `
@@ -128,6 +131,7 @@ const _s_lua_code_rollback = `
 
   -- reset val
   obj_val.reserved = false
+  obj_val.tries = obj_val.tries + 1
   redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id, cjson.encode (obj_val))
 
   return id
@@ -143,14 +147,16 @@ class RedisOrderedQueue {
   }
   
   //////////////////////////////////
-  push (id, mature, obj, done) {
+  push (entry, done) {
   //////////////////////////////////
-    this._rediscl.roq_push (this._name, id, mature, obj, function (err, res) {
-      if (err) return done (err);
-      
-      // res is 1
-      done (null, res);
-    });
+    var pl = {
+      _id:     entry.id || uuid.v4(),
+      payload: entry.payload,
+      tries:   entry.tries,
+      mature:  (entry.mature || new Date ()).getTime ()
+    };
+    
+    this._rediscl.roq_push (this._name, pl._id, pl.mature, JSON.stringify (pl), done);
   }
   
   //////////////////////////////////
@@ -158,9 +164,10 @@ class RedisOrderedQueue {
   //////////////////////////////////
     this._rediscl.roq_pop (this._name, new Date().getTime (), function (err, res) {
       if (err) return done (err);
-
-      // res is [id, mature, text]
-      done (null, res);
+      if (!res) return done ();
+      var obj = JSON.parse (res);
+      obj.mature = obj.mature && new Date (obj.mature);
+      done (null, obj);
     });
   }
   
@@ -169,32 +176,23 @@ class RedisOrderedQueue {
   //////////////////////////////////
     this._rediscl.roq_reserve (this._name, new Date().getTime (), incr, function (err, res) {
       if (err) return done (err);
-  
-      // res is [id, mature, text]
-      done (null, res);
+      if (!res) return done ();
+      var obj = JSON.parse (res);
+      obj.mature = obj.mature && new Date (obj.mature);
+      done (null, obj);
     });
   }
   
   //////////////////////////////////
   commit (id, done) {
   //////////////////////////////////
-    this._rediscl.roq_commit (this._name, id, function (err, res) {
-      if (err) return done (err);
-  
-      // res is id
-      done (null, res);
-    });
+    this._rediscl.roq_commit (this._name, id, done);
   }
   
   //////////////////////////////////
   rollback (id, done) {
   //////////////////////////////////
-    this._rediscl.roq_rollback (this._name, id, new Date().getTime (), function (err, res) {
-      if (err) return done (err);
-  
-      // res is id
-      done (null, res);
-    });
+    this._rediscl.roq_rollback (this._name, id, new Date().getTime (), done);
   }
   
   //////////////////////////////////

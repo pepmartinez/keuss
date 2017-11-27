@@ -2,7 +2,6 @@
 
 var async = require ('async');
 var _ =     require ('lodash');
-var uuid =  require ('uuid');
 
 var AsyncQueue =        require ('../AsyncQueue');
 var RedisConn =         require ('../utils/RedisConn');
@@ -44,21 +43,14 @@ class RedisOQ extends AsyncQueue {
   insert (entry, callback) {
   /////////////////////////////////////////
     var self = this;
-    var pl = {
-      payload: entry.payload,
-      tries:   entry.tries
-    };
+    self._verbose ('insert: %j', entry);
     
-    var id = entry.id || uuid.v4();
-    var mature = entry.mature || Queue.now ();
-    self._verbose ('insert: id is %s, mature is %s', id, mature);
-    
-    this._roq.push (id, mature.getTime (), JSON.stringify (pl), function (err, res) {
+    this._roq.push (entry, function (err, res) {
       if (err) {
         return callback (err);
       }
       
-      self._verbose ('insert: inserted payload %j', pl, {});
+      self._verbose ('insert: inserted payload %j', res, {});
       callback (null, res);
     });
   }
@@ -74,21 +66,14 @@ class RedisOQ extends AsyncQueue {
         return callback (err);
       }
       
-      // res is [id, mature, text]
       self._verbose  ('get: obtained %j', res, {});
       
       if (!res) {
         callback (null, null);
       }
       else {
-        var pl = JSON.parse (res[2]);
-
-        // TODO check res has #2, and parses as json
-
-        pl.mature = new Date (parseInt (res[1]));
-        pl._id = res[0];
-        self._verbose  ('get: final pl to return is %j', pl, {});
-        callback (null, pl);
+        self._verbose  ('get: final pl to return is %j', res, {});
+        callback (null, res);
       }
     });
   }
@@ -106,21 +91,14 @@ class RedisOQ extends AsyncQueue {
         return callback (err);
       }
         
-      // res is [id, mature, text]
       self._verbose  ('reserve: obtained %j', res, {});
         
       if (!res) {
         callback (null, null);
       }
       else {
-        var pl = JSON.parse (res[2]);
-  
-        // TODO check res has #2, and parses as json
-  
-        pl.mature = new Date (parseInt (res[1]));
-        pl._id = res[0];
-        self._verbose  ('reserve: final pl to return is %j', pl, {});
-        callback (null, pl);
+        self._verbose  ('reserve: final pl to return is %j', res, {});
+        callback (null, res);
       }
     });
   }
