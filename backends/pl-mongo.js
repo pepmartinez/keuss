@@ -1,0 +1,338 @@
+'use strict';
+
+var async = require ('async');
+var _ =     require ('lodash');
+
+var MongoClient = require ('mongodb').MongoClient;
+var mongo =       require ('mongodb');
+
+var AsyncQueue = require ('../AsyncQueue');
+var Queue =      require ('../Queue');
+
+
+class PipelinedMongoQueue extends AsyncQueue {
+  
+  //////////////////////////////////////////////
+  constructor (name, pipeline, opts) {
+  //////////////////////////////////////////////
+    super (name, opts);
+
+    this._pipeline = pipeline;
+    this._col = this._pipeline._col;
+  }
+  
+  
+  /////////////////////////////////////////
+  static Type () {
+  /////////////////////////////////////////
+    return 'mongo:pipeline';
+  }
+
+  /////////////////////////////////////////
+  type () {
+  /////////////////////////////////////////
+    return 'mongo:pipeline';
+  }
+  
+  /////////////////////////////////////////
+  // add element to queue
+  insert (entry, callback) {
+  /////////////////////////////////////////
+    var self = this;
+    entry._q = this._name;
+
+    this._col.insertOne (entry, {}, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      self._verbose  ('insert: inserted payload %j', entry, {})
+        
+      // TODO result.insertedCount must be 1
+
+      callback (null, result.insertedId);
+    });
+  }
+  
+  
+  /////////////////////////////////////////
+  // get element from queue
+  get (callback) {
+  /////////////////////////////////////////
+    var self = this;
+    this._col.findOneAndDelete ({_q: this._name, mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      self._verbose  ('get: obtained %j', result, {});
+      callback (null, result && result.value);
+    });
+  }
+  
+  
+  //////////////////////////////////
+  // reserve element: call cb (err, pl) where pl has an id
+  reserve (callback) {
+    var self = this;
+    
+    var delay = this._opts.reserve_delay || 120;
+    
+    var query = {
+      _q:     this._name,
+      mature: {$lte: Queue.nowPlusSecs (0)}
+    };
+
+    var update = {
+      $set: {mature: Queue.nowPlusSecs (delay), reserved: new Date ()},
+      $inc: {tries: 1}
+    };
+    
+    var opts = {
+      sort: {mature : 1}, 
+      returnOriginal: true
+    };
+    
+    this._col.findOneAndUpdate (query, update, opts, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      self._verbose  ('reserve: obtained %j', result, {});
+      callback (null, result && result.value);
+    });
+  }
+  
+  
+  //////////////////////////////////
+  // commit previous reserve, by p.id
+  commit (id, callback) {
+    var self = this;
+    
+    try {
+      var query =  {
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
+        _q: this._name,
+        reserved: {$exists: true}
+      };
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as rollback id: ' + e);
+    }
+    
+    this._col.deleteOne (query, {}, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      self._verbose  ('commit (%s): res is %j', id, result, {});
+      callback (null, result && (result.deletedCount == 1));
+    });
+  }
+  
+  
+  //////////////////////////////////
+  // rollback previous reserve, by p.id
+  rollback (id, callback) {
+    var self = this;
+    
+    try {
+      var query =  {
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
+        _q: this._name,
+        reserved: {$exists: true}
+      };
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as rollback id: ' + e);
+    }
+    
+    var update = {
+      $set:   {mature: Queue.now ()}, 
+      $unset: {reserved: ''}
+    };
+
+    this._col.updateOne (query, update, {}, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      self._verbose ('rollback (%s): res is %j', id, result, {});
+      callback (null, result && (result.modifiedCount == 1));
+    });
+  }
+  
+  
+  //////////////////////////////////
+  // queue size including non-mature elements
+  totalSize (callback) {
+  //////////////////////////////////
+    var q = {_q: this._name};
+    var opts = {};
+    this._col.count (q, opts, callback);
+  }
+  
+  
+  //////////////////////////////////
+  // queue size NOT including non-mature elements
+  size (callback) {
+  //////////////////////////////////
+    var q = {
+      _q: this._name,
+      mature : {$lte : AsyncQueue.now ()}
+    };
+    
+    var opts = {};
+    
+    this._col.count (q, opts, callback);
+  }
+  
+  
+  //////////////////////////////////
+  // queue size of non-mature elements only
+  schedSize (callback) {
+  //////////////////////////////////
+    var q = {
+      _q: this._name,
+      mature : {$gt : AsyncQueue.now ()}
+    };
+    
+    var opts = {};
+    
+    this._col.count (q, opts, callback);
+  }
+
+  
+  /////////////////////////////////////////
+  // get element from queue
+  next_t (callback) {
+  /////////////////////////////////////////
+    var self = this;
+    this._col.find ({_q: this._name}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      self._verbose  ('next_t: obtained %j', result, {});
+      callback (null, result && result.mature);
+    });
+  }
+};
+
+
+class Pipeline {
+  constructor (name, factory) {
+    this._name = name;
+    this._col = factory._mongo_conn.collection (this._name);
+    this.ensureIndexes (function (err) {});
+
+    console.log ('created pipeline with name %s', name);
+  }
+
+  queue (name, opts) {
+    console.log ('pipeline[%s]: requested queue named', this._name, name);
+    return new PipelinedMongoQueue (name, this, opts);
+  }
+
+  list (cb) {
+    // TODO
+    this._mongo_conn.collections (function (err, collections) {
+      if (err) {
+        return cb (err);
+      }
+      
+      var colls = [];
+      
+      collections.forEach (function (coll) {
+        colls.push (coll.s.name)
+      });
+      
+      cb (null, colls);
+    });
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////
+  // private parts
+
+  //////////////////////////////////////////////////////////////////
+  // create needed indexes for O(1) functioning
+  ensureIndexes (cb) {
+  //////////////////////////////////////////////////////////////////
+    this._col.ensureIndex ({_q : 1, mature : 1}, function (err) {
+      return cb (err);
+    })
+  }
+}
+
+
+class Factory {
+  constructor (opts, mongo_conn) {
+    this._opts = opts;
+    this._mongo_conn = mongo_conn;
+
+    this._pipelines = {};
+
+    console.log ('created factory with options %j', opts);
+  }
+  
+  queue (name, opts) {
+    var pl_name = opts.pipeline || 'default';
+    
+    var pipeline = this._pipelines[pl_name];
+    if (!pipeline) {
+      this._pipelines[pl_name] = new Pipeline (pl_name, this);
+      pipeline = this._pipelines[pl_name];
+    }
+
+    var full_opts = {}
+    _.merge(full_opts, this._opts, opts);
+    return pipeline.queue (name, full_opts);
+  }
+
+  close (cb) {
+    if (this._mongo_conn) {
+      this._mongo_conn.close ();
+      this._mongo_conn = null;
+    } 
+    
+    if (cb) {
+      return cb ();
+    }
+  }
+  
+  type () {
+    return PipelinedMongoQueue.Type ();
+  }
+
+  list (cb) {
+    this._mongo_conn.collections (function (err, collections) {
+      if (err) {
+        return cb (err);
+      }
+      
+      var colls = [];
+      
+      collections.forEach (function (coll) {
+        colls.push (coll.s.name)
+      });
+      
+      cb (null, colls);
+    });
+  }
+}
+
+function creator (opts, cb) {
+  var _opts = opts || {};
+  var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
+    
+  MongoClient.connect (m_url, function (err, db) {
+    if (err) return cb (err);
+    return cb (null, new Factory (_opts, db));
+  });
+}
+
+module.exports = creator;
+
+
+
+
+
