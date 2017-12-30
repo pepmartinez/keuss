@@ -317,6 +317,7 @@ class AsyncQueue extends Queue {
           self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
           self._verbose  ('_nextDelta: got from queue.next_t to be %d msecs', delta);
+          if (delta > self._pollInterval) delta = self._pollInterval;
           return cb (delta);
         }
         else {
@@ -328,6 +329,8 @@ class AsyncQueue extends Queue {
     else {
       var delta = this._next_mature_t - Queue.now ().getTime();
       this._verbose  ('_nextDelta: explicit delta is %d msecs', delta);
+      if (delta > this._pollInterval) delta = this._pollInterval;
+
       return cb (delta);
     }
   }
@@ -354,7 +357,6 @@ class AsyncQueue extends Queue {
      
     var self = this;
     this._nextDelta (function (delta) {
-      // TODO cap out delta to a max 
       self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
       self._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
     });
