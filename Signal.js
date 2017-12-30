@@ -1,12 +1,8 @@
 'use strict';
 
-var WithLog = require ('./utils/WithLog');
 
-
-class Signal extends WithLog {
+class Signal {
   constructor (master, opts) {
-    super (opts);
-    
     this._opts = opts || {};
     this._master = master;
     this._name = 'signal:' + master._name;
@@ -16,7 +12,7 @@ class Signal extends WithLog {
     this._buffered_mature = null;
     this._lastHRT = null;
     
-    this._verbose ('Signaller created with bufferTime %d msecs', this._bufferTime);
+    // ('Signaller created with bufferTime %d msecs', this._bufferTime);
   }
 
   signalInsertion (mature, cb) {
@@ -27,31 +23,31 @@ class Signal extends WithLog {
     }
     
     if (!this._lastHRT) {
+      // first hit
       this._lastHRT = process.hrtime ();
-      this._verbose ('first hit');
       emit = true;
     }
     else {
       var hrt = process.hrtime (this._lastHRT);
       var hrt_ms = Signal._hrtimeAsMSecs (hrt);
     
-      this._verbose ('msec since last hit: %d', hrt_ms);
+      // ('msec since last hit: %d', hrt_ms);
     
       if (hrt_ms > this._bufferTime) {
-        this._verbose ('last hit too away in the past, emitting');
+        // last hit too away in the past, emitting
         emit = true;
       }
     }
     
     if (emit) {
-      this._verbose ('emitting buffered hit with mature: %d', this._buffered_mature);
+      // ('emitting buffered hit with mature: %d', this._buffered_mature);
       this.emitInsertion (this._buffered_mature, cb);
       
       this._buffered_mature = 0;
       this._lastHRT = process.hrtime ();
     }
     else {
-      this._verbose ('last hit too close in the past, not emitting');
+      // last hit too close in the past, not emitting
       if (cb) cb ();
     }
   }

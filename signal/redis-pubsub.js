@@ -16,7 +16,8 @@ class RPSSignal extends Signal {
     
     this._factory._emitter.on (this._channel, function (message) {
       var mature = parseInt (message);
-      self._verbose ('got mitt pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
+      
+      // ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
 
@@ -24,14 +25,12 @@ class RPSSignal extends Signal {
     this._rediscl_sub = this._factory._rediscl_sub;
     
     this._rediscl_sub.subscribe (this._channel);
-    
-    this._verbose ('created redis-pubsub signaller on channel [%s]', this._channel);
   }
     
   type () {return RPSSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-    this._verbose ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
+    // ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
     this._rediscl_pub.publish (this._channel, mature.getTime());
   }
 }

@@ -35,24 +35,12 @@ class RedisOQ extends AsyncQueue {
   }
   
   
-  
-  // TODO: reload scripts if fail (causd by redis restart or failover)
-  
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
     var self = this;
-    self._verbose ('insert: %j', entry);
-    
-    this._roq.push (entry, function (err, res) {
-      if (err) {
-        return callback (err);
-      }
-      
-      self._verbose ('insert: inserted payload %j', res, {});
-      callback (null, res);
-    });
+    this._roq.push (entry, callback);
   }
   
   
@@ -61,21 +49,7 @@ class RedisOQ extends AsyncQueue {
   get (callback) {
   /////////////////////////////////////////
     var self = this;
-    this._roq.pop (function (err, res) {
-      if (err) {
-        return callback (err);
-      }
-      
-      self._verbose  ('get: obtained %j', res, {});
-      
-      if (!res) {
-        callback (null, null);
-      }
-      else {
-        self._verbose  ('get: final pl to return is %j', res, {});
-        callback (null, res);
-      }
-    });
+    this._roq.pop (callback);
   }
 
 
@@ -86,21 +60,7 @@ class RedisOQ extends AsyncQueue {
     var self = this;
     var delay = this._opts.reserve_delay || 120;
 
-    this._roq.reserve (delay*1000, function (err, res) {
-      if (err) {
-        return callback (err);
-      }
-        
-      self._verbose  ('reserve: obtained %j', res, {});
-        
-      if (!res) {
-        callback (null, null);
-      }
-      else {
-        self._verbose  ('reserve: final pl to return is %j', res, {});
-        callback (null, res);
-      }
-    });
+    this._roq.reserve (delay*1000, callback);
   }
 
     
@@ -115,7 +75,6 @@ class RedisOQ extends AsyncQueue {
         return callback (err);
       }
 
-      self._verbose  ('commit: res is', res, {});
       return callback (null, res != null)
     });
   }
@@ -132,7 +91,6 @@ class RedisOQ extends AsyncQueue {
         return callback (err);
       }
 
-      self._verbose  ('rollback: res is', res, {});
       return callback (null, res != null)
     });
   }

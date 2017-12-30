@@ -44,9 +44,7 @@ class SimpleMongoQueue extends AsyncQueue {
       if (err) {
         return callback (err);
       }
-      
-      self._verbose  ('insert: inserted payload %j', entry, {})
-        
+
       // TODO result.insertedCount must be 1
 
       callback (null, result.insertedId);
@@ -64,7 +62,6 @@ class SimpleMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('get: obtained %j', result, {});
       callback (null, result && result.value);
     });
   }
@@ -96,7 +93,6 @@ class SimpleMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('reserve: obtained %j', result, {});
       callback (null, result && result.value);
     });
   }
@@ -122,7 +118,6 @@ class SimpleMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('commit (%s): res is %j', id, result, {});
       callback (null, result && (result.deletedCount == 1));
     });
   }
@@ -152,7 +147,7 @@ class SimpleMongoQueue extends AsyncQueue {
       if (err) {
         return callback (err);
       }
-      self._verbose ('rollback (%s): res is %j', id, result, {});
+      
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -206,7 +201,6 @@ class SimpleMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('next_t: obtained %j', result, {});
       callback (null, result && result.mature);
     });
   }

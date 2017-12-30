@@ -3,7 +3,6 @@
 var _ =     require ('lodash');
 
 var RedisConn =  require ('../utils/RedisConn');
-var WithLog =    require ('../utils/WithLog');
 
 var _s_rediscl = undefined;
 var _s_opts = undefined;
@@ -11,16 +10,13 @@ var _s_opts = undefined;
 /*
  * redis using HINCRBY
 */
-class RedisStats extends WithLog {
+class RedisStats {
   constructor (name, factory, opts) {
-    super (opts);
     this._name = 'keuss:stats:' + name;
     this._opts = opts || {};
     this._factory = factory
     this._rediscl = factory._rediscl;
     this._cache = {};
-    
-    this._verbose ('created redis stats on key [%s]', this._name);
   }
   
   type () {return this._factory.type ()}
@@ -49,7 +45,7 @@ class RedisStats extends WithLog {
       _.forEach (self._cache, function (value, key) {
         if (value) {
           self._rediscl.hincrby (self._name, key, value);
-          self._verbose ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
+          // ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
           self._cache[key] = 0;
         }
       });

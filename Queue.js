@@ -1,18 +1,15 @@
 'use strict';
 
 var MemStats = require ('./stats/mem');
-var WithLog =  require ('./utils/WithLog');
 
 
-class Queue extends WithLog {
+class Queue {
   //////////////////////////////////////////////
   constructor (name, opts) {
   //////////////////////////////////////////////
     if (!name) {
       throw new Error ('provide a queue name');
     }
-    
-    super (opts);
     
     // original opts
     this._opts = opts || {};
@@ -24,9 +21,6 @@ class Queue extends WithLog {
     if (!this._opts.stats.opts) {
       this._opts.stats.opts = {}
     }
-    
-    this._opts.stats.opts.logger = this.logger ();
-    this._opts.stats.opts.level =  this.level ();
     
     // queue name
     this._name = name;

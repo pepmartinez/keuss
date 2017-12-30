@@ -16,7 +16,7 @@ class AsyncQueue extends Queue {
     super (name, opts);
 
     // defaults
-    this._pollInterval = this._opts.pollInterval || 15000;
+    this._pollInterval = this._opts.pollInterval || 60000;
     
     // list of waiting consumers
     this._consumers_by_order = [];
@@ -32,9 +32,6 @@ class AsyncQueue extends Queue {
     if (!this._opts.signaller.opts) {
       this._opts.signaller.opts = {}
     }
-    
-    this._opts.signaller.opts.logger = this.logger();
-    this._opts.signaller.opts.level = this.level();
     
     var signaller_factory = this._opts.signaller.provider || new LocalSignal ();
     this._signaller = signaller_factory.signal (this, this._opts.signaller.opts);
@@ -115,17 +112,17 @@ class AsyncQueue extends Queue {
   signalInsertion (mature, cb) {
   /////////////////////////////////////////
     if (this._next_mature_t && (this._next_mature_t <= mature.getTime ())) {
-      this._verbose  ('put: this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', mature, this._next_mature_t)
+    // ('put: this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', mature, this._next_mature_t)
     }
     else {
       this._next_mature_t = mature.getTime ();
       
       if (this._getOrFail_timeout) {
         clearTimeout (this._getOrFail_timeout);
-        this._verbose  ('put: _getOrFail_timeout was set, cancelled')
+        // _getOrFail_timeout was set, cancelled
       }
       
-      this._verbose  ('put: re-triggering _getOrFail')
+      // re-trigger _getOrFail
       this._getOrFail ();
     }
     
@@ -202,8 +199,7 @@ class AsyncQueue extends Queue {
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-        self._verbose ('get: timed out %d msecs on consumer %s', opts.timeout, cid);
-
+        // ('get: timed out %d msecs on consumer %s', opts.timeout, cid);
         consumer_data.callback = null;
         self._consumers_by_tid.delete (consumer_data.tid);
 
@@ -218,9 +214,7 @@ class AsyncQueue extends Queue {
     
     this._consumers_by_order.push (consumer_data);
     this._consumers_by_tid.set (tid, consumer_data);
-    
-    this._verbose  ('get: added consumer %s (tid %s)', consumer_data.cid, consumer_data.tid);
-    
+
     if (this._getOrFail_timeout) {
       clearTimeout (this._getOrFail_timeout);
     }
@@ -273,9 +267,7 @@ class AsyncQueue extends Queue {
       
       // remove from map
       this._consumers_by_tid.delete (tid);
-      
-      this._verbose  ('cancel: cancelled %s. consumers left waiting: %d, total consumers: %d', tid, this._consumers_by_order.length, this.nConsumers ());
-    }
+   }
   }
 
   
@@ -308,6 +300,7 @@ class AsyncQueue extends Queue {
   _nextDelta (cb) {
   /////////////////////////////
     if (!this._next_mature_t) {
+      // there's no precalculated value, get it from backend
       var self = this;
 
       this.next_t (function (err, res) {
@@ -316,19 +309,16 @@ class AsyncQueue extends Queue {
         if (res) {
           self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
-          self._verbose  ('_nextDelta: got from queue.next_t to be %d msecs', delta);
           if (delta > self._pollInterval) delta = self._pollInterval;
           return cb (delta);
         }
         else {
-          self._verbose  ('_nextDelta: null queue.next_t, use default poll interval (%d msecs)', self._pollInterval);
           return cb (self._pollInterval);
         }
       });
     }
     else {
       var delta = this._next_mature_t - Queue.now ().getTime();
-      this._verbose  ('_nextDelta: explicit delta is %d msecs', delta);
       if (delta > this._pollInterval) delta = this._pollInterval;
 
       return cb (delta);
@@ -343,11 +333,6 @@ class AsyncQueue extends Queue {
     // queue is empty or non-mature: push consumer again
     if (consumer) {
       this._consumers_by_order.push (consumer);
-      this._verbose  ('_rearm_getOrFail: consumer %s (tid %s) returned to wset', consumer.cid, consumer.tid);
-      this._verbose  ('_rearm_getOrFail: consumers left waiting: %d, total consumers: %d', this._consumers_by_order.length, this.nConsumers ());
-    }
-    else {
-      this._verbose  ('_rearm_getOrFail: no consumer to be returned to wset');
     }
     
     // rearm 
@@ -358,7 +343,6 @@ class AsyncQueue extends Queue {
     var self = this;
     this._nextDelta (function (delta) {
       self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
-      self._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
     });
   }
   
@@ -367,24 +351,15 @@ class AsyncQueue extends Queue {
   _reinsertAndRearm (result, consumer) {
   ///////////////////////////////////////////////////////////
     if (result) {
-      this._verbose  ('_reinsertAndRearm: re-inserting non-mature %j', result, {});
-      
       var self = this;
       this.insert (result, function (err, r) {
         if (err) {
-          self._error  ('_reinsertAndRearm: err while reinserting non-mature: %s', err, {});
         }
-        
-        self._verbose  ('_reinsertAndRearm: re-inserted %j', result, {});
-        
-        self._verbose  ('_reinsertAndRearm: _next_mature_t was %d', self._next_mature_t);
-        
+
         if ((!self._next_mature_t) || (self._next_mature_t > result.mature.getTime ())) {
           self._next_mature_t = result.mature.getTime ();
         }
-        
-        self._verbose  ('_reinsertAndRearm: _next_mature_t is now %d', self._next_mature_t);
-        
+
         self._rearm_getOrFail (consumer);
       });
     }
@@ -401,43 +376,33 @@ class AsyncQueue extends Queue {
     // seeks an returns one element from the queue to the top of the waitinglist 
     // Only those whose maturity time is in the past are take into account, 
     // and we get the newest of them all
-    this._verbose  ('_getOrFail: enter, _getOrFail_timeout is %s', (this._getOrFail_timeout ? 'set' : 'unset'));
-    
+
     this._getOrFail_timeout = null;
     
     if (this._consumers_by_order.length == 0) {
       // no consumers waiting
-      this._verbose  ('_getOrFail: no consumers, end');
       return;
     }
     
     let consumer = this._consumers_by_order.shift ();
-    this._verbose  ('_getOrFail: chose consumer %s (tid %s)', consumer.cid, consumer.tid);
-    this._verbose  ('_getOrFail: consumers left waiting: %d, total consumers: %d', this._consumers_by_order.length, this.nConsumers ());
 
     while (!consumer.callback) {
-      this._verbose  ('_getOrFail: chose consumer %j that already timed out or has been cancelled, ignoring it...', consumer, {});
+      //  consumer already timed out or has been cancelled, ignoring it...
       
       if (this._consumers_by_order.length == 0) {
         // no consumers waiting
-        this._verbose  ('_getOrFail: no consumers, end');
         return;
       }
       
       consumer = this._consumers_by_order.shift ();
-      this._verbose  ('_getOrFail: chose consumer %s (tid %s)', consumer.cid, consumer.tid);
-      this._verbose  ('_getOrFail: consumers left waiting: %d, total consumers: %d', this._consumers_by_order.length, this.nConsumers ());
     }
     
     var self = this;
     var getOrReserve_cb = function (err, result) {
-      self._verbose  ('_getOrFail: get res is %j', result, {});
-      
       self._next_mature_t = null;
 
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
-        self._verbose  ('_getOrFail: consumer %s (tid %s) was cancelled, ignoring it...', consumer.cid, consumer.tid);
 
         // do not reinsert if it's using reserve
         if (!(consumer.reserve)) {
@@ -447,8 +412,6 @@ class AsyncQueue extends Queue {
       
       // TODO eat up errors?
       if (err) {
-        self._error ('_getOrFail: err %s', err, {});
-
         if (consumer.cleanup_timeout) {
           clearTimeout (consumer.cleanup_timeout);
           consumer.cleanup_timeout = null;
@@ -473,8 +436,6 @@ class AsyncQueue extends Queue {
       
       // got an element
       var delta = result.mature.getTime() - Queue.now ().getTime();
-      self._verbose  ('_getOrFail: got an element, mature delta is %d msecs', delta);
-
       self._stats.incr ('get');
         
       if (consumer.cleanup_timeout) {

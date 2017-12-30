@@ -49,7 +49,6 @@ class RedisListQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('insert: inserted payload %j', pl, {});
       callback (null, res);
     });
   }
@@ -64,8 +63,6 @@ class RedisListQueue extends AsyncQueue {
       if (err) {
         return callback (err);
       }
-      
-      self._verbose  ('get: obtained %j', res, {});
       
       if (!res) {
         callback (null, null);

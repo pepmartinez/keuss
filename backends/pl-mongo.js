@@ -46,8 +46,6 @@ class PipelinedMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('insert: inserted payload %j', entry, {})
-        
       // TODO result.insertedCount must be 1
 
       callback (null, result.insertedId);
@@ -65,7 +63,6 @@ class PipelinedMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('get: obtained %j', result, {});
       callback (null, result && result.value);
     });
   }
@@ -98,7 +95,6 @@ class PipelinedMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('reserve: obtained %j', result, {});
       callback (null, result && result.value);
     });
   }
@@ -125,7 +121,6 @@ class PipelinedMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('commit (%s): res is %j', id, result, {});
       callback (null, result && (result.deletedCount == 1));
     });
   }
@@ -156,7 +151,7 @@ class PipelinedMongoQueue extends AsyncQueue {
       if (err) {
         return callback (err);
       }
-      self._verbose ('rollback (%s): res is %j', id, result, {});
+      
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -212,7 +207,6 @@ class PipelinedMongoQueue extends AsyncQueue {
         return callback (err);
       }
       
-      self._verbose  ('next_t: obtained %j', result, {});
       callback (null, result && result.mature);
     });
   }
@@ -224,12 +218,9 @@ class Pipeline {
     this._name = name;
     this._col = factory._mongo_conn.collection (this._name);
     this.ensureIndexes (function (err) {});
-
-    console.log ('created pipeline with name %s', name);
   }
 
   queue (name, opts) {
-    console.log ('pipeline[%s]: requested queue named', this._name, name);
     return new PipelinedMongoQueue (name, this, opts);
   }
 
@@ -270,8 +261,6 @@ class Factory {
     this._mongo_conn = mongo_conn;
 
     this._pipelines = {};
-
-    console.log ('created factory with options %j', opts);
   }
   
   queue (name, opts) {
@@ -331,8 +320,3 @@ function creator (opts, cb) {
 }
 
 module.exports = creator;
-
-
-
-
-
