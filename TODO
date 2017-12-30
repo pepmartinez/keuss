@@ -1,9 +1,5 @@
 * signal queue creation or read queues on refresh?
-* add at-least-one semantics for queues (reserve/commit/rollback)
-  + added base (done)
-  + added to mongo (done)
-  + add to redis-oq
 * bridges?
 * deadletter (tied to at-least-one)?
-* allow passing redis conn/obj (ioredis Redis or Cluster) on anything using redis
 * queue traversal/query
+* async_queue._rearm_getOrFail (consumer): cap next_t from queue to a maximum (this._pollInterval)

@@ -354,7 +354,7 @@ class AsyncQueue extends Queue {
      
     var self = this;
     this._nextDelta (function (delta) {
-      // TODO cap out delta to a max of 5 or 10 min
+      // TODO cap out delta to a max 
       self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
       self._verbose  ('_rearm_getOrFail: _getOrFail rearmed, wait is %d', delta);
     });
@@ -465,39 +465,31 @@ class AsyncQueue extends Queue {
       }
 
       if (!result) {
-        // queue is empty: rearm
+        // queue is empty or non-mature: rearm
         return self._rearm_getOrFail (consumer);
       }
       
       // got an element
       var delta = result.mature.getTime() - Queue.now ().getTime();
       self._verbose  ('_getOrFail: got an element, mature delta is %d msecs', delta);
-      
-      if (delta > 0) {
-        // element not mature, reinsert & rearm
-        self._verbose  ('_getOrFail: got an element, non-mature by %d msecs', delta);
-        return self._reinsertAndRearm (result, consumer);
-      }
-      else {
-        self._verbose  ('_getOrFail: element is mature by %d msecs, return it', delta);
-        self._stats.incr ('get');
-        
-        if (consumer.cleanup_timeout) {
-          clearTimeout (consumer.cleanup_timeout);
-          consumer.cleanup_timeout = null;
-        }
-        
-        // remove from map
-        self._consumers_by_tid.delete (consumer.tid);
-        consumer.callback (null, result);  
 
-        if (self._getOrFail_timeout) {
-          clearTimeout (self._getOrFail_timeout);
-        }
+      self._stats.incr ('get');
         
-        self._getOrFail ();
-        return;
+      if (consumer.cleanup_timeout) {
+        clearTimeout (consumer.cleanup_timeout);
+        consumer.cleanup_timeout = null;
       }
+        
+      // remove from map
+      self._consumers_by_tid.delete (consumer.tid);
+      consumer.callback (null, result);  
+
+      if (self._getOrFail_timeout) {
+        clearTimeout (self._getOrFail_timeout);
+      }
+        
+      self._getOrFail ();
+      return;
     }
     
     if (consumer.reserve) {
