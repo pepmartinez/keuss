@@ -1,7 +1,6 @@
 
 var async =   require ('async');
 var should =  require ('should');
-var winston = require ('winston');
 
 var MQ = require ('../backends/redis-list');
 
@@ -11,20 +10,6 @@ describe ('redis-list queue backend', function () {
 
   before (function (done) {
     var opts = {};
-    
-    opts.logger = new (winston.Logger)({
-      transports: [
-        new (winston.transports.Console)({
-          level: 'info',
-          timestamp: function() {return new Date ();},
-          formatter: function (options) {
-            // Return string will be passed to logger. 
-            return options.timestamp().toISOString() +' '+ options.level.toUpperCase() +' '+ (options.message ? options.message : '') +
-            (options.meta && Object.keys(options.meta).length ? '\n\t'+ JSON.stringify(options.meta) : '' );
-          }
-        })
-      ]
-    });
 
     MQ (opts, function (err, fct) {
       if (err) return done (err);

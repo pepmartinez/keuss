@@ -1,29 +1,13 @@
-var async =   require ('async');
-var should =  require ('should');
-var winston = require ('winston');
-var random = require('random-to');
-
-
-var logger = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)({
-      level: 'info',
-      timestamp: function() {return new Date ();},
-      formatter: function (options) {
-        // Return string will be passed to logger. 
-        return options.timestamp().toISOString() +' '+ options.level.toUpperCase() +' '+ (options.message ? options.message : '') +
-        (options.meta && Object.keys(options.meta).length ? '\n\t'+ JSON.stringify(options.meta) : '' );
-      }
-    })
-  ]
-});
+var async =  require ('async');
+var should = require ('should');
+var random = require ('random-to');
 
 var counter = 0;
 
 function run_consumer (q) {
   q.pop ('c1', {}, function (err, res) {
-    logger.verbose ('consumer: got err %j', err, {});
-    logger.verbose ('consumer: got res %j', res, {});
+    console.log ('consumer: got err %j', err, {});
+    console.log ('consumer: got res %j', res, {});
 
     counter++;
     logger.info ('consumer: got %d', counter);
@@ -34,7 +18,6 @@ function run_consumer (q) {
 var MQ = require ('../backends/redis-oq');
 
 var opts = {
-  logger: logger
 };
     
 MQ (opts, function (err, factory) {
