@@ -2,16 +2,19 @@
 var async =   require ('async');
 var should =  require ('should');
 
-var MQ = require ('../backends/redis-oq');
-
-
 var factory = null;
 
-describe ('Redis OrderedQueue backend', function () {
+[
+  {label: 'Simple MongoDB', mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB', mq: require ('../backends/pl-mongo')},
+  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')}
+].forEach (function (MQ_item) {
+describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
+  var MQ = MQ_item.mq;
 
   before (function (done) {
     var opts = {};
-
+    
     MQ (opts, function (err, fct) {
       if (err) return done (err);
       factory = fct;
@@ -25,7 +28,7 @@ describe ('Redis OrderedQueue backend', function () {
   });
   
   it ('queue is created empty and ok', function (done){
-    var q = factory.queue('test_queue');
+    var q = factory.queue ('test_queue');
     should.equal (q.nextMatureDate (), null);
     q.name ().should.equal ('test_queue');
     
@@ -55,7 +58,7 @@ describe ('Redis OrderedQueue backend', function () {
         cb();
       })},
       function (cb) {q.next_t (function (err, res) {
-        res.getTime().should.be.approximately (new Date().getTime (), 100);
+        res.getTime().should.be.approximately (new Date().getTime (), 500);
         cb();
       })},
       function (cb) {q.pop ('c1', cb)},
@@ -117,7 +120,7 @@ describe ('Redis OrderedQueue backend', function () {
         cb();
       })},
       function (cb) {q.next_t (function (err, res) {
-        res.getTime().should.be.approximately (new Date().getTime () + 1000, 100);
+        res.getTime().should.be.approximately (new Date().getTime () + 1000, 500);
         cb();
       })},
       function (cb) {q.pop ('c2', function (err, ret) {
@@ -296,8 +299,6 @@ describe ('Redis OrderedQueue backend', function () {
       done();
     });
   });
-    
-
   
   it ('should do raw reserve & commit as expected', function (done){
     var q = factory.queue('test_queue');
@@ -419,7 +420,7 @@ describe ('Redis OrderedQueue backend', function () {
       function (cb) {q.get (function (err, res) {
         res._id.should.eql (id);
         res.payload.should.eql ({elem:1, pl:'twetrwte'});
-//        res.tries.should.equal (1);
+        res.tries.should.equal (1);
         cb ();
       })},
       function (cb) {q.size (function (err, size) {
@@ -484,5 +485,5 @@ describe ('Redis OrderedQueue backend', function () {
       done();
     });
   });
-  
+});
 });

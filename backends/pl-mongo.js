@@ -264,7 +264,7 @@ class Factory {
   }
   
   queue (name, opts) {
-    var pl_name = opts.pipeline || 'default';
+    var pl_name = (opts && opts.pipeline) || 'default';
     
     var pipeline = this._pipelines[pl_name];
     if (!pipeline) {
