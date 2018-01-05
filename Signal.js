@@ -40,7 +40,6 @@ class Signal {
     }
     
     if (emit) {
-      // ('emitting buffered hit with mature: %d', this._buffered_mature);
       this.emitInsertion (this._buffered_mature, cb);
       
       this._buffered_mature = 0;

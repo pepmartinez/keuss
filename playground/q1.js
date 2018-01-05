@@ -1,5 +1,5 @@
 // mongodb: create a consumer and a producer
-var MQ = require ('../backends/mongo');
+var MQ = require ('../backends/pl-mongo');
 
 var factory_opts = {
   url: 'mongodb://localhost/qeus'
@@ -16,7 +16,7 @@ MQ (factory_opts, function (err, factory) {
   var q = factory.queue ('test_queue', q_opts);
 
   // insert element
-  q.push ({a:1, b:'666'}, {delay: 155}, function (err, res) {
+  q.push ({a:1, b:'666'}, {delay: 3}, function (err, res) {
     if (err) {
       return console.error (err);
     }
@@ -28,7 +28,7 @@ MQ (factory_opts, function (err, factory) {
         return console.error (err);
       }
 
-      console.log ('got this: ', res.payload);
+      console.log ('got this: ', res);
     });
   });
 });

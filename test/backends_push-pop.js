@@ -2,11 +2,14 @@
 var async =   require ('async');
 var should =  require ('should');
 
-var MQ = require ('../backends/redis-list');
-
 var factory = null;
 
-describe ('redis-list queue backend', function () {
+[
+  {label: 'Redis List', mq: require ('../backends/redis-list')}
+].forEach (function (MQ_item) {
+
+describe ('push-pop with ' + MQ_item.label + ' queue backend', function () {
+  var MQ = MQ_item.mq;
 
   before (function (done) {
     var opts = {};
@@ -162,5 +165,5 @@ describe ('redis-list queue backend', function () {
       done();
     });
   });
-
+});
 });

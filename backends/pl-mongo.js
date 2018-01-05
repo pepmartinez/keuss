@@ -21,7 +21,12 @@ class PipelinedMongoQueue extends AsyncQueue {
     this._col = this._pipeline._col;
   }
   
-  
+  /////////////////////////////////////////
+  pipeline () {
+  /////////////////////////////////////////
+    return this._pipeline;
+  }
+
   /////////////////////////////////////////
   static Type () {
   /////////////////////////////////////////
@@ -158,6 +163,38 @@ class PipelinedMongoQueue extends AsyncQueue {
   
   
   //////////////////////////////////
+  // passes element to the next queue in pipeline
+  next (id, next_queue, opts, callback) {
+    var self = this;
+
+    var query =  {
+      _id: id, 
+      _q: this._name,
+      reserved: {$exists: true}
+    };
+
+    var update = {
+      $set:   {
+        mature: opts.mature || Queue.now (),
+        tries:  opts.tries || 0,
+        _q:     next_queue.name ()
+      }, 
+      $unset: {reserved: ''}
+    };
+
+    if (opts.payload) update.$set.payload = opts.payload;
+
+    this._col.updateOne (query, update, {}, function (err, result) {
+      if (err) {
+        return callback (err);
+      }
+      
+      callback (null, result && (result.modifiedCount == 1));
+    });
+  }
+
+
+  //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
@@ -218,6 +255,10 @@ class Pipeline {
     this._name = name;
     this._col = factory._mongo_conn.collection (this._name);
     this.ensureIndexes (function (err) {});
+  }
+
+  name () {
+    return this._name;
   }
 
   queue (name, opts) {

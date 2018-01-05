@@ -58,7 +58,10 @@ class AsyncQueue extends Queue {
   
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
   rollback (id, callback) {callback (null, false)}
-  
+
+  // pipeline: atomically passes to next queue a previously reserved element, by id
+  next (id, next_queue, opts, callback) {callback (null, false)}
+
   // queue size including non-mature elements
   totalSize (callback) {callback (null, 0)}
   
