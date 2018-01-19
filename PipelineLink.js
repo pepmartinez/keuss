@@ -34,6 +34,8 @@ class PipelineLink {
   src () {return this._src}
   dst () {return this._dst}
   
+  name () {return this._name}
+  
   start (ondata) {
     this._process (ondata);
   }

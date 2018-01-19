@@ -35,6 +35,7 @@ MQ (factory_opts, function (err, factory) {
       pl.processed_1++
     }
 
+    console.log ('%s: tick', pll1.name ());
     done();
   });
 
@@ -48,6 +49,7 @@ MQ (factory_opts, function (err, factory) {
       pl.processed_2++
     }
   
+    console.log ('%s: tick', pll2.name ());
     done();
   });
   
@@ -61,11 +63,12 @@ MQ (factory_opts, function (err, factory) {
       pl.processed_3++
     }
 
+    console.log ('%s: tick', pll3.name ());
     done ();
   });
 
   // insert elements
-  async.timesLimit (1111, 3, function (n, next) {
+  async.timesLimit (111, 3, function (n, next) {
     q1.push ({a:n, b:'see it spin...'}, {}, next);
   });
 });
