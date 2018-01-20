@@ -18,11 +18,8 @@ class AsyncQueue extends Queue {
     // defaults
     this._pollInterval = this._opts.pollInterval || 60000;
     
-    // list of waiting consumers
-    this._consumers_by_order = [];
+    // map of active consumers
     this._consumers_by_tid = new Map();
-    
-    this._getOrFail_timeout = null;
     
     // signaller
     if (!this._opts.signaller) {
@@ -92,7 +89,6 @@ class AsyncQueue extends Queue {
     
     this._consumers_by_tid.forEach (function (value, key) {
       r.push ({
-        cid: value.cid,
         tid: value.tid,
         since: value.since,
         callback: (value.callback ? 'set' : 'unset'),
@@ -109,6 +105,7 @@ class AsyncQueue extends Queue {
   /////////////////////////////////////////
     return this._consumers_by_tid.size;
   }
+
   
   /////////////////////////////////////////
   // called when an insertion has been signaled
@@ -120,13 +117,8 @@ class AsyncQueue extends Queue {
     else {
       this._next_mature_t = mature.getTime ();
       
-      if (this._getOrFail_timeout) {
-        clearTimeout (this._getOrFail_timeout);
-        // _getOrFail_timeout was set, cancelled
-      }
-      
-      // re-trigger _getOrFail
-      this._getOrFail ();
+
+      // TODO: run a wakeup on all consumers, or possibly on just some
     }
     
     if (cb) cb ();
@@ -177,9 +169,9 @@ class AsyncQueue extends Queue {
   
   //////////////////////////////////
   // obtain element from queue
-  pop (cid, opts, callback) {
+  pop (opts, callback) {
   //////////////////////////////////
-    // TODO fail if too many consumers
+    // TODO fail if too many consumers?
     if (!callback) {
       callback = opts;
       opts = {};
@@ -190,39 +182,37 @@ class AsyncQueue extends Queue {
     }
     
     var tid = opts.tid || uuid.v4 ();
+    
     var consumer_data = {
-      cid: cid,
-      tid: tid,
-      since: new Date (),
-      reserve: opts.reserve,
-      callback: callback
+      tid: tid,               // unique id fr this transaction
+      since: new Date (),     // timestamp of creation of the consumer
+      reserve: opts.reserve,  // boolean, is a reserve or a plain pop?
+      callback: callback,     // final, outbound callback upon read/timeout
+      cleanup_timeout: null,  // timer for timeout cancellation
+      rearm_timeout: null     // timer for rearming, awaiting data available
     };
     
     var self = this;
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-        // ('get: timed out %d msecs on consumer %s', opts.timeout, cid);
+        // ('get: timed out %d msecs on transaction %s', opts.timeout, tid);
         consumer_data.callback = null;
         self._consumers_by_tid.delete (consumer_data.tid);
 
         callback ({
           timeout: true, 
-          cid: consumer_data.cid, 
           tid: consumer_data.tid,
           since: consumer_data.since
         });
       }, opts.timeout)
     }
     
-    this._consumers_by_order.push (consumer_data);
     this._consumers_by_tid.set (tid, consumer_data);
 
-    if (this._getOrFail_timeout) {
-      clearTimeout (this._getOrFail_timeout);
-    }
-    
-    this._getOrFail ();
+    // attempt a read
+    _onetime_pop (consumer_data);
+
     return tid;
   }
   
@@ -299,6 +289,71 @@ class AsyncQueue extends Queue {
   // private parts
 
 
+  _onetime_pop (consumer) {
+    var self = this;
+    var getOrReserve_cb = function (err, result) {
+      if (!consumer.callback) {
+        // consumer was cancelled mid-flight
+        // do not reinsert if it's using reserve
+        if (!(consumer.reserve)) {
+          return self._reinsert (result);
+        }
+      }
+      
+      // TODO eat up errors?
+      if (err) {
+        // get/reserve in error
+
+        // clean timeout timer
+        if (consumer.cleanup_timeout) {
+          clearTimeout (consumer.cleanup_timeout);
+          consumer.cleanup_timeout = null;
+        }
+      
+        // remove consumer from map
+        self._consumers_by_tid.delete (consumer.tid);
+
+        // call final callback
+        consumer.callback (err);
+        return;
+      }
+
+      if (!result) {
+        // queue is empty or non-mature: rearm
+        // mark us as to-rearm-in-future
+
+// TODO
+        
+
+
+      }
+      
+      // got an element
+      var delta = result.mature.getTime() - Queue.now ().getTime();
+      self._stats.incr ('get');
+
+      // clean timeout timer
+      if (consumer.cleanup_timeout) {
+        clearTimeout (consumer.cleanup_timeout);
+        consumer.cleanup_timeout = null;
+      }
+        
+      // remove consumer from map
+      self._consumers_by_tid.delete (consumer.tid);
+
+      // call final callback
+      consumer.callback (null, result);  
+      return;
+    }
+    
+    if (consumer.reserve) {
+      this.reserve (getOrReserve_cb);
+    }
+    else {
+      this.get (getOrReserve_cb);
+    }
+  }
+
   /////////////////////////////
   _nextDelta (cb) {
   /////////////////////////////
@@ -327,142 +382,21 @@ class AsyncQueue extends Queue {
       return cb (delta);
     }
   }
-  
-  
-  //////////////////////////////////
-  // return consumer to wset and rearm _getOrFail_timeout
-  _rearm_getOrFail (consumer) {
-  //////////////////////////////////
-    // queue is empty or non-mature: push consumer again
-    if (consumer) {
-      this._consumers_by_order.push (consumer);
-    }
-    
-    // rearm 
-    if (!this._getOrFail_timeout) {
-      clearTimeout (this._getOrFail_timeout);
-    }
-     
-    var self = this;
-    this._nextDelta (function (delta) {
-      self._getOrFail_timeout = setTimeout (function () {self._getOrFail ()}, delta);
-    });
-  }
+
   
   
   ///////////////////////////////////////////////////////////
-  _reinsertAndRearm (result, consumer) {
+  _reinsert (result) {
   ///////////////////////////////////////////////////////////
     if (result) {
       var self = this;
       this.insert (result, function (err, r) {
         if (err) {
         }
-
-        if ((!self._next_mature_t) || (self._next_mature_t > result.mature.getTime ())) {
-          self._next_mature_t = result.mature.getTime ();
+        else {
+          self._signaller.signalInsertion (result.mature);
         }
-
-        self._rearm_getOrFail (consumer);
       });
-    }
-    else {
-      this._rearm_getOrFail (consumer);
-    }
-  }
-  
-  
-  //////////////////////////////////
-  // obtain element from queue
-  _getOrFail () {
-  //////////////////////////////////
-    // seeks an returns one element from the queue to the top of the waitinglist 
-    // Only those whose maturity time is in the past are take into account, 
-    // and we get the newest of them all
-
-    this._getOrFail_timeout = null;
-    
-    if (this._consumers_by_order.length == 0) {
-      // no consumers waiting
-      return;
-    }
-    
-    let consumer = this._consumers_by_order.shift ();
-
-    while (!consumer.callback) {
-      //  consumer already timed out or has been cancelled, ignoring it...
-      
-      if (this._consumers_by_order.length == 0) {
-        // no consumers waiting
-        return;
-      }
-      
-      consumer = this._consumers_by_order.shift ();
-    }
-    
-    var self = this;
-    var getOrReserve_cb = function (err, result) {
-      self._next_mature_t = null;
-
-      if (!consumer.callback) {
-        // consumer was cancelled mid-flight
-
-        // do not reinsert if it's using reserve
-        if (!(consumer.reserve)) {
-          return self._reinsertAndRearm (result);
-        }
-      }
-      
-      // TODO eat up errors?
-      if (err) {
-        if (consumer.cleanup_timeout) {
-          clearTimeout (consumer.cleanup_timeout);
-          consumer.cleanup_timeout = null;
-        }
-      
-        // remove from map
-        self._consumers_by_tid.delete (consumer.tid);
-        consumer.callback (err);
-        
-        if (self._getOrFail_timeout) {
-          clearTimeout (self._getOrFail_timeout);
-        }
-        
-        self._getOrFail ();
-        return;
-      }
-
-      if (!result) {
-        // queue is empty or non-mature: rearm
-        return self._rearm_getOrFail (consumer);
-      }
-      
-      // got an element
-      var delta = result.mature.getTime() - Queue.now ().getTime();
-      self._stats.incr ('get');
-        
-      if (consumer.cleanup_timeout) {
-        clearTimeout (consumer.cleanup_timeout);
-        consumer.cleanup_timeout = null;
-      }
-        
-      // remove from map
-      self._consumers_by_tid.delete (consumer.tid);
-      consumer.callback (null, result);  
-
-      if (self._getOrFail_timeout) {
-        clearTimeout (self._getOrFail_timeout);
-      }
-        
-      self._getOrFail ();
-      return;
-    }
-    
-    if (consumer.reserve) {
-      this.reserve (getOrReserve_cb);
-    }
-    else {
-      this.get (getOrReserve_cb);
     }
   }
 };
