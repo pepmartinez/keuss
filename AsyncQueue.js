@@ -116,7 +116,7 @@ class AsyncQueue extends Queue {
     // console.log ('%s: signalInsertion received signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
 
     if (this._next_mature_t && (this._next_mature_t <= mature.getTime ())) {
-      // console.log ('%s: signalInsertion, this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', new Date().toISOString(), mature, this._next_mature_t)
+      // console.log ('%s: signalInsertion, this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', new Date().toISOString(), mature, new Date(this._next_mature_t).toISOString())
       if (cb) cb ();
     }
     else {
@@ -127,18 +127,29 @@ class AsyncQueue extends Queue {
       this._nextDelta (function (delta_ms) {
         // run a wakeup on all consumers with the wakeup timer set
         // console.log ('%s: signalInsertion sees that the delta_ms is now %d', new Date().toISOString(), delta_ms);
-        _.forEach (self._consumers_by_tid, function (tid, consumer) {
+        // console.log ('%s: signalInsertion : cosumers:  %d', new Date().toISOString(), self.nConsumers());
+        self._consumers_by_tid.forEach (function (consumer, tid) {
+          // console.log ('%s: signalInsertion checking wakeup state for consumer %j', new Date().toISOString(), consumer);
           if (consumer.wakeup_timeout) {
             // console.log ('%s: signalInsertion rescheduling consumer %j', new Date().toISOString(), consumer);
             clearTimeout (consumer.wakeup_timeout);
+            consumer.wakeup_timeout = null;
 
-            consumer.wakeup_timeout = setTimeout (
-              function () {
-                consumer.wakeup_timeout = null;
-                self._onetime_pop (consumer);
-              },
-              delta_ms
-            ); 
+            if (delta_ms > 0) {
+              consumer.wakeup_timeout = setTimeout (
+                function () {
+                  consumer.wakeup_timeout = null;
+                  self._onetime_pop (consumer);
+                },
+                delta_ms
+              );
+
+              // console.log ('%s: signalInsertion rescheduled consumer %j', new Date().toISOString(), consumer);
+            }
+            else {
+              setImmediate (function () {self._onetime_pop (consumer)});
+              // console.log ('%s: signalInsertion immediately waking up consumer %j', new Date().toISOString(), consumer); 
+            } 
           }
         });
       });
