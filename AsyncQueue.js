@@ -92,7 +92,8 @@ class AsyncQueue extends Queue {
         tid: value.tid,
         since: value.since,
         callback: (value.callback ? 'set' : 'unset'),
-        cleanup_timeout: (value.cleanup_timeout ? 'set' : 'unset')
+        cleanup_timeout: (value.cleanup_timeout ? 'set' : 'unset'),
+        wakeup_timeout: (value.wakeup_timeout ? 'set' : 'unset')
       });
     });
     
@@ -111,17 +112,39 @@ class AsyncQueue extends Queue {
   // called when an insertion has been signaled
   signalInsertion (mature, cb) {
   /////////////////////////////////////////
+    
+    // console.log ('%s: signalInsertion received signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
+
     if (this._next_mature_t && (this._next_mature_t <= mature.getTime ())) {
-    // ('put: this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', mature, this._next_mature_t)
+      // console.log ('%s: signalInsertion, this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', new Date().toISOString(), mature, this._next_mature_t)
+      if (cb) cb ();
     }
     else {
+      // console.log ('%s: signalInsertion about to wake up sleepers', new Date().toISOString());
       this._next_mature_t = mature.getTime ();
       
+      var self = this;
+      this._nextDelta (function (delta_ms) {
+        // run a wakeup on all consumers with the wakeup timer set
+        // console.log ('%s: signalInsertion sees that the delta_ms is now %d', new Date().toISOString(), delta_ms);
+        _.forEach (self._consumers_by_tid, function (tid, consumer) {
+          if (consumer.wakeup_timeout) {
+            // console.log ('%s: signalInsertion rescheduling consumer %j', new Date().toISOString(), consumer);
+            clearTimeout (consumer.wakeup_timeout);
 
-      // TODO: run a wakeup on all consumers, or possibly on just some
+            consumer.wakeup_timeout = setTimeout (
+              function () {
+                consumer.wakeup_timeout = null;
+                self._onetime_pop (consumer);
+              },
+              delta_ms
+            ); 
+          }
+        });
+      });
+
+      if (cb) cb ();
     }
-    
-    if (cb) cb ();
   }
   
   
@@ -151,7 +174,9 @@ class AsyncQueue extends Queue {
       payload  : payload,
       tries: opts.tries || 0
     }
-    
+
+    // console.log ('%s: about to insert %j', new Date().toISOString(), msg);
+
     var self = this;
     
     // insert into queue
@@ -162,6 +187,7 @@ class AsyncQueue extends Queue {
       
       self._stats.incr ('put');
       self._signaller.signalInsertion (mature);
+      // console.log ('%s: signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
       callback (null, result.insertedId);
     })
   }
@@ -169,7 +195,7 @@ class AsyncQueue extends Queue {
   
   //////////////////////////////////
   // obtain element from queue
-  pop (opts, callback) {
+  pop (cid, opts, callback) {
   //////////////////////////////////
     // TODO fail if too many consumers?
     if (!callback) {
@@ -184,23 +210,29 @@ class AsyncQueue extends Queue {
     var tid = opts.tid || uuid.v4 ();
     
     var consumer_data = {
-      tid: tid,               // unique id fr this transaction
+      tid: tid,               // unique id for this transaction
       since: new Date (),     // timestamp of creation of the consumer
       reserve: opts.reserve,  // boolean, is a reserve or a plain pop?
       callback: callback,     // final, outbound callback upon read/timeout
       cleanup_timeout: null,  // timer for timeout cancellation
-      rearm_timeout: null     // timer for rearming, awaiting data available
+      wakeup_timeout: null     // timer for rearming, awaiting data available
     };
     
     var self = this;
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-        // ('get: timed out %d msecs on transaction %s', opts.timeout, tid);
-        consumer_data.callback = null;
+        // console.log ('get: timed out %d msecs on transaction %s', opts.timeout, tid);
+        consumer_data.cleanup_timeout = null;
+
+        if (consumer_data.wakeup_timeout) {
+          clearTimeout (consumer_data.wakeup_timeout);
+          consumer_data.wakeup_timeout = null;
+        }
+
         self._consumers_by_tid.delete (consumer_data.tid);
 
-        callback ({
+        consumer_data.callback ({
           timeout: true, 
           tid: consumer_data.tid,
           since: consumer_data.since
@@ -211,7 +243,8 @@ class AsyncQueue extends Queue {
     this._consumers_by_tid.set (tid, consumer_data);
 
     // attempt a read
-    _onetime_pop (consumer_data);
+    // console.log ('%s: calling initial onetime_pop on %j', new Date().toISOString(), consumer_data)
+    this._onetime_pop (consumer_data);
 
     return tid;
   }
@@ -256,8 +289,14 @@ class AsyncQueue extends Queue {
       // clear timeout if present
       if (consumer_data.cleanup_timeout) {
         clearTimeout (consumer_data.cleanup_timeout);
+        consumer_data.cleanup_timeout = null;
       }
       
+      if (consumer_data.wakeup_timeout) {
+        clearTimeout (consumer_data.wakeup_timeout);
+        consumer_data.wakeup_timeout = null;
+      }
+
       // remove from map
       this._consumers_by_tid.delete (tid);
    }
@@ -292,6 +331,7 @@ class AsyncQueue extends Queue {
   _onetime_pop (consumer) {
     var self = this;
     var getOrReserve_cb = function (err, result) {
+      // console.log ('%s - %s: called getOrReserve_cb : err %j, result %j', new Date().toISOString(), consumer.tid, err, result);
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         // do not reinsert if it's using reserve
@@ -303,6 +343,7 @@ class AsyncQueue extends Queue {
       // TODO eat up errors?
       if (err) {
         // get/reserve in error
+        // console.log ('%s - %s: getOrReserve_cb in error: err %j', new Date().toISOString(), consumer.tid, err);
 
         // clean timeout timer
         if (consumer.cleanup_timeout) {
@@ -319,18 +360,33 @@ class AsyncQueue extends Queue {
       }
 
       if (!result) {
-        // queue is empty or non-mature: rearm
-        // mark us as to-rearm-in-future
+        // queue is empty or non-mature: put us to sleep, to-rearm-in-future
+    
+        // console.log ('%s - %s: getOrReserve_cb no result, setting wakeup', new Date().toISOString(), consumer.tid);
 
-// TODO
-        
+        // obtain time to sleep (capped)
+        self._nextDelta (function (delta_ms) {
+          // TODO cancel previous wakeup_timeout if not null?
+          // console.log ('%s - %s: getOrReserve_cb : set wakeup in %d ms', new Date().toISOString(), consumer.tid, delta_ms);
 
+          consumer.wakeup_timeout = setTimeout (
+            function () {
+              // console.log ('%s - %s: wakey wakey... calling onetime_pop', new Date().toISOString(), consumer.tid);
+              consumer.wakeup_timeout = null;
+              self._onetime_pop (consumer);
+            },
+            delta_ms
+          ); 
+        });
 
+        return;
       }
       
       // got an element
-      var delta = result.mature.getTime() - Queue.now ().getTime();
+      self._next_mature_t = null;
       self._stats.incr ('get');
+
+      // console.log ('%s - %s: getOrReserve_cb : got result %j', new Date().toISOString(), consumer.tid, result);
 
       // clean timeout timer
       if (consumer.cleanup_timeout) {
@@ -354,11 +410,13 @@ class AsyncQueue extends Queue {
     }
   }
 
+
   /////////////////////////////
   _nextDelta (cb) {
   /////////////////////////////
     if (!this._next_mature_t) {
       // there's no precalculated value, get it from backend
+      // console.log ('%s : _nextDelta has no available _next_mature_t, getting it from backend', new Date().toISOString());
       var self = this;
 
       this.next_t (function (err, res) {
@@ -368,16 +426,21 @@ class AsyncQueue extends Queue {
           self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
           if (delta > self._pollInterval) delta = self._pollInterval;
+          // console.log ('%s : _nextDelta _next_mature_t from backend is %d, calc delta is %d', new Date().toISOString(), res, delta);
           return cb (delta);
         }
         else {
+          // console.log ('%s : _nextDelta no _next_mature_t from backend, calc delta is %d', new Date().toISOString(), self._pollInterval);
           return cb (self._pollInterval);
         }
       });
     }
     else {
+      // console.log ('%s : _nextDelta has available _next_mature_t %d', new Date().toISOString(), this._next_mature_t);
       var delta = this._next_mature_t - Queue.now ().getTime();
       if (delta > this._pollInterval) delta = this._pollInterval;
+
+      // console.log ('%s : _nextDelta calc delta is %d', new Date().toISOString(), delta);
 
       return cb (delta);
     }

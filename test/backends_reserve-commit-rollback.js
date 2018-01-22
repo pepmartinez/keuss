@@ -96,6 +96,7 @@ describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', fu
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:2}, cb)},
+      function (cb) {setTimeout (function () {cb ()}, 150)},
       function (cb) {q.push ({elem:2, pl:'twetrwte'}, {delay:1}, cb)},
       function (cb) {q.size (function (err, size) {
         size.should.equal (0);
@@ -152,6 +153,7 @@ describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', fu
     
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:6}, cb)},
+      function (cb) {setTimeout (function () {cb ()}, 150)},
       function (cb) {q.push ({elem:2, pl:'twetrwte'}, {delay:5}, cb)},
       function (cb) {q.size (function (err, size) {
         size.should.equal (0);
@@ -255,6 +257,7 @@ describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', fu
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, {delay:6}, cb)},
       function (cb) {q.push ({elem:2, pl:'twetrwte'}, {delay:5}, cb)},
+      function (cb) {setTimeout (function () {cb ()}, 150)},
       function (cb) {q.push ({elem:3, pl:'twetrwte'}, {delay:4}, cb)},
       function (cb) {q.consumers().length.should.equal (0); cb();},
       function (cb) {q.stats (function (err, res) {
