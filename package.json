@@ -1,12 +1,13 @@
 {
   "name": "keuss",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "keywords": [
     "queue",
     "job",
     "mongodb",
     "redis",
-    "HA"
+    "HA",
+    "pipeline"
   ],
   "homepage": "https://github.com/pepmartinez/keuss",
   "bugs": {
@@ -23,20 +24,20 @@
   },
   "license": "GPL-3.0",
   "dependencies": {
-    "async": "2.5.0",
-    "mongodb": "2.2.29",
+    "async": "2.6.0",
+    "mongodb": "2.2.33",
     "lodash": "4.17.4",
-    "uuid": "3.1.0",
-    "ioredis": "3.1.1",
-    "commander": "2.10.0",
-    "mitt": "1.1.2"
+    "uuid": "3.2.1",
+    "ioredis": "3.2.2",
+    "commander": "2.13.0",
+    "mitt": "1.1.3"
   },
   "devDependencies": {
-    "mocha": "3.4.2",
-    "should": "11.2.1",
-    "random-to": "0.0.2"
+    "mocha": "5.0.0",
+    "random-to": "0.0.2",
+    "should": "13.2.1"
   },
   "scripts": {
-    "test": "mocha --reporter spec --check-leaks --no-timeouts test/"
+    "test": "mocha --reporter spec --check-leaks --no-timeouts --exit test/"
   }
 }

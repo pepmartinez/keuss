@@ -36,7 +36,6 @@ Still beta, basic structure may be in flux
     - [Commit a reserved element](#commit-a-reserved-element)
     - [Rolls back a reserved element](#rolls-back-a-reserved-element)
   - [Redis connections](#redis-connections)
-  - [Logging](#logging)
   - [Reserve & (commit | rollback)](#reserve--commit--rollback)
   - [Working with no signallers](#working-with-no-signallers)
 - [Examples](#examples)
@@ -363,9 +362,6 @@ Examples:
     ...
   });
   ```
-
-### Logging
-Mostly all objects that are created with a *opts* object can receive and use a [winston](https://github.com/winstonjs/winston) logger as *opts.logger*
 
 ### Reserve & (commit | rollback)
 

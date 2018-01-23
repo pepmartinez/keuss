@@ -2,4 +2,3 @@
 * bridges?
 * deadletter (tied to at-least-one)?
 * queue traversal/query
-* async_queue._rearm_getOrFail (consumer): cap next_t from queue to a maximum (this._pollInterval)
