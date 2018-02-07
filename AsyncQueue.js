@@ -289,7 +289,7 @@ class AsyncQueue extends Queue {
   
   //////////////////////////////////
   // cancel a waiting consumer
-  cancel (tid, opts) {
+  cancel (tid) {
   //////////////////////////////////
     let consumer_data = this._consumers_by_tid.get (tid);
     
@@ -310,7 +310,25 @@ class AsyncQueue extends Queue {
 
       // remove from map
       this._consumers_by_tid.delete (tid);
-   }
+    }
+    else {
+      // cancel all pending stuff
+      this._consumers_by_tid.forEach (function (consumer_data, tid) {
+        consumer_data.callback = null;
+
+        if (consumer_data.cleanup_timeout) {
+          clearTimeout (consumer_data.cleanup_timeout);
+          consumer_data.cleanup_timeout = null;
+        }
+       
+        if (consumer_data.wakeup_timeout) {
+          clearTimeout (consumer_data.wakeup_timeout);
+          consumer_data.wakeup_timeout = null;
+        }
+      });
+
+      this._consumers_by_tid.clear();
+    }
   }
 
   

@@ -5,8 +5,8 @@ var should =  require ('should');
 var factory = null;
 
 [
-  {label: 'Simple MongoDB', mq: require ('../backends/mongo')},
-  {label: 'Pipelined MongoDB', mq: require ('../backends/pl-mongo')},
+  {label: 'Simple MongoDB',     mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')},
   {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')}
 ].forEach (function (MQ_item) {
 describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
@@ -21,7 +21,6 @@ describe ('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', fu
       done();
     });
   });
-  
   
   after (function (done) {
     factory.close (done);

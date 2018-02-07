@@ -1,3 +1,6 @@
+
+//var log = require('why-is-node-running')
+
 var should =  require ('should');
 var async =   require ('async');
 
@@ -10,25 +13,37 @@ function run_tests_on_class (CL) {
   describe (CL.Type () + ' stats provider', function () {
     
     before (function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       mem.clear (done);
+      ftry.close();
     });
     
     after  (function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       mem.clear (done);
+
+ //     setTimeout(function () {
+ //       log() // logs out active handles that are keeping node running
+ //     }, 100)
+
     });
     
     it ('creates ok', function (done) {
       var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       mem.values (function (err, vals) {
         vals.should.eql ({});
+        ftry.close();
         done (err);
       });
     });
     
     it ('initializes ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.incr ('v1', 1, cb)},
@@ -38,14 +53,18 @@ function run_tests_on_class (CL) {
         setTimeout (function () {
           mem.values (function (err, vals) {
             vals.should.eql ({v1: 1, v2: 1, v3: 1});
-            mem.clear (done);
+            mem.clear (function (err) {
+              ftry.close();
+              done (err);
+            });
           });
         }, 200);
       });
     });
     
     it ('increments (default by 1) ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -56,14 +75,18 @@ function run_tests_on_class (CL) {
         setTimeout (function () {
           mem.values (function (err, vals) {
             vals.should.eql ({v1: 2});
-            mem.clear (done);
+            mem.clear (function (err) {
+              ftry.close();
+              done (err);
+            });
           });
         }, 200);
       });
     });
     
     it ('increments (explicit deltas) ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -74,6 +97,7 @@ function run_tests_on_class (CL) {
         setTimeout (function () {
           mem.values (function (err, vals) {
             vals.should.eql ({v1: 4});
+            ftry.close();
             done (err);
           });
         }, 200);
@@ -81,7 +105,8 @@ function run_tests_on_class (CL) {
     });
     
     it ('decrements (default by 1) ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -92,6 +117,7 @@ function run_tests_on_class (CL) {
         setTimeout (function () {
           mem.values (function (err, vals) {
             vals.should.eql ({v1: 1});
+            ftry.close();
             done (err);
           });
         }, 200);
@@ -99,7 +125,8 @@ function run_tests_on_class (CL) {
     });
     
     it ('decrements (explicit deltas) ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -118,12 +145,14 @@ function run_tests_on_class (CL) {
           }, 200);
         }
       ], function(err, results) {
+        ftry.close();
         done (err);
       });
     });
     
     it ('clears ok', function (done) {
-      var mem = new CL ().stats (name);
+      var ftry = new CL ();
+      var mem = ftry.stats (name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -143,6 +172,7 @@ function run_tests_on_class (CL) {
           }, 200);
         }
       ], function(err, results) {
+        ftry.close();
         done (err);
       });
     });
@@ -151,5 +181,5 @@ function run_tests_on_class (CL) {
 }
 
 
-run_tests_on_class (Mem);
+//run_tests_on_class (Mem);
 run_tests_on_class (Redis);

@@ -103,6 +103,10 @@ class RedisStatsFactory {
   stats (name) {
     return new RedisStats (name, this);
   }
+
+  close () {
+    this._rediscl.quit ();
+  }
 }
 
 module.exports = RedisStatsFactory;

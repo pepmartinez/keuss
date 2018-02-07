@@ -43,6 +43,9 @@ class MemStatsFactory {
   stats () {
     return new MemStats (this);
   }
+
+  close () {
+  }
 }
 
 module.exports = MemStatsFactory;
