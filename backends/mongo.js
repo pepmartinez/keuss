@@ -125,7 +125,12 @@ class SimpleMongoQueue extends AsyncQueue {
   
   //////////////////////////////////
   // rollback previous reserve, by p.id
-  rollback (id, callback) {
+  rollback (id, next_t, callback) {
+    if (_.isFunction (next_t)) {
+      callback = next_t;
+      next_t = null;
+    }
+
     var self = this;
     
     try {
@@ -139,7 +144,7 @@ class SimpleMongoQueue extends AsyncQueue {
     }
     
     var update = {
-      $set:   {mature: Queue.now ()}, 
+      $set:   {mature: (next_t ? new Date (next_t) : Queue.now ())}, 
       $unset: {reserved: ''}
     };
 

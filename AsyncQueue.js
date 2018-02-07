@@ -54,10 +54,10 @@ class AsyncQueue extends Queue {
   commit (id, callback) {callback (null, false)}
   
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
-  rollback (id, callback) {callback (null, false)}
+  rollback (id, next_t, callback) {callback (null, false)}
 
   // pipeline: atomically passes to next queue a previously reserved element, by id
-  next (id, next_queue, opts, callback) {callback (null, false)}
+  pl_step (id, next_queue, opts, callback) {callback (null, false)}
 
   // queue size including non-mature elements
   totalSize (callback) {callback (null, 0)}
@@ -270,10 +270,15 @@ class AsyncQueue extends Queue {
   
   //////////////////////////////////
   // high level rollback
-  ko (id, cb) {
+  ko (id, next_t, cb) {
+    if (_.isFunction (next_t)) {
+      cb = next_t;
+      next_t = null;
+    }
+
     var self = this;
     
-    this.rollback (id, function (err, res) {
+    this.rollback (id, next_t, function (err, res) {
       if (err) {
         return cb (err);
       }
@@ -294,6 +299,8 @@ class AsyncQueue extends Queue {
     let consumer_data = this._consumers_by_tid.get (tid);
     
     if (tid) {
+      // call callback with error-cancelled?
+      
       // mark cancelled by deleting callback
       consumer_data.callback = null;
       

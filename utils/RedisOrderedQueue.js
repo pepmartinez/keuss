@@ -190,9 +190,9 @@ class RedisOrderedQueue {
   }
   
   //////////////////////////////////
-  rollback (id, done) {
+  rollback (id, next_t, done) {
   //////////////////////////////////
-    this._rediscl.roq_rollback (this._name, id, new Date().getTime (), done);
+    this._rediscl.roq_rollback (this._name, id, next_t || (new Date().getTime ()), done);
   }
   
   //////////////////////////////////

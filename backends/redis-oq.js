@@ -82,11 +82,16 @@ class RedisOQ extends AsyncQueue {
 
   /////////////////////////////////////////
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
-  rollback (id, callback) {
+  rollback (id, next_t, callback) {
   /////////////////////////////////////////
+    if (_.isFunction (next_t)) {
+      callback = next_t;
+      next_t = null;
+    }
+
     var self = this;
 
-    this._roq.rollback (id, function (err, res) {
+    this._roq.rollback (id, next_t, function (err, res) {
       if (err) {
         return callback (err);
       }

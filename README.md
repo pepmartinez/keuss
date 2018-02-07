@@ -299,11 +299,11 @@ commits a reserved element by its id (the id would be at res._id on the res para
 
 #### Rolls back a reserved element
 ```javascript
-q.ko (id, function (err, res) {
+q.ko (id, next_t, function (err, res) {
   ...
 })
 ```
-rolls back a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively makes the element available again at the queue, but it's up to the backend to decide whether to apply a delay to it (as if it were inserted with opts.delay)
+rolls back a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively makes the element available again at the queue, marking to be mature at next_t (next_t being a millsec-unixtime). If no next_t is specified or a null is passed, 'now' is assumed.
 
 ### Redis connections
 Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will 
