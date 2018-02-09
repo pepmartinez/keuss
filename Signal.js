@@ -17,7 +17,8 @@ class Signal {
 
   signalInsertion (mature, cb) {
     var emit = false;
-    
+    // console.log ('%s: signaller got a signalInsertion with %s. _buffered_mature is %s', new Date().toISOString(), mature, this._buffered_mature);
+
     if ((!this._buffered_mature) || (mature < this._buffered_mature)) {
       this._buffered_mature = mature;
     }
@@ -31,7 +32,7 @@ class Signal {
       var hrt = process.hrtime (this._lastHRT);
       var hrt_ms = Signal._hrtimeAsMSecs (hrt);
     
-      // ('msec since last hit: %d', hrt_ms);
+      // console.log ('msec since last hit: %d', hrt_ms);
     
       if (hrt_ms > this._bufferTime) {
         // last hit too away in the past, emitting
@@ -42,6 +43,7 @@ class Signal {
     if (emit) {
       this.emitInsertion (this._buffered_mature, cb);
       
+      // console.log ('%s: signaller called emitInsertion (%s)', new Date().toISOString(), this._buffered_mature);
       this._buffered_mature = 0;
       this._lastHRT = process.hrtime ();
     }

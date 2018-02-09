@@ -113,25 +113,25 @@ class AsyncQueue extends Queue {
   signalInsertion (mature, cb) {
   /////////////////////////////////////////
     
-    // console.log ('%s: signalInsertion received signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
+   // console.log ('%s - %s: signalInsertion received signalled insertion with mature %s', new Date().toISOString(), this._name, mature.toISOString ());
 
     if (this._next_mature_t && (this._next_mature_t <= mature.getTime ())) {
-      // console.log ('%s: signalInsertion, this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', new Date().toISOString(), mature, new Date(this._next_mature_t).toISOString())
+     // console.log ('%s - %s: signalInsertion, this msg mature (%s) is set to after _next_mature (%s). Not triggering any get', new Date().toISOString(), this._name, mature, new Date(this._next_mature_t).toISOString())
       if (cb) cb ();
     }
     else {
-      // console.log ('%s: signalInsertion about to wake up sleepers', new Date().toISOString());
+     // console.log ('%s - %s: signalInsertion about to wake up sleepers', new Date().toISOString(), this._name);
       this._next_mature_t = mature.getTime ();
       
       var self = this;
       this._nextDelta (function (delta_ms) {
         // run a wakeup on all consumers with the wakeup timer set
-        // console.log ('%s: signalInsertion sees that the delta_ms is now %d', new Date().toISOString(), delta_ms);
-        // console.log ('%s: signalInsertion : cosumers:  %d', new Date().toISOString(), self.nConsumers());
+       // console.log ('%s - %s: signalInsertion sees that the delta_ms is now %d', new Date().toISOString(), self._name, delta_ms);
+       // console.log ('%s - %s: signalInsertion : cosumers:  %d', new Date().toISOString(), self._name, self.nConsumers());
         self._consumers_by_tid.forEach (function (consumer, tid) {
-          // console.log ('%s: signalInsertion checking wakeup state for consumer %j', new Date().toISOString(), consumer);
+         // console.log ('%s - %s: signalInsertion checking wakeup state for consumer %j', new Date().toISOString(), self._name, consumer);
           if (consumer.wakeup_timeout) {
-            // console.log ('%s: signalInsertion rescheduling consumer %j', new Date().toISOString(), consumer);
+           // console.log ('%s - %s: signalInsertion rescheduling consumer %j', new Date().toISOString(), self._name, consumer);
             clearTimeout (consumer.wakeup_timeout);
             consumer.wakeup_timeout = null;
 
@@ -144,11 +144,11 @@ class AsyncQueue extends Queue {
                 delta_ms
               );
 
-              // console.log ('%s: signalInsertion rescheduled consumer %j', new Date().toISOString(), consumer);
+             // console.log ('%s - %s: signalInsertion rescheduled consumer %j', new Date().toISOString(), self._name, consumer);
             }
             else {
               setImmediate (function () {self._onetime_pop (consumer)});
-              // console.log ('%s: signalInsertion immediately waking up consumer %j', new Date().toISOString(), consumer); 
+             // console.log ('%s - %s: signalInsertion immediately waking up consumer %j', new Date().toISOString(), self._name, consumer); 
             } 
           }
         });
@@ -186,7 +186,7 @@ class AsyncQueue extends Queue {
       tries: opts.tries || 0
     }
 
-    // console.log ('%s: about to insert %j', new Date().toISOString(), msg);
+   // console.log ('%s - %s: about to insert %j', new Date().toISOString(), this._name, msg);
 
     var self = this;
     
@@ -198,7 +198,7 @@ class AsyncQueue extends Queue {
       
       self._stats.incr ('put');
       self._signaller.signalInsertion (mature);
-      // console.log ('%s: signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
+     // console.log ('%s: signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
       callback (null, result.insertedId);
     })
   }
@@ -233,7 +233,7 @@ class AsyncQueue extends Queue {
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-        // console.log ('get: timed out %d msecs on transaction %s', opts.timeout, tid);
+       // console.log ('%s - %s: get: timed out %d msecs on transaction %s', new Date().toISOString(), self._name, opts.timeout, tid);
         consumer_data.cleanup_timeout = null;
 
         if (consumer_data.wakeup_timeout) {
@@ -254,7 +254,7 @@ class AsyncQueue extends Queue {
     this._consumers_by_tid.set (tid, consumer_data);
 
     // attempt a read
-    // console.log ('%s: calling initial onetime_pop on %j', new Date().toISOString(), consumer_data)
+   // console.log ('%s - %s: calling initial onetime_pop on %j', new Date().toISOString(), self._name, consumer_data)
     this._onetime_pop (consumer_data);
 
     return tid;
@@ -284,7 +284,11 @@ class AsyncQueue extends Queue {
       }
       
       if (res) {
-        self._signaller.signalInsertion (Queue.now ());
+        var t = new Date (next_t || null);
+       // console.log ('%s - %s: ko : tid %s rolled back, new mature is %s', new Date().toISOString(), self._name, id, t);
+      
+        // signal correct time
+        self._signaller.signalInsertion (t);
       }
       
       cb (null, res);
@@ -367,7 +371,7 @@ class AsyncQueue extends Queue {
   _onetime_pop (consumer) {
     var self = this;
     var getOrReserve_cb = function (err, result) {
-      // console.log ('%s - %s: called getOrReserve_cb : err %j, result %j', new Date().toISOString(), consumer.tid, err, result);
+     // console.log ('%s - %s - %s: called getOrReserve_cb : err %j, result %j', new Date().toISOString(), self._name, consumer.tid, err, result);
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         // do not reinsert if it's using reserve
@@ -379,7 +383,7 @@ class AsyncQueue extends Queue {
       // TODO eat up errors?
       if (err) {
         // get/reserve in error
-        // console.log ('%s - %s: getOrReserve_cb in error: err %j', new Date().toISOString(), consumer.tid, err);
+       // console.log ('%s - %s - %s: getOrReserve_cb in error: err %j', new Date().toISOString(), self._name, consumer.tid, err);
 
         // clean timeout timer
         if (consumer.cleanup_timeout) {
@@ -398,16 +402,23 @@ class AsyncQueue extends Queue {
       if (!result) {
         // queue is empty or non-mature: put us to sleep, to-rearm-in-future
     
-        // console.log ('%s - %s: getOrReserve_cb no result, setting wakeup', new Date().toISOString(), consumer.tid);
+       // console.log ('%s - %s - %s: getOrReserve_cb no result, setting wakeup', new Date().toISOString(), self._name, consumer.tid);
+
+        // clear this._next_mature_t if it's in the past
+        if (self._next_mature_t && (self._next_mature_t < new Date().getTime ())) {
+         // console.log ('%s - %s - %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', new Date().toISOString(), self._name);
+
+          self._next_mature_t = null;
+        }
 
         // obtain time to sleep (capped)
         self._nextDelta (function (delta_ms) {
           // TODO cancel previous wakeup_timeout if not null?
-          // console.log ('%s - %s: getOrReserve_cb : set wakeup in %d ms', new Date().toISOString(), consumer.tid, delta_ms);
+         // console.log ('%s - %s - %s: getOrReserve_cb : set wakeup in %d ms', new Date().toISOString(), self._name, consumer.tid, delta_ms);
 
           consumer.wakeup_timeout = setTimeout (
             function () {
-              // console.log ('%s - %s: wakey wakey... calling onetime_pop', new Date().toISOString(), consumer.tid);
+             // console.log ('%s - %s - %s: wakey wakey... calling onetime_pop', new Date().toISOString(), self._name, consumer.tid);
               consumer.wakeup_timeout = null;
               self._onetime_pop (consumer);
             },
@@ -422,7 +433,7 @@ class AsyncQueue extends Queue {
       self._next_mature_t = null;
       self._stats.incr ('get');
 
-      // console.log ('%s - %s: getOrReserve_cb : got result %j', new Date().toISOString(), consumer.tid, result);
+     // console.log ('%s - %s - %s: getOrReserve_cb : got result %j', new Date().toISOString(), self._name, consumer.tid, result);
 
       // clean timeout timer
       if (consumer.cleanup_timeout) {
@@ -452,31 +463,38 @@ class AsyncQueue extends Queue {
   /////////////////////////////
     if (!this._next_mature_t) {
       // there's no precalculated value, get it from backend
-      // console.log ('%s : _nextDelta has no available _next_mature_t, getting it from backend', new Date().toISOString());
+     // console.log ('%s - %s : _nextDelta has no available _next_mature_t, getting it from backend', new Date().toISOString(), this._name);
       var self = this;
 
       this.next_t (function (err, res) {
-        if (err) return cb (this._pollInterval);
+        if (err) {
+          var delta = self._next_mature_t || self._pollInterval;
+         // console.log ('%s - %s : _nextDelta error from backend, calc delta is %d', new Date().toISOString(), self._name, delta);
+          return cb (delta);
+        }
 
         if (res) {
+          // always trust backend's next_t, no matter what is in self._next_mature_t
           self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
           if (delta > self._pollInterval) delta = self._pollInterval;
-          // console.log ('%s : _nextDelta _next_mature_t from backend is %d, calc delta is %d', new Date().toISOString(), res, delta);
+         // console.log ('%s - %s : _nextDelta _next_mature_t from backend is %d, calc delta is %d', new Date().toISOString(), self._name, res, delta);
           return cb (delta);
         }
         else {
-          // console.log ('%s : _nextDelta no _next_mature_t from backend, calc delta is %d', new Date().toISOString(), self._pollInterval);
-          return cb (self._pollInterval);
+          var delta = self._next_mature_t || self._pollInterval;
+         // console.log ('%s - %s : _nextDelta no _next_mature_t from backend, calc delta is %d', new Date().toISOString(), self._name, delta);
+          return cb (delta);
         }
       });
     }
     else {
-      // console.log ('%s : _nextDelta has available _next_mature_t %d', new Date().toISOString(), this._next_mature_t);
+     // console.log ('%s - %s : _nextDelta has available _next_mature_t %d', new Date().toISOString(), this._name, this._next_mature_t);
       var delta = this._next_mature_t - Queue.now ().getTime();
       if (delta > this._pollInterval) delta = this._pollInterval;
+      if (delta < 0) delta = 0;
 
-      // console.log ('%s : _nextDelta calc delta is %d', new Date().toISOString(), delta);
+     // console.log ('%s - %s : _nextDelta calc delta is %d', new Date().toISOString(), this._name, delta);
 
       return cb (delta);
     }
