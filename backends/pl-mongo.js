@@ -169,7 +169,7 @@ class PipelinedMongoQueue extends AsyncQueue {
   
   //////////////////////////////////
   // passes element to the next queue in pipeline
-  next (id, next_queue, opts, callback) {
+  pl_step (id, next_queue, opts, callback) {
     var self = this;
 
     var query =  {
@@ -253,6 +253,7 @@ class PipelinedMongoQueue extends AsyncQueue {
     });
   }
 };
+
 
 
 class Pipeline {

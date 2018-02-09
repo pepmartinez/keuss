@@ -40,6 +40,10 @@ class PipelineLink {
     this._process (ondata);
   }
 
+  stop () {
+    this._src.cancel ();
+  }
+
   _mature (opts) {
     var mature = null;
 
@@ -56,54 +60,73 @@ class PipelineLink {
   _process (ondata) {
     var self = this;
 
-    // ('pll %s: attempting reserve', self._name);
+   // console.log ('pll %s: attempting reserve', self._name);
 
     this.src().pop('c1', { reserve: true }, function (err, res) {
-      // ('pll %s: reserved element: %j', self._name, res);
+     // console.log ('pll %s: reserved element: %j', self._name, res);
 
       if (err) {
-        // ('pll %s: error in reserve:', self._name, err);
+       // console.log ('pll %s: error in reserve:', self._name, err);
         return self._process (ondata);
       }
       
       if (!res) {
-        // ('pll %s: reserve produced nothing', self._name);
+       // console.log ('pll %s: reserve produced nothing', self._name);
         return self._process (ondata);
       }
       
       // do something
       ondata (res, function (err, res0) {
-        // ('pll %s: processed: %s', self._name, res._id);
+       // console.log ('pll %s: processed: %s', self._name, res._id);
+
+        if (err) {
+          // error: drop or retry?
+          if (err.drop === true) {
+         // console.log ('pll %s: marked to be dropped: %s', self._name, res._id);
+            return self._process (ondata);
+          }
+          else {
+            // rollback. TODO set some limit, drop afterwards?
+            self.src().ko (res._id, self._rollback_next_t (res), function (err) {
+             // console.log ('pll %s: rolled back: %s', self._name, res._id);
+              self._process (ondata);
+            });
+
+            return;
+          }
+        }
 
         var opts = {};
         _.merge (opts, self._opts, (res0 && res0.opts) || {});
-
         self._mature (opts);
-
         opts.payload = (res0 && res0.payload) || res.payload;
 
-// TODO add something to call rollback or drop, instead of next: use err for that
-        self.next (res._id, opts, function (err, res0) {
+        self._next (res._id, opts, function (err, res0) {
           if (err) {
-//            console.log ('error in next:', err);
+//           // console.log ('error in next:', err);
           }
-          // ('pll %s: passed to next: %s', self._name, res._id);
-          return self._process (ondata);
+         // console.log ('pll %s: passed to next: %s', self._name, res._id);
+          self._process (ondata);
         });
       });
     });
   }
 
-  next (id, opts, callback) {
+  _next (id, opts, callback) {
     var self = this;
 
-    this.src().next (id, this.dst(), opts, function (err, res) {
+    this.src().pl_step (id, this.dst(), opts, function (err, res) {
       self.src()._stats.incr ('put');
       self.dst()._stats.incr ('get');
       self.dst()._signaller.signalInsertion ((opts && opts.mature) || Queue.now());
       
       callback (err, res);
     });
+  }
+
+  _rollback_next_t (item) {
+    var delta = (item.tries * (this._opts.retry_factor_t || 2)) + (this._opts.retry_base_t || 1);
+    return new Date().getTime () + (delta * 1000);
   }
 }
 
