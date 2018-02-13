@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "keywords": [
     "queue",
     "job",
@@ -30,8 +30,7 @@
     "lodash": "4.17.4",
     "mitt": "1.1.3",
     "mongodb": "2.2.34",
-    "uuid": "3.2.1",
-    "why-is-node-running": "^1.2.3"
+    "uuid": "3.2.1"
   },
   "devDependencies": {
     "mocha": "5.0.0",
