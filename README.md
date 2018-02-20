@@ -1,7 +1,5 @@
 # keuss
-Job Queues on selectable backends (for now: mongodb, redis) for node.js
-
-Still beta, basic structure may be in flux
+Job Queues an pipelines on selectable backends (for now: mongodb, redis) for node.js
 
 # Contents
 
@@ -12,6 +10,7 @@ Still beta, basic structure may be in flux
 - [About](#about)
   - [Concepts](#concepts)
     - [Queue](#queue)
+    - [Pipeline](#pipeline)
     - [Storage](#storage)
     - [Signaller](#signaller)
     - [Stats](#stats)
@@ -45,10 +44,10 @@ Still beta, basic structure may be in flux
 
 ## About
 Keuss is an attempt or experiment to provide a serverless, persistent and high-available 
-queue middleware supporting delays, using mongodb and redis to provide most of the backend 
+queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend 
 needs
 
-As it seems, the key to provide persistency, HA and load balance is to have a storage subsystem 
+The underlying idea is that the key to provide persistency, HA and load balance is to have a storage subsystem 
 that provides that, and use it to store your queues. Instead of reinventing the wheel by 
 building such as storage I simply tried to adapt what's already out there
 
@@ -71,22 +70,29 @@ a **Queue** is more of an interface, a definition of what it can do. Keuss queue
 
 *element* here translates to any js object. Internally, it's usually managed as json
 
+#### Pipeline
+A **pipeline** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the 'commit element in incoming queue, insert element in the next queue' to be atomic. This removes chances for race conditions, or message losses
+
+The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors
+
 #### Storage
-**Storage** or **Backend** provides almost-complete queue primitives, fully functional-complee and already usable as is. Keuss comes with 3 backends, with various levels of features and performance:
+**Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 3 backends, with various levels of features and performance:
 
 * *mongo*, a mongodb-based backend that provides te full set of queue features, still with decent performance
 * *redis-oq*, backed using an ordered queue on top of redis (made in turn with a sorted set, a hash and some lua). Provides all queue features including reserve-commit-rollback. Noticeable faster than mongodb
-* redis-list, backed using a redis list. Does not offer reserve-commit-rollback nor the ability to schedule, but is much faster than redis-oq
+* *redis-list*, backed using a redis list. Does not offer reserve-commit-rollback nor the ability to schedule, but is much faster than redis-oq
+* *pl-mongo*, a version of the mongo backend that provides pipelining capabilities (the queues it produces are also pipelines). 
 
 As mentioned before, persistence and HA depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases
 
 The following table shows the capabilities of each backend:
 
-backend    | delay/schedule | reserve/commit
------------|:--------------:|:--------------:
-redis-list | - | - 
-redis-oq   | x | x 
-mongo      | x | x 
+backend    | delay/schedule | reserve/commit | pipelining |
+-----------|:--------------:|:--------------:|:----------:|
+redis-list | - | - | -
+redis-oq   | x | x | -
+mongo      | x | x | -
+pl-mongo   | x | x | x
 
 #### Signaller
 **Signaller** provides a bus interconnecting all keuss clients, so events can be shared. Keuss provides 2 signallers:
@@ -105,6 +111,9 @@ So far, the only events published by keuss is *element inserted in queue X*, whi
 * *Backends* need to be intialized before being used. Exact inittialization details depend on each backend
 * When creating a *queue*, a *signaller* and a *stats* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *local* and *mem*, respectively, are used
 * *Queues* are created on-demand, and are never destroyed as far as keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty
+* *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue
+
+More info on pipelines [here](doc/pipelines.md)
 
 ## Install 
 ```bash
