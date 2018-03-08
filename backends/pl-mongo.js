@@ -6,16 +6,16 @@ var _ =     require ('lodash');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var AsyncQueue = require ('../AsyncQueue');
-var Queue =      require ('../Queue');
+var Queue = require ('../Queue');
+var QFactory =   require ('../QFactory');
 
 
-class PipelinedMongoQueue extends AsyncQueue {
+class PipelinedMongoQueue extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, pipeline, opts) {
   //////////////////////////////////////////////
-    super (name, opts);
+    super (name, pipeline._factory, opts);
 
     this._pipeline = pipeline;
     this._col = this._pipeline._col;
@@ -215,7 +215,7 @@ class PipelinedMongoQueue extends AsyncQueue {
   //////////////////////////////////
     var q = {
       _q: this._name,
-      mature : {$lte : AsyncQueue.now ()}
+      mature : {$lte : Queue.now ()}
     };
     
     var opts = {};
@@ -230,7 +230,7 @@ class PipelinedMongoQueue extends AsyncQueue {
   //////////////////////////////////
     var q = {
       _q: this._name,
-      mature : {$gt : AsyncQueue.now ()}
+      mature : {$gt : Queue.now ()}
     };
     
     var opts = {};
@@ -259,6 +259,7 @@ class PipelinedMongoQueue extends AsyncQueue {
 class Pipeline {
   constructor (name, factory) {
     this._name = name;
+    this._factory = factory;
     this._col = factory._mongo_conn.collection (this._name);
     this.ensureIndexes (function (err) {});
   }
@@ -302,11 +303,10 @@ class Pipeline {
 }
 
 
-class Factory {
+class Factory extends QFactory {
   constructor (opts, mongo_conn) {
-    this._opts = opts;
+    super (opts);
     this._mongo_conn = mongo_conn;
-
     this._pipelines = {};
   }
   
@@ -337,22 +337,6 @@ class Factory {
   
   type () {
     return PipelinedMongoQueue.Type ();
-  }
-
-  list (cb) {
-    this._mongo_conn.collections (function (err, collections) {
-      if (err) {
-        return cb (err);
-      }
-      
-      var colls = [];
-      
-      collections.forEach (function (coll) {
-        colls.push (coll.s.name)
-      });
-      
-      cb (null, colls);
-    });
   }
 }
 

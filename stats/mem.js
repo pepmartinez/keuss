@@ -40,6 +40,10 @@ class MemStatsFactory {
   static Type () {return 'mem'}
   type () {return Type ()}
 
+  queues (qclass, cb) {
+    cb(null, []);
+  }
+
   stats () {
     return new MemStats (this);
   }

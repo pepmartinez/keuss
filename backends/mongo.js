@@ -6,16 +6,15 @@ var _ =     require ('lodash');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var AsyncQueue = require ('../AsyncQueue');
-var Queue =      require ('../Queue');
+var Queue = require ('../Queue');
+var QFactory =   require ('../QFactory');
 
-
-class SimpleMongoQueue extends AsyncQueue {
+class SimpleMongoQueue extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
-    super (name, opts);
+    super (name, factory, opts);
 
     this._factory = factory;
     this._col = factory._mongo_conn.collection (name);
@@ -173,7 +172,7 @@ class SimpleMongoQueue extends AsyncQueue {
   size (callback) {
   //////////////////////////////////
     var q = {
-      mature : {$lte : AsyncQueue.now ()}
+      mature : {$lte : Queue.now ()}
     };
     
     var opts = {};
@@ -187,7 +186,7 @@ class SimpleMongoQueue extends AsyncQueue {
   schedSize (callback) {
   //////////////////////////////////
     var q = {
-      mature : {$gt : AsyncQueue.now ()}
+      mature : {$gt : Queue.now ()}
     };
     
     var opts = {};
@@ -225,9 +224,9 @@ class SimpleMongoQueue extends AsyncQueue {
 };
 
 
-class Factory {
+class Factory extends QFactory {
   constructor (opts, mongo_conn) {
-    this._opts = opts;
+    super (opts);
     this._mongo_conn = mongo_conn;
   }
 
@@ -250,22 +249,6 @@ class Factory {
   
   type () {
     return SimpleMongoQueue.Type ();
-  }
-
-  list (cb) {
-    this._mongo_conn.collections (function (err, collections) {
-      if (err) {
-        return cb (err);
-      }
-      
-      var colls = [];
-      
-      collections.forEach (function (coll) {
-        colls.push (coll.s.name)
-      });
-      
-      cb (null, colls);
-    });
   }
 }
 

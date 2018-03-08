@@ -4,17 +4,17 @@ var async = require ('async');
 var _ =     require ('lodash');
 
 var RedisConn =  require ('../utils/RedisConn');
-var AsyncQueue = require ('../AsyncQueue');
+var Queue = require ('../Queue');
+var QFactory =   require ('../QFactory');
 
 
-class RedisListQueue extends AsyncQueue {
+class RedisListQueue extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
-    super (name, opts);
+    super (name, factory, opts);
 
-    this._factory = factory;
     this._rediscl = factory._rediscl;
     this._redis_l_name = 'keuss:q:list:' + this._name;
   }
@@ -109,9 +109,9 @@ class RedisListQueue extends AsyncQueue {
   }
 };
 
-class Factory {
+class Factory extends QFactory {
   constructor (opts, rediscl) {
-    this._opts = opts || {};
+    super (opts);
     this._rediscl = rediscl;
   }
 
@@ -131,31 +131,6 @@ class Factory {
   
   type () {
     return RedisListQueue.Type ();
-  }
-
-  list (cb) {
-    var colls = [];
-    var self = this;
-
-    this._rediscl.keys ('keuss:q:list:?*', function (err, collections) {
-      if (err) return cb (err);
-
-      collections.forEach (function (coll) {
-        colls.push (coll.substring (13));
-      });
-
-      // add "keuss:stats:redis:list:*" to try to add empty queues
-      self._rediscl.keys ('keuss:stats:redis:list:?*', function (err, collections) {
-        if (err) return cb (err);
-
-        collections.forEach (function (coll) {
-          var qname = coll.substring (23);
-          if (_.indexOf (colls, qname) == -1) colls.push (qname);
-        });
-      
-        cb (null, colls);
-      });
-    });
   }
 }
 
