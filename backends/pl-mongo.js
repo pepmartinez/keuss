@@ -19,6 +19,11 @@ class PipelinedMongoQueue extends Queue {
 
     this._pipeline = pipeline;
     this._col = this._pipeline._col;
+
+    // set topology
+    this._stats.topology ({
+      pipeline: pipeline.name()
+    }, function(){});
   }
   
   /////////////////////////////////////////

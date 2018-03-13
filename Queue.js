@@ -29,7 +29,7 @@ class Queue {
     this._consumers_by_tid = new Map();
     
     this._signaller = factory._signaller_factory.signal (this, this._opts.signaller.opts);
-    this._stats = factory._stats_factory.stats (this.type () + ':' + this.name (), this._opts.stats.opts);
+    this._stats = factory._stats_factory.stats (this.type (), this.name (), this._opts.stats.opts);
 
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
@@ -40,52 +40,46 @@ class Queue {
   // expected redefinitions on subclasses
   
   // add element to queue
-  insert (entry, callback) {callback (null, null)}
+  insert (entry, callback) {callback (null, null);}
   
   // get element from queue
-  get (callback) {callback (null, {mature: 0, payload: null, tries: 0})}
+  get (callback) {callback (null, {mature: 0, payload: null, tries: 0});}
   
   // reserve element: call cb (err, pl) where pl has an id
-  reserve (callback) {callback (null, {mature: 0, payload: null, tries: 0}, null)}
+  reserve (callback) {callback (null, {mature: 0, payload: null, tries: 0}, null);}
   
   // commit previous reserve, by p.id: call cb (err, true|false), true if element committed
-  commit (id, callback) {callback (null, false)}
+  commit (id, callback) {callback (null, false);}
   
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
-  rollback (id, next_t, callback) {callback (null, false)}
+  rollback (id, next_t, callback) {callback (null, false);}
 
   // pipeline: atomically passes to next queue a previously reserved element, by id
-  pl_step (id, next_queue, opts, callback) {callback (null, false)}
+  pl_step (id, next_queue, opts, callback) {callback (null, false);}
 
   // queue size including non-mature elements
-  totalSize (callback) {callback (null, 0)}
+  totalSize (callback) {callback (null, 0);}
   
   // queue size NOT including non-mature elements
-  size (callback) {callback (null, 0)}
+  size (callback) {callback (null, 0);}
   
   // queue size of non-mature elements only
-  schedSize (callback) {callback (null, 0)}
+  schedSize (callback) {callback (null, 0);}
   
   // Date of next 
-  next_t (callback) {callback (null, null)}
+  next_t (callback) {callback (null, null);}
   
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
   
-  stats (cb) {this._stats.values (cb)}
+  stats (cb) {this._stats.values (cb);}
     
   // placeholder methods
-  name () {return this._name}
-  type () {return 'queue:base'}
-    
-  // queue size NOT including non-mature elements
-  size (cb) {cb ()}
-    
-  // queue size including non-mature elements
-  totalSize (cb) {cb ()}
+  name () {return this._name;}
+  type () {return 'queue:base';}
     
   // T of next mature
-  nextMatureDate () {return this._next_mature_t}
+  nextMatureDate () {return this._next_mature_t;}
 
   static now ()             {return (new Date ());}
   static nowPlusSecs (secs) {return (new Date (Date.now () + secs * 1000));}

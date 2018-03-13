@@ -7,33 +7,23 @@ var async =   require ('async');
 var Mem =   require ('../stats/mem');
 var Redis = require ('../stats/redis');
 
+var qclass = 'some-class';
 var name = 'test-stats';
 
 function run_tests_on_class (CL) {
   describe (CL.Type () + ' stats provider', function () {
     
     before (function (done) {
-      var ftry = new CL ();
-      var mem = ftry.stats (name);
-      mem.clear (done);
-      ftry.close();
+      done();
     });
     
     after  (function (done) {
-      var ftry = new CL ();
-      var mem = ftry.stats (name);
-      mem.clear (done);
-
- //     setTimeout(function () {
- //       log() // logs out active handles that are keeping node running
- //     }, 100)
-
+      done();
     });
     
     it ('creates ok', function (done) {
-      var mem = new CL ().stats (name);
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       mem.values (function (err, vals) {
         vals.should.eql ({});
         ftry.close();
@@ -43,7 +33,7 @@ function run_tests_on_class (CL) {
     
     it ('initializes ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.incr ('v1', 1, cb)},
@@ -64,7 +54,7 @@ function run_tests_on_class (CL) {
     
     it ('increments (default by 1) ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -86,7 +76,7 @@ function run_tests_on_class (CL) {
     
     it ('increments (explicit deltas) ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -106,7 +96,7 @@ function run_tests_on_class (CL) {
     
     it ('decrements (default by 1) ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -126,7 +116,7 @@ function run_tests_on_class (CL) {
     
     it ('decrements (explicit deltas) ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -150,9 +140,81 @@ function run_tests_on_class (CL) {
       });
     });
     
+    it ('manages topology ok', function (done) {
+      var ftry = new CL ();
+      var mem = ftry.stats (qclass, name);
+      var topology = {a:1, b: {t:'yy', tt: 99}};
+
+      async.series([
+        function (cb) {mem.clear (cb)},
+        function (cb) {mem.topology (topology, cb)},
+        function (cb) {
+          setTimeout (function () {
+            mem.topology (function (err, tplg) {
+              tplg.should.eql (topology);
+              cb();
+            });
+          }, 200);
+        },
+        function (cb) {mem.clear (cb)},
+        function (cb) {
+          setTimeout (function () {
+            cb();
+          }, 200);
+        }
+      ], function(err, results) {
+        ftry.close();
+        done (err);
+      });
+    });
+    
+    it ('manages concise & full listing ok', function (done) {
+      var ftry = new CL ();
+      var mem1 = ftry.stats (qclass, name);
+      var mem2 = ftry.stats (qclass, name + '-2');
+      var topology1 = {a:1, b: {t:'yy', tt: 99}};
+      var topology2 = {a:17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7};
+
+      async.series([
+        function (cb) {mem1.clear (cb)},
+        function (cb) {mem2.clear (cb)},
+        function (cb) {mem1.topology (topology1, cb)},
+        function (cb) {mem2.topology (topology2, cb)},
+        function (cb) {mem1.incr ('v1', 8, cb)},
+        function (cb) {mem1.incr ('v2', 6, cb)},
+        function (cb) {mem2.incr ('v1', 4, cb)},
+        function (cb) {mem2.incr ('v3', 45, cb)},
+        function (cb) {
+          setTimeout (function () {
+            ftry.queues (qclass, function (err, res) {
+              if (err) return cb (err);
+              res.should.eql ([ 'test-stats', 'test-stats-2' ]);
+              cb ();
+            })
+          }, 200);
+        },
+        function (cb) {
+          setTimeout (function () {
+            ftry.queues (qclass, {full: true}, function (err, res) {
+              if (err) return cb (err);
+              res.should.eql ({ 
+                'test-stats': { topology: { a: 1, b: {t:'yy', tt: 99} }, counters: {v1: 8, v2: 6 } },
+                'test-stats-2': { topology: { a: 17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7 }, counters: {v1: 4, v3: 45} } 
+              });
+              
+              cb ();
+            })
+          }, 200);
+        }
+      ], function(err, results) {
+        ftry.close();
+        done (err);
+      });
+    });
+    
     it ('clears ok', function (done) {
       var ftry = new CL ();
-      var mem = ftry.stats (name);
+      var mem = ftry.stats (qclass, name);
       
       async.series([
         function (cb) {mem.clear (cb)},
@@ -181,5 +243,5 @@ function run_tests_on_class (CL) {
 }
 
 
-//run_tests_on_class (Mem);
+run_tests_on_class (Mem);
 run_tests_on_class (Redis);

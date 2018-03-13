@@ -1,9 +1,14 @@
 'use strict';
 
+var _ = require ('lodash');
+
 class MemStats {
   constructor (factory) {
     this._factory = factory;
-    this._s = {};
+    this._s = {
+      counters: {},
+      topology: {}
+    };
   }
   
   type () {
@@ -11,17 +16,17 @@ class MemStats {
   }
   
   values (cb) {
-    cb (null, this._s);
+    cb (null, this._s.counters);
   }
   
   incr (v, delta, cb) {
-    if (!this._s[v]) {
-      this._s[v] = 0;
+    if (!this._s.counters[v]) {
+      this._s.counters[v] = 0;
     }
     
     if ((delta == null) || (delta == undefined)) delta = 1;
-    this._s[v] = this._s[v] + delta;
-    if (cb) cb(null, this._s[v]);
+    this._s.counters[v] = this._s.counters[v] + delta;
+    if (cb) cb(null, this._s.counters[v]);
   }
   
   decr (v, delta, cb) {
@@ -29,14 +34,35 @@ class MemStats {
     this.incr (v, -delta, cb);
   }
   
+  topology (tplg, cb) {
+    if (!cb) {
+      // get
+      cb = tplg;
+      cb (null, this._s.topology);
+    }
+    else {
+      // set
+      this._s.topology = tplg;
+      cb ();
+    }
+  }
+
   clear (cb) {
-    this._s = {};
+    this._s = {
+      counters: {},
+      topology: {}
+    };
+
+    // TODO remove from factory 
+    
     if (cb) cb();
   } 
 }
 
 class MemStatsFactory {
   constructor (opts) {
+    // map of created queues' stats: root -> qclass -> queues
+    this._queues = {};
   }
 
   static Type () {
@@ -47,12 +73,43 @@ class MemStatsFactory {
     return Type ();
   }
 
-  queues (qclass, cb) {
-    cb(null, []);
+  queues (qclass, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+
+    var cls = this._queues[qclass];
+
+    if (opts.full) {
+      if (!cls) return cb (null, {});
+
+      var ret = {};
+
+      _.forEach (cls, function (v, k) {
+        ret[k] = v._s;
+      });
+
+      cb (null, ret);
+    }
+    else {
+      if (!cls) return cb (null, []);
+
+      var ret = [];
+
+      _.forEach (cls, function (v, k) {
+        ret.push (k);
+      });
+
+      cb (null, ret);
+    }
   }
 
-  stats () {
-    return new MemStats (this);
+  stats (qclass, name, opts) {
+    if (!this._queues[qclass]) this._queues[qclass] = {};
+    var st = new MemStats (this);
+    this._queues[qclass][name] = st;
+    return st;
   }
 
   close () {
