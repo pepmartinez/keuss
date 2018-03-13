@@ -18,15 +18,20 @@ class QFactory {
     this._stats_factory =     this._opts.stats.provider || new MemStats ();
   }
 
-  signaller_factory () {return this._signaller_factory}
-  stats_factory () {return this._stats_factory}
+  signaller_factory () {
+    return this._signaller_factory;
+  }
+  
+  stats_factory () {
+    return this._stats_factory;
+  }
 
   queue (name, opts) {
     return null;
   }
 
   close (cb) {
-    cb()
+    cb();
   }
   
   type () {
@@ -35,7 +40,7 @@ class QFactory {
 
   list (cb) {
     // use stats factory
-    this._stats_factory.queues (this.type (), cb)
+    this._stats_factory.queues (this.type (), cb);
   }
 }
 

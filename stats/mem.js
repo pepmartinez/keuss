@@ -6,7 +6,9 @@ class MemStats {
     this._s = {};
   }
   
-  type () {return this._factory.type ()}
+  type () {
+    return this._factory.type ();
+  }
   
   values (cb) {
     cb (null, this._s);
@@ -24,7 +26,7 @@ class MemStats {
   
   decr (v, delta, cb) {
     if ((delta == null) || (delta == undefined)) delta = 1;
-    this.incr (v, -delta, cb)
+    this.incr (v, -delta, cb);
   }
   
   clear (cb) {
@@ -37,8 +39,13 @@ class MemStatsFactory {
   constructor (opts) {
   }
 
-  static Type () {return 'mem'}
-  type () {return Type ()}
+  static Type () {
+    return 'mem';
+  }
+  
+  type () {
+    return Type ();
+  }
 
   queues (qclass, cb) {
     cb(null, []);

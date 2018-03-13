@@ -109,9 +109,10 @@ class PipelinedMongoQueue extends Queue {
   // commit previous reserve, by p.id
   commit (id, callback) {
     var self = this;
-    
+    var query;
+
     try {
-      var query =  {
+      query =  {
         _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
         _q: this._name,
         reserved: {$exists: true}
@@ -140,9 +141,10 @@ class PipelinedMongoQueue extends Queue {
     }
 
     var self = this;
-    
+    var query;
+
     try {
-      var query =  {
+      query =  {
         _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
         _q: this._name,
         reserved: {$exists: true}
@@ -252,7 +254,7 @@ class PipelinedMongoQueue extends Queue {
       callback (null, result && result.mature);
     });
   }
-};
+}
 
 
 
@@ -274,19 +276,7 @@ class Pipeline {
 
   list (cb) {
     // TODO
-    this._mongo_conn.collections (function (err, collections) {
-      if (err) {
-        return cb (err);
-      }
-      
-      var colls = [];
-      
-      collections.forEach (function (coll) {
-        colls.push (coll.s.name)
-      });
-      
-      cb (null, colls);
-    });
+    cb (null, []);
   }
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -298,7 +288,7 @@ class Pipeline {
   //////////////////////////////////////////////////////////////////
     this._col.ensureIndex ({_q : 1, mature : 1}, function (err) {
       return cb (err);
-    })
+    });
   }
 }
 
@@ -319,7 +309,7 @@ class Factory extends QFactory {
       pipeline = this._pipelines[pl_name];
     }
 
-    var full_opts = {}
+    var full_opts = {};
     _.merge(full_opts, this._opts, opts);
     return pipeline.queue (name, full_opts);
   }

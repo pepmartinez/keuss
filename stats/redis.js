@@ -14,12 +14,14 @@ class RedisStats {
   constructor(name, factory, opts) {
     this._name = 'keuss:stats:' + name;
     this._opts = opts || {};
-    this._factory = factory
+    this._factory = factory;
     this._rediscl = factory._rediscl;
     this._cache = {};
   }
 
-  type() { return this._factory.type() }
+  type() { 
+    return this._factory.type();
+   }
 
   values(cb) {
     this._rediscl.hgetall(this._name, function (err, v) {

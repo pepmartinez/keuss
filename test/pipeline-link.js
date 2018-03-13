@@ -24,7 +24,7 @@ var factory = null;
   
     after (function (done) {
       factory.close (function (err) {
-        done (err)
+        done (err);
       });
     });
   
@@ -114,7 +114,7 @@ var factory = null;
       async.timesLimit (5, 1, function (n, next) {
         q3.pop ('c', pop_opts, function (err, res) {
           next (err, res);
-        })
+        });
       }, function (err, res) {
         stage1_retries.should.equal (3);
         stage2_retries.should.equal (3);
@@ -147,7 +147,7 @@ var factory = null;
 
       async.timesLimit (5, 1, function (n, next) {
         q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, function () {
-          setTimeout (next, 200)
+          setTimeout (next, 200);
         });
       });
     });
