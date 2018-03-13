@@ -72,7 +72,8 @@ class Queue {
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
   
-  stats (cb) {this._stats.values (cb);}
+  stats    (cb) {this._stats.values (cb);}
+  topology (cb) {this._stats.topology (cb);}
     
   // placeholder methods
   name () {return this._name;}
@@ -354,6 +355,7 @@ class Queue {
     async.parallel ({
       type:          function (cb) {cb (null, self.type())},
       stats:         function (cb) {self.stats (cb)},
+      topology:      function (cb) {self.topology (cb)},
       next_mature_t: function (cb) {self.next_t (cb)},
       size:          function (cb) {self.size (cb)},
       totalSize:     function (cb) {self.totalSize (cb)},

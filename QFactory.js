@@ -38,9 +38,9 @@ class QFactory {
     return 'none';
   }
 
-  list (cb) {
+  list (opts, cb) {
     // use stats factory
-    this._stats_factory.queues (this.type (), cb);
+    this._stats_factory.queues (this.type (), opts, cb);
   }
 }
 
