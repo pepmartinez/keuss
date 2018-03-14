@@ -12,8 +12,9 @@ var _s_opts = undefined;
  * redis using HINCRBY 
  * 
  * stores in:
- *   - counters in keuss:stats:<qclass>:<name>:counter_<counter> -> int
- *   - topology in keuss:stats:<qclass>:<name>:topology          -> string/json
+ *   - counters                   in keuss:stats:<qclass>:<name>:counter_<counter> -> int
+ *   - opts (queue creation opts) in keuss:stats:<qclass>:<name>:opts              -> string/json
+ *   - topology                   in keuss:stats:<qclass>:<name>:topology          -> string/json
 */
 class RedisStats {
   constructor(name, factory, opts) {
@@ -91,6 +92,28 @@ class RedisStats {
     this.incr(v, -delta, cb);
   }
   
+  opts (opts, cb) {
+    if (!cb) {
+      // get
+      cb = opts;
+      this._rediscl.hget (this._name, 'opts', function (err, res){
+        if (err) return cb(err);
+        if (!res) return cb(null, {});
+        try {
+          if (res) res = JSON.parse(res);
+          cb (null, res);
+        }
+        catch (e) {
+          cb(e);
+        }
+      });
+    }
+    else {
+      // set
+      this._rediscl.hset (this._name, 'opts', JSON.stringify (opts || {}), cb);
+    }
+  }
+  
   topology (tplg, cb) {
     if (!cb) {
       // get
@@ -163,6 +186,9 @@ class RedisStatsFactory {
                   ret.counters[k.substr (8)] = parseInt(v[k]);
                 }
                 else if (k == 'topology') {
+                  ret[k] = JSON.parse (v[k]);
+                }
+                else if (k == 'opts') {
                   ret[k] = JSON.parse (v[k]);
                 }
                 else {

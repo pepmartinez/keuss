@@ -7,6 +7,7 @@ class MemStats {
     this._factory = factory;
     this._s = {
       counters: {},
+      opts: {},
       topology: {}
     };
   }
@@ -34,6 +35,19 @@ class MemStats {
     this.incr (v, -delta, cb);
   }
   
+  opts (opts, cb) {
+    if (!cb) {
+      // get
+      cb = opts;
+      cb (null, this._s.opts);
+    }
+    else {
+      // set
+      this._s.opts = opts;
+      cb ();
+    }
+  }
+  
   topology (tplg, cb) {
     if (!cb) {
       // get
@@ -50,6 +64,7 @@ class MemStats {
   clear (cb) {
     this._s = {
       counters: {},
+      opts: {},
       topology: {}
     };
 

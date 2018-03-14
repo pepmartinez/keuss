@@ -6,8 +6,8 @@ var _ =     require ('lodash');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var Queue = require ('../Queue');
-var QFactory =   require ('../QFactory');
+var Queue =    require ('../Queue');
+var QFactory = require ('../QFactory');
 
 
 class PipelinedMongoQueue extends Queue {
@@ -306,9 +306,12 @@ class Factory extends QFactory {
   }
   
   queue (name, opts) {
-    var pl_name = (opts && opts.pipeline) || 'default';
-    
+    if (!opts) opts = {};
+    if (!opts.pipeline) opts.pipeline = 'default';
+
+    var pl_name = opts.pipeline;    
     var pipeline = this._pipelines[pl_name];
+
     if (!pipeline) {
       this._pipelines[pl_name] = new Pipeline (pl_name, this);
       pipeline = this._pipelines[pl_name];

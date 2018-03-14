@@ -3,6 +3,8 @@
 var LocalSignal = require ('./signal/local');
 var MemStats =    require ('./stats/mem');
 
+var _ = require ('lodash');
+
 
 class QFactory {
   constructor (opts) {
@@ -42,6 +44,23 @@ class QFactory {
     // use stats factory
     this._stats_factory.queues (this.type (), opts, cb);
   }
+
+  recreate_topology (cb) {
+    var self = this;
+
+    this.list ({full: true}, function (err, ql) {
+      if (err) return cb (err);
+
+      var ret = {};
+
+      _.forEach (ql, function (v, k) {
+        var q = self.queue (k, v.opts);
+        ret[k] = q;
+      });
+
+      cb (null, ret);
+    });
+  } 
 }
 
 module.exports = QFactory;

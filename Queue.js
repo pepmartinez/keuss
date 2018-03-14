@@ -31,6 +31,10 @@ class Queue {
     this._signaller = factory._signaller_factory.signal (this, this._opts.signaller.opts);
     this._stats = factory._stats_factory.stats (this.type (), this.name (), this._opts.stats.opts);
 
+    // save opts minus stats & signaller
+    var __opts = _.omit (this._opts, ['signaller', 'stats']);
+    this._stats.opts (__opts, function () {});
+
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
   }

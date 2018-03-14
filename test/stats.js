@@ -172,6 +172,8 @@ function run_tests_on_class (CL) {
       var ftry = new CL ();
       var mem1 = ftry.stats (qclass, name);
       var mem2 = ftry.stats (qclass, name + '-2');
+      var opts1 = {s:0, a: 'yy'};
+      var opts2 = {s:7, at: 'yy--j'};
       var topology1 = {a:1, b: {t:'yy', tt: 99}};
       var topology2 = {a:17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7};
 
@@ -180,6 +182,8 @@ function run_tests_on_class (CL) {
         function (cb) {mem2.clear (cb)},
         function (cb) {mem1.topology (topology1, cb)},
         function (cb) {mem2.topology (topology2, cb)},
+        function (cb) {mem1.opts (opts1, cb)},
+        function (cb) {mem2.opts (opts2, cb)},
         function (cb) {mem1.incr ('v1', 8, cb)},
         function (cb) {mem1.incr ('v2', 6, cb)},
         function (cb) {mem2.incr ('v1', 4, cb)},
@@ -198,8 +202,8 @@ function run_tests_on_class (CL) {
             ftry.queues (qclass, {full: true}, function (err, res) {
               if (err) return cb (err);
               res.should.eql ({ 
-                'test-stats': { topology: { a: 1, b: {t:'yy', tt: 99} }, counters: {v1: 8, v2: 6 } },
-                'test-stats-2': { topology: { a: 17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7 }, counters: {v1: 4, v3: 45} } 
+                'test-stats': { topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 } },
+                'test-stats-2': { topology: topology2, opts: opts2, counters: {v1: 4, v3: 45} } 
               });
               
               cb ();
