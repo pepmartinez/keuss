@@ -309,8 +309,13 @@ class Queue {
   cancel (tid) {
   //////////////////////////////////
     let consumer_data = this._consumers_by_tid.get (tid);
-    
+
     if (tid) {
+      if (!consumer_data) {
+        // tid does not point to valid consume, NOOP
+        return;
+      }
+
       // call callback with error-cancelled?
       
       // mark cancelled by deleting callback
