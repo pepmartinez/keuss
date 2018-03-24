@@ -115,7 +115,7 @@ const _s_lua_code_rollback = `
   local id = ARGV[1]
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
   
-  if (val == nil) then
+  if (val==false) then
     return nil
   end
 

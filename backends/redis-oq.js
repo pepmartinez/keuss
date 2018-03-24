@@ -96,7 +96,7 @@ class RedisOQ extends Queue {
         return callback (err);
       }
 
-      return callback (null, res != null)
+      return callback (null, (res ? true : false))
     });
   }
 
