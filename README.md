@@ -1,51 +1,44 @@
 # keuss
-Job Queues an pipelines on selectable backends (for now: mongodb, redis) for node.js
+Job Queues an pipelines on selectable backends (for now: mongodb and redis) for node.js
 
 # Contents
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-
-- [About](#about)
-  - [Concepts](#concepts)
-    - [Queue](#queue)
-    - [Pipeline](#pipeline)
-    - [Storage](#storage)
+- [keuss](#keuss)
+- [Contents](#contents)
+  - [About](#about)
+    - [Concepts](#concepts)
+      - [Queue](#queue)
+      - [Pipeline](#pipeline)
+      - [Storage](#storage)
+      - [Signaller](#signaller)
+      - [Stats](#stats)
+    - [How all fits together](#how-all-fits-together)
+  - [Install](#install)
+  - [Usage](#usage)
+    - [Factory API](#factory-api)
+      - [Initialization](#initialization)
+      - [Queue creation](#queue-creation)
     - [Signaller](#signaller)
     - [Stats](#stats)
-  - [How all fits together](#how-all-fits-together)
-- [Install](#install)
-- [Usage](#usage)
-  - [Factory API](#factory-api)
-    - [Initialization](#initialization)
-    - [Queue creation](#queue-creation)
-  - [Signaller](#signaller-1)
-  - [Stats](#stats-1)
-  - [Queue API](#queue-api)
-    - [Get Stats](#get-stats)
-    - [Queue name](#queue-name)
-    - [Queue type](#queue-type)
-    - [Queue occupation](#queue-occupation)
-    - [Total Queue occupation](#total-queue-occupation)
-    - [Time of schedule of next message](#time-of-schedule-of-next-message)
-    - [Add element to queue](#add-element-to-queue)
-    - [Get element from queue](#get-element-from-queue)
-    - [Cancel a pending Pop](#cancel-a-pending-pop)
-    - [Commit a reserved element](#commit-a-reserved-element)
-    - [Rolls back a reserved element](#rolls-back-a-reserved-element)
-  - [Redis connections](#redis-connections)
-  - [Reserve & (commit | rollback)](#reserve--commit--rollback)
-  - [Working with no signallers](#working-with-no-signallers)
-- [Examples](#examples)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+    - [Queue API](#queue-api)
+      - [Get Stats](#get-stats)
+      - [Queue name](#queue-name)
+      - [Queue type](#queue-type)
+      - [Queue occupation](#queue-occupation)
+      - [Total Queue occupation](#total-queue-occupation)
+      - [Time of schedule of next message](#time-of-schedule-of-next-message)
+      - [Add element to queue](#add-element-to-queue)
+      - [Get element from queue](#get-element-from-queue)
+      - [Cancel a pending Pop](#cancel-a-pending-pop)
+      - [Commit a reserved element](#commit-a-reserved-element)
+      - [Rolls back a reserved element](#rolls-back-a-reserved-element)
+    - [Redis connections](#redis-connections)
+    - [Reserve & (commit | rollback)](#reserve-commit-rollback)
+    - [Working with no signallers](#working-with-no-signallers)
+  - [Examples](#examples)
 
 
 ## About
-Keuss is an attempt or experiment to provide a serverless, persistent and high-available 
-queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend 
-needs
+Keuss is an attempt or experiment to provide a serverless, persistent and kigh-available queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend needs. As of now, it has evolved into a rather capable and complete queue middleware
 
 The underlying idea is that the key to provide persistency, HA and load balance is to have a storage subsystem 
 that provides that, and use it to store your queues. Instead of reinventing the wheel by 
@@ -98,6 +91,7 @@ pl-mongo   | x | x | x
 **Signaller** provides a bus interconnecting all keuss clients, so events can be shared. Keuss provides 2 signallers:
 * *local* : provides in-proccess messaging, useful only for simple cases or testing
 * *redis-pubsub*: uses the pubsub subsystem provided by redis 
+* *mongo-capped*: uses pubsub on top of a mongodb capped collection, using [mubsub](https://www.npmjs.com/package/mubsub)
 
 So far, the only events published by keuss is *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago
 
@@ -105,6 +99,7 @@ So far, the only events published by keuss is *element inserted in queue X*, whi
 **Stats** provides counters and metrics on queues, shared among keuss clients. So far, only 'elements inserted' and 'elements got' are maintained. Two options are provided:
 * *mem*: very simple in-process, memory based 
 * *redis*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms
+* *mongo*: backed by mongodb usnig one object per queue inside a singel collection. Modifications are buffered in memory and flushed every 100ms
 
 ### How all fits together
 * *Queues*, or rather clients to individual queues, are created using a *backend* as factory
