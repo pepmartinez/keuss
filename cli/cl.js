@@ -1,7 +1,7 @@
 
 var program = require ('commander');
 
-program
+ program
   .version ('0.0.1')
   .usage   ('[options]')
   .option  ('-c, --consumer', 'run consumer loop')

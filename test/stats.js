@@ -6,6 +6,7 @@ var async =   require ('async');
 
 var Mem =   require ('../stats/mem');
 var Redis = require ('../stats/redis');
+var Mongo = require ('../stats/mongo');
 
 var qclass = 'some-class';
 var name = 'test-stats';
@@ -249,3 +250,4 @@ function run_tests_on_class (CL) {
 
 run_tests_on_class (Mem);
 run_tests_on_class (Redis);
+run_tests_on_class (Mongo);
