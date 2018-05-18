@@ -82,6 +82,11 @@ class Queue {
   // placeholder methods
   name () {return this._name;}
   type () {return 'queue:base';}
+
+  // capabilities
+  capabilities () {
+    return this._factory.capabilities ();
+  }
     
   // T of next mature
   nextMatureDate () {return this._next_mature_t;}

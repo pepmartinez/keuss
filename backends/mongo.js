@@ -250,6 +250,14 @@ class Factory extends QFactory {
   type () {
     return SimpleMongoQueue.Type ();
   }
+
+  capabilities () {
+    return {
+      sched:    true,
+      reserve:  true,
+      pipeline: false
+    };
+  }
 }
 
 function creator (opts, cb) {

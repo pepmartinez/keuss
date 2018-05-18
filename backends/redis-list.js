@@ -12,7 +12,6 @@ class RedisListQueue extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
-  //////////////////////////////////////////////
     super (name, factory, opts);
 
     this._rediscl = factory._rediscl;
@@ -22,14 +21,12 @@ class RedisListQueue extends Queue {
   
   /////////////////////////////////////////
   static Type () {
-  /////////////////////////////////////////
     return 'redis:list';
   }
 
   
   /////////////////////////////////////////
   type () {
-  /////////////////////////////////////////
     return 'redis:list';
   }
   
@@ -37,7 +34,6 @@ class RedisListQueue extends Queue {
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     var self = this;
     var pl = {
       payload: entry.payload,
@@ -57,7 +53,6 @@ class RedisListQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     var self = this;
     this._rediscl.rpop (this._redis_l_name, function (err, res) {
       if (err) {
@@ -80,7 +75,6 @@ class RedisListQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-  //////////////////////////////////
     this._rediscl.llen (this._redis_l_name,  callback);
   }
   
@@ -88,7 +82,6 @@ class RedisListQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-  //////////////////////////////////
     this._rediscl.llen (this._redis_l_name,  callback);
   }
   
@@ -96,7 +89,6 @@ class RedisListQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-  //////////////////////////////////
     callback (null, 0);
   }
   
@@ -104,7 +96,6 @@ class RedisListQueue extends Queue {
   //////////////////////////////////
   // Date of next 
   next_t (callback) {
-  //////////////////////////////////
     callback (null, null)
   }
 };
@@ -131,6 +122,14 @@ class Factory extends QFactory {
   
   type () {
     return RedisListQueue.Type ();
+  }
+
+  capabilities () {
+    return {
+      sched:    false,
+      reserve:  false,
+      pipeline: false
+    };
   }
 }
 

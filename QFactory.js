@@ -40,6 +40,10 @@ class QFactory {
     return 'none';
   }
 
+  capabilities () {
+    return {};
+  }
+  
   list (opts, cb) {
     // use stats factory
     this._stats_factory.queues (this.type (), opts, cb);

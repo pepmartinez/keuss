@@ -14,7 +14,6 @@ class PipelinedMongoQueue extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, pipeline, opts) {
-  //////////////////////////////////////////////
     super (name, pipeline._factory, opts);
 
     this._pipeline = pipeline;
@@ -28,26 +27,22 @@ class PipelinedMongoQueue extends Queue {
   
   /////////////////////////////////////////
   pipeline () {
-  /////////////////////////////////////////
     return this._pipeline;
   }
 
   /////////////////////////////////////////
   static Type () {
-  /////////////////////////////////////////
     return 'mongo:pipeline';
   }
 
   /////////////////////////////////////////
   type () {
-  /////////////////////////////////////////
     return 'mongo:pipeline';
   }
   
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     var self = this;
     entry._q = this._name;
 
@@ -66,7 +61,6 @@ class PipelinedMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     var self = this;
     this._col.findOneAndDelete ({_q: this._name, mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, function (err, result) {
       if (err) {
@@ -209,7 +203,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-  //////////////////////////////////
     var q = {_q: this._name};
     var opts = {};
     this._col.count (q, opts, callback);
@@ -219,7 +212,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-  //////////////////////////////////
     var q = {
       _q: this._name,
       mature : {$lte : Queue.now ()}
@@ -234,7 +226,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-  //////////////////////////////////
     var q = {
       _q: this._name,
       mature : {$gt : Queue.now ()}
@@ -249,7 +240,6 @@ class PipelinedMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-  /////////////////////////////////////////
     var self = this;
     this._col.find ({_q: this._name}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
       if (err) {
@@ -290,7 +280,6 @@ class Pipeline {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-  //////////////////////////////////////////////////////////////////
     this._col.ensureIndex ({_q : 1, mature : 1}, function (err) {
       return cb (err);
     });
@@ -335,6 +324,14 @@ class Factory extends QFactory {
   
   type () {
     return PipelinedMongoQueue.Type ();
+  }
+
+  capabilities () {
+    return {
+      sched:    true,
+      reserve:  true,
+      pipeline: true
+    };
   }
 }
 

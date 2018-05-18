@@ -13,7 +13,6 @@ class RedisOQ extends Queue {
   
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
-  //////////////////////////////////////////////
     super (name, factory, opts);
     
     this._rediscl = factory._rediscl;
@@ -23,14 +22,12 @@ class RedisOQ extends Queue {
   
   /////////////////////////////////////////
   static Type () {
-  /////////////////////////////////////////
     return 'redis:oq';
   }
 
   
   /////////////////////////////////////////
   type () {
-  /////////////////////////////////////////
     return 'redis:oq';
   }
   
@@ -38,7 +35,6 @@ class RedisOQ extends Queue {
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     var self = this;
     this._roq.push (entry, callback);
   }
@@ -47,7 +43,6 @@ class RedisOQ extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     var self = this;
     this._roq.pop (callback);
   }
@@ -56,7 +51,6 @@ class RedisOQ extends Queue {
   /////////////////////////////////////////
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {
-  /////////////////////////////////////////
     var self = this;
     var delay = this._opts.reserve_delay || 120;
 
@@ -67,7 +61,6 @@ class RedisOQ extends Queue {
   /////////////////////////////////////////
   // commit previous reserve, by p.id: call cb (err, true|false), true if element committed
   commit (id, callback) {
-  /////////////////////////////////////////
     var self = this;
 
     this._roq.commit (id, function (err, res) {
@@ -83,7 +76,6 @@ class RedisOQ extends Queue {
   /////////////////////////////////////////
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
   rollback (id, next_t, callback) {
-  /////////////////////////////////////////
     if (_.isFunction (next_t)) {
       callback = next_t;
       next_t = null;
@@ -104,7 +96,6 @@ class RedisOQ extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-  //////////////////////////////////
     this._roq.totalSize (callback);
   }
   
@@ -112,7 +103,6 @@ class RedisOQ extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-  //////////////////////////////////
     this._roq.size (callback);
   }
   
@@ -120,7 +110,6 @@ class RedisOQ extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-  //////////////////////////////////
     this._roq.schedSize (callback);
   }
   
@@ -128,7 +117,6 @@ class RedisOQ extends Queue {
   //////////////////////////////////
   // Date of next 
   next_t (callback) {
-  //////////////////////////////////
     this._roq.peek (function (err, res) {
       if (err) {
         return callback (err);
@@ -146,7 +134,6 @@ class RedisOQ extends Queue {
   
   //////////////////////////////////////////////////////////////////
   static list (cb) {
-  //////////////////////////////////////////////////////////////////
     var colls = [];
     
     _s_rediscl.keys ('keuss:q:ordered_queue:index:?*', function (err, collections) {
@@ -197,6 +184,14 @@ class Factory extends QFactory {
   
   type () {
     return RedisOQ.Type ();
+  }
+
+  capabilities () {
+    return {
+      sched:    true,
+      reserve:  true,
+      pipeline: false
+    };
   }
 }
 
