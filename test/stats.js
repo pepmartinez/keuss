@@ -193,7 +193,7 @@ function run_tests_on_class (CL) {
           setTimeout (function () {
             ftry.queues (qclass, function (err, res) {
               if (err) return cb (err);
-              res.should.eql ([ 'test-stats', 'test-stats-2' ]);
+              res.sort().should.eql ([ 'test-stats', 'test-stats-2' ]);
               cb ();
             })
           }, 200);

@@ -12,7 +12,7 @@ class Signal {
     this._buffered_mature = null;
     this._lastHRT = null;
     
-    // ('Signaller created with bufferTime %d msecs', this._bufferTime);
+    // console.log ('Signaller created with bufferTime %d msecs', this._bufferTime);
   }
 
   signalInsertion (mature, cb) {
@@ -49,6 +49,7 @@ class Signal {
     }
     else {
       // last hit too close in the past, not emitting
+      // console.log ('%s: last hit too close in the past, not emitting (%s)', new Date().toISOString(), this._buffered_mature);
       if (cb) cb ();
     }
   }
