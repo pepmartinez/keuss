@@ -274,7 +274,7 @@ class Queue {
 
         self._consumers_by_tid.delete (consumer_data.tid);
 
-        consumer_data.callback ({
+        if (consumer_data.callback) consumer_data.callback ({
           timeout: true, 
           tid: consumer_data.tid,
           since: consumer_data.since
@@ -428,7 +428,7 @@ class Queue {
         self._consumers_by_tid.delete (consumer.tid);
 
         // call final callback
-        consumer.callback (err);
+        if (consumer.callback) consumer.callback (err);
         return;
       }
 
@@ -478,7 +478,7 @@ class Queue {
       self._consumers_by_tid.delete (consumer.tid);
 
       // call final callback
-      consumer.callback (null, result);  
+      if (consumer.callback) consumer.callback (null, result);  
       return;
     };
     
