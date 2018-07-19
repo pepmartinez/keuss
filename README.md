@@ -32,7 +32,7 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
       - [Commit a reserved element](#commit-a-reserved-element)
       - [Rolls back a reserved element](#rolls-back-a-reserved-element)
     - [Redis connections](#redis-connections)
-    - [Reserve & (commit | rollback)](#reserve-commit-rollback)
+    - [Reserve & (commit | rollback)](#reserve--commit--rollback)
     - [Working with no signallers](#working-with-no-signallers)
   - [Examples](#examples)
 
@@ -69,23 +69,25 @@ A **pipeline** is an enhanced queue that provides an extra operation: pass an el
 The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors
 
 #### Storage
-**Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 3 backends, with various levels of features and performance:
+**Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 5 backends, with various levels of features and performance:
 
 * *mongo*, a mongodb-based backend that provides te full set of queue features, still with decent performance
 * *redis-oq*, backed using an ordered queue on top of redis (made in turn with a sorted set, a hash and some lua). Provides all queue features including reserve-commit-rollback. Noticeable faster than mongodb
 * *redis-list*, backed using a redis list. Does not offer reserve-commit-rollback nor the ability to schedule, but is much faster than redis-oq
 * *pl-mongo*, a version of the mongo backend that provides pipelining capabilities (the queues it produces are also pipelines). 
+* *ps-mongo*, a verion of *mongo* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index 
 
 As mentioned before, persistence and HA depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases
 
 The following table shows the capabilities of each backend:
 
-backend    | delay/schedule | reserve/commit | pipelining |
------------|:--------------:|:--------------:|:----------:|
-redis-list | - | - | -
-redis-oq   | x | x | -
-mongo      | x | x | -
-pl-mongo   | x | x | x
+backend    | delay/schedule | reserve/commit | pipelining | history | speed |
+-----------|:--------------:|:--------------:|:----------:|:-------:|:-----:|
+redis-list | - | - | - | - | +++++
+redis-oq   | x | x | - | - | +++
+mongo      | x | x | - | - | ++
+pl-mongo   | x | x | x | - | +
+ps-mongo   | x | x | - | x | ++
 
 #### Signaller
 **Signaller** provides a bus interconnecting all keuss clients, so events can be shared. Keuss provides 2 signallers:
@@ -130,10 +132,12 @@ MQ (opts, function (err, factory) {
 ```
 
 where 'opts' is an object containing default values for queue creation (such as pollInterval, signaller or stats), plus the following backend-dependent values:
-* backend *mongo*
+* backends *mongo*, *pl-mongo* and *ps-mongo*
    * url: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`
 * backends *redis-list* and *redis-oq*
   * redis: data to create a redis connection to the Redis acting as backend, see below
+* backend *ps-mongo*
+  * ttl: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs
 
 #### Queue creation
 ```javascript
