@@ -2,3 +2,6 @@
 * bridges?
 * deadletter (tied to at-least-one)?
 * queue traversal/query
+* allow pdate obj on pl-mongo (api dep on being mongodb)
+* more backends:
+  + multiple-packet, nagle-like mongodb
