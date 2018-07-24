@@ -10,14 +10,14 @@ class MCSignal extends Signal {
     super (queue, opts);
     this._factory = factory;
     
-    this._topic_name = 'keuss:q:signal:' + queue.type () + ':' + queue.name ();
+    this._topic_name = 'keuss:signal:' + queue.ns () + ':' + queue.name ();
     this._opts = opts || {};
     var self = this;
     
     this._factory._channel.subscribe (this._topic_name, function (message) {
       var mature = parseInt (message);
       
-      // ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
+      console.log ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
   }
@@ -25,7 +25,7 @@ class MCSignal extends Signal {
   type () {return MCSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-    // ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
+    console.log ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
     this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 }

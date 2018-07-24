@@ -8,13 +8,13 @@ class LocalSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
     this._factory = factory;
-    this._channel = 'keuss:q:signal:' + queue.type () + ':' + queue.name ();
+    this._channel = 'keuss:signal:' + queue.ns () + ':' + queue.name ();
 
     var self = this;
     this._factory._emitter.on (this._channel, function (message) {
       var mature = message;
       
-      // ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
+      console.log ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
       self._master.signalInsertion (new Date (mature));
     });
   }

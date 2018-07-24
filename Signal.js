@@ -5,7 +5,7 @@ class Signal {
   constructor (master, opts) {
     this._opts = opts || {};
     this._master = master;
-    this._name = 'signal:' + master._name;
+    this._name = 'signal:' + master.ns() + ':' + master.name();
     
     this._bufferTime = this._opts.bufferTime || 50; //msec
     

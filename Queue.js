@@ -85,6 +85,7 @@ class Queue {
     
   // placeholder methods
   name () {return this._name;}
+  ns ()   {return this._factory.name();}
   type () {return 'queue:base';}
 
   // capabilities
