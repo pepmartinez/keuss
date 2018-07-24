@@ -17,12 +17,17 @@ var _s_opts = undefined;
  *   - topology                   in keuss:stats:<qclass>:<name>:topology          -> string/json
 */
 class RedisStats {
-  constructor(name, factory, opts) {
-    this._name = 'keuss:stats:' + name;
+  constructor(qclass, name, factory, opts) {
+    this._qclass = qclass;
+    this._name = name;
+    this._id = 'keuss:stats:' + qclass + ':' + name;
     this._opts = opts || {};
     this._factory = factory;
     this._rediscl = factory._rediscl;
     this._cache = {};
+
+    this._rediscl.hset (this._id, 'name',   this._name);
+    this._rediscl.hset (this._id, 'qclass', this._qclass);
   }
 
 
@@ -30,9 +35,17 @@ class RedisStats {
     return this._factory.type();
    }
 
+   qclass () {
+     return this._qclass;
+   }
+ 
+   name () {
+     return this._name;
+   }
+
 
   values(cb) {
-    this._rediscl.hgetall (this._name, function (err, v) {
+    this._rediscl.hgetall (this._id, function (err, v) {
       if (err) {
         return cb(err);
       }
@@ -56,7 +69,7 @@ class RedisStats {
     this._flusher = setTimeout(function () {
       _.forEach(self._cache, function (value, key) {
         if (value) {
-          self._rediscl.hincrby(self._name, 'counter_' + key, value);
+          self._rediscl.hincrby(self._id, 'counter_' + key, value);
           // ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
           self._cache[key] = 0;
         }
@@ -96,7 +109,7 @@ class RedisStats {
     if (!cb) {
       // get
       cb = opts;
-      this._rediscl.hget (this._name, 'opts', function (err, res){
+      this._rediscl.hget (this._id, 'opts', function (err, res){
         if (err) return cb(err);
         if (!res) return cb(null, {});
         try {
@@ -110,7 +123,7 @@ class RedisStats {
     }
     else {
       // set
-      this._rediscl.hset (this._name, 'opts', JSON.stringify (opts || {}), cb);
+      this._rediscl.hset (this._id, 'opts', JSON.stringify (opts || {}), cb);
     }
   }
   
@@ -118,7 +131,7 @@ class RedisStats {
     if (!cb) {
       // get
       cb = tplg;
-      this._rediscl.hget (this._name, 'topology', function (err, res){
+      this._rediscl.hget (this._id, 'topology', function (err, res){
         if (err) return cb(err);
         if (!res) return cb(null, {});
         try {
@@ -132,7 +145,7 @@ class RedisStats {
     }
     else {
       // set
-      this._rediscl.hset (this._name, 'topology', JSON.stringify (tplg), cb);
+      this._rediscl.hset (this._id, 'topology', JSON.stringify (tplg), cb);
     }
   }
   
@@ -140,9 +153,22 @@ class RedisStats {
     this._cancelFlush();
     this._cache = {};
     var self = this;
+    
+    var tasks = [
+      function (cb) {self._rediscl.hdel(self._id, 'opts', cb);},
+      function (cb) {self._rediscl.hdel(self._id, 'topology', cb);}
+    ];
 
-    this._rediscl.del(this._name, function (err, res) {
-      if (cb) cb(err);
+    this.values ((err, vals) => {
+      _.forEach (vals, (v, k) => {
+        tasks.push (function (cb) {
+          self._rediscl.hdel(self._id, 'counter_' + k, cb);
+        });
+      });
+
+      async.series (tasks, function (err) {
+        if (cb) cb(err);
+      });
     });
   }
 }
@@ -157,7 +183,7 @@ class RedisStatsFactory {
   type() { return Type() }
 
   stats(qclass, name, opts) {
-    return new RedisStats (qclass + ':' + name, this);
+    return new RedisStats (qclass, name, this);
   }
   
   queues (qclass, opts, cb) {

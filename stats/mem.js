@@ -3,9 +3,11 @@
 var _ = require ('lodash');
 
 class MemStats {
-  constructor (factory) {
+  constructor (qclass, name, factory) {
     this._factory = factory;
     this._s = {
+      qclass: qclass,
+      name: name,
       counters: {},
       opts: {},
       topology: {}
@@ -15,7 +17,15 @@ class MemStats {
   type () {
     return this._factory.type ();
   }
-  
+
+  qclass () {
+    return this._s.qclass;
+  }
+
+  name () {
+    return this._s.name;
+  }
+
   values (cb) {
     cb (null, this._s.counters);
   }
@@ -62,12 +72,10 @@ class MemStats {
   }
 
   clear (cb) {
-    this._s = {
-      counters: {},
-      opts: {},
-      topology: {}
-    };
-
+    this._s.counters = {}
+    this._s.opts = {};
+    this._s.topology = {};
+    
     // TODO remove from factory 
     
     if (cb) cb();
@@ -122,7 +130,7 @@ class MemStatsFactory {
 
   stats (qclass, name, opts) {
     if (!this._queues[qclass]) this._queues[qclass] = {};
-    var st = new MemStats (this);
+    var st = new MemStats (qclass, name, this);
     this._queues[qclass][name] = st;
     return st;
   }

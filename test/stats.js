@@ -42,6 +42,8 @@ function run_tests_on_class (CL) {
         function (cb) {mem.incr ('v3', 1, cb)}
       ], function(err, results) {
         setTimeout (function () {
+          mem.qclass().should.equal (qclass);
+          mem.name().should.equal (name);
           mem.values (function (err, vals) {
             vals.should.eql ({v1: 1, v2: 1, v3: 1});
             mem.clear (function (err) {
@@ -203,8 +205,8 @@ function run_tests_on_class (CL) {
             ftry.queues (qclass, {full: true}, function (err, res) {
               if (err) return cb (err);
               res.should.eql ({ 
-                'test-stats': { topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 } },
-                'test-stats-2': { topology: topology2, opts: opts2, counters: {v1: 4, v3: 45} } 
+                'test-stats': { name: 'test-stats', qclass: 'some-class', topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 } },
+                'test-stats-2': { name: 'test-stats-2', qclass: 'some-class', topology: topology2, opts: opts2, counters: {v1: 4, v3: 45} } 
               });
               
               cb ();

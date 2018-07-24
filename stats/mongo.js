@@ -12,16 +12,39 @@ var _s_opts = undefined;
  * plain into a single mongo coll
 */
 class MongoStats {
-  constructor(name, factory, opts) {
-    this._name = 'keuss:stats:' + name;
+  constructor(qclass, name, factory, opts) {
+    this._qclass = qclass;
+    this._name = name;
+    this._id = 'keuss:stats:' + qclass + ':' + name;
     this._opts = opts || {};
     this._factory = factory;
     this._cache = {};
+
+    this._ensure_conn (err => {
+      if (err) return;
+
+      var upd = {
+        $set: {
+          qclass: this._qclass,
+          name:   this._name,
+        }
+      };
+      
+      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err, ret) => {});
+    });
   }
 
 
   type() { 
     return this._factory.type();
+   }
+
+   qclass () {
+     return this._qclass;
+   }
+ 
+   name () {
+     return this._name;
    }
 
 
@@ -30,7 +53,7 @@ class MongoStats {
     self._ensure_conn (function (err) {
       if (err) return;
 
-      self._coll().findOne ({_id: self._name}, {fields: {counters: 1}}, function (err, res) {
+      self._coll().findOne ({_id: self._id}, {fields: {counters: 1}}, function (err, res) {
         if (err) return cb (err);
         //  ('mongo stats: get %s -> %j', self._name, res);
         cb (null, (res && res.counters) || {});
@@ -59,7 +82,7 @@ class MongoStats {
         self._ensure_conn (function (err) {
           if (err) return;
     
-          self._coll().updateOne ({_id: self._name}, upd, {upsert: true}, function (err) {
+          self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
             //  ('mongo stats: updated %s -> %j', self._name, upd);
           });
         });
@@ -115,7 +138,7 @@ class MongoStats {
       self._ensure_conn (function (err) {
         if (err) return;
 
-        self._coll().findOne ({_id: self._name}, {fields: {opts: 1}}, function (err, res) {
+        self._coll().findOne ({_id: self._id}, {fields: {opts: 1}}, function (err, res) {
           if (err) return cb (err);
           //  ('mongo stats - opts: get %s -> %j', self._name, res);
           cb (null, (res && res.opts) || {});
@@ -128,7 +151,7 @@ class MongoStats {
         if (err) return;
   
         var upd = {$set: {opts : opts}};
-        self._coll().updateOne ({_id: self._name}, upd, {upsert: true}, function (err) {
+        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
           //  ('mongo stats: updated %s -> %j', self._name, upd);
           cb (err);
         });
@@ -145,7 +168,7 @@ class MongoStats {
       self._ensure_conn (function (err) {
         if (err) return;
 
-        self._coll().findOne ({_id: self._name}, {fields: {topology: 1}}, function (err, res) {
+        self._coll().findOne ({_id: self._id}, {fields: {topology: 1}}, function (err, res) {
           if (err) return cb (err);
           //  ('mongo stats - topology: get %s -> %j', self._name, res);
           cb (null, (res && res.topology) || {});
@@ -158,7 +181,8 @@ class MongoStats {
         if (err) return;
   
         var upd = {$set: {topology : tplg}};
-        self._coll().updateOne ({_id: self._name}, upd, {upsert: true}, function (err) {
+        
+        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
           //  ('mongo stats: updated %s -> %j', self._name, upd);
           cb (err);
         });
@@ -174,7 +198,15 @@ class MongoStats {
     this._ensure_conn (function (err) {
       if (err) return cb (err);
 
-      self._coll().deleteOne ({_id: self._name}, function (err) {
+      var upd = {
+        $unset: {
+          counters: 1, 
+          opts: 1, 
+          topology: 1
+        }
+      };
+
+      self._coll().updateOne ({_id: self._id}, upd, function (err) {
         cb (err);
       });
     });
@@ -192,9 +224,9 @@ class MongoStatsFactory {
   type() { return Type() }
 
   stats(qclass, name, opts) {
-    return new MongoStats (qclass + ':' + name, this);
+    return new MongoStats (qclass, name, this);
   }
-  
+
   queues (qclass, opts, cb) {
     if (!cb) {
       cb = opts;
@@ -207,12 +239,14 @@ class MongoStatsFactory {
       if (err) return cb (err);
 
       if (opts.full) {
-        self._coll.find().toArray (function (err, arr) {
+        self._coll.find({_id: {$regex: '^keuss:stats:' + qclass}}).toArray (function (err, arr) {
           if (err) return cb (err);
 
           var res = {};
           arr.forEach (function (elem){
-            res [elem._id.substring(13 + qclass.length)] = {
+            res [elem.name] = {
+              qclass: elem.qclass,
+              name: elem.name,
               counters: elem.counters,
               topology: elem.topology,
               opts: elem.opts
@@ -223,12 +257,12 @@ class MongoStatsFactory {
         });
       }
       else {
-        self._coll.find().project ({_id: 1}).toArray (function (err, arr) {
+        self._coll.find({_id: {$regex: '^keuss:stats:' + qclass}}).project ({_id: 1, name: 1}).toArray (function (err, arr) {
           if (err) return cb (err);
 
           var res = [];
           arr.forEach (function (elem){
-            res.push (elem._id.substring(13 + qclass.length));
+            res.push (elem.name);
           });
 
           cb (null, res);
