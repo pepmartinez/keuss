@@ -12,10 +12,10 @@ var _s_opts = undefined;
  * plain into a single mongo coll
 */
 class MongoStats {
-  constructor(qclass, name, factory, opts) {
-    this._qclass = qclass;
+  constructor(ns, name, factory, opts) {
+    this._ns = ns;
     this._name = name;
-    this._id = 'keuss:stats:' + qclass + ':' + name;
+    this._id = 'keuss:stats:' + ns + ':' + name;
     this._opts = opts || {};
     this._factory = factory;
     this._cache = {};
@@ -25,7 +25,7 @@ class MongoStats {
 
       var upd = {
         $set: {
-          qclass: this._qclass,
+          ns: this._ns,
           name:   this._name,
         }
       };
@@ -39,8 +39,8 @@ class MongoStats {
     return this._factory.type();
    }
 
-   qclass () {
-     return this._qclass;
+   ns () {
+     return this._ns;
    }
  
    name () {
@@ -223,11 +223,11 @@ class MongoStatsFactory {
   static Type() { return 'mongo' }
   type() { return Type() }
 
-  stats(qclass, name, opts) {
-    return new MongoStats (qclass, name, this);
+  stats(ns, name, opts) {
+    return new MongoStats (ns, name, this);
   }
 
-  queues (qclass, opts, cb) {
+  queues (ns, opts, cb) {
     if (!cb) {
       cb = opts;
       opts = {};
@@ -239,13 +239,13 @@ class MongoStatsFactory {
       if (err) return cb (err);
 
       if (opts.full) {
-        self._coll.find({_id: {$regex: '^keuss:stats:' + qclass}}).toArray (function (err, arr) {
+        self._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).toArray (function (err, arr) {
           if (err) return cb (err);
 
           var res = {};
           arr.forEach (function (elem){
             res [elem.name] = {
-              qclass: elem.qclass,
+              ns: elem.ns,
               name: elem.name,
               counters: elem.counters,
               topology: elem.topology,
@@ -257,7 +257,7 @@ class MongoStatsFactory {
         });
       }
       else {
-        self._coll.find({_id: {$regex: '^keuss:stats:' + qclass}}).project ({_id: 1, name: 1}).toArray (function (err, arr) {
+        self._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).project ({_id: 1, name: 1}).toArray (function (err, arr) {
           if (err) return cb (err);
 
           var res = [];

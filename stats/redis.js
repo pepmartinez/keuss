@@ -12,22 +12,22 @@ var _s_opts = undefined;
  * redis using HINCRBY 
  * 
  * stores in:
- *   - counters                   in keuss:stats:<qclass>:<name>:counter_<counter> -> int
- *   - opts (queue creation opts) in keuss:stats:<qclass>:<name>:opts              -> string/json
- *   - topology                   in keuss:stats:<qclass>:<name>:topology          -> string/json
+ *   - counters                   in keuss:stats:<ns>:<name>:counter_<counter> -> int
+ *   - opts (queue creation opts) in keuss:stats:<ns>:<name>:opts              -> string/json
+ *   - topology                   in keuss:stats:<ns>:<name>:topology          -> string/json
 */
 class RedisStats {
-  constructor(qclass, name, factory, opts) {
-    this._qclass = qclass;
+  constructor(ns, name, factory, opts) {
+    this._ns = ns;
     this._name = name;
-    this._id = 'keuss:stats:' + qclass + ':' + name;
+    this._id = 'keuss:stats:' + ns + ':' + name;
     this._opts = opts || {};
     this._factory = factory;
     this._rediscl = factory._rediscl;
     this._cache = {};
 
     this._rediscl.hset (this._id, 'name',   this._name);
-    this._rediscl.hset (this._id, 'qclass', this._qclass);
+    this._rediscl.hset (this._id, 'ns', this._ns);
   }
 
 
@@ -35,8 +35,8 @@ class RedisStats {
     return this._factory.type();
    }
 
-   qclass () {
-     return this._qclass;
+   ns () {
+     return this._ns;
    }
  
    name () {
@@ -182,11 +182,11 @@ class RedisStatsFactory {
   static Type() { return 'redis' }
   type() { return Type() }
 
-  stats(qclass, name, opts) {
-    return new RedisStats (qclass, name, this);
+  stats(ns, name, opts) {
+    return new RedisStats (ns, name, this);
   }
   
-  queues (qclass, opts, cb) {
+  queues (ns, opts, cb) {
     if (!cb) {
       cb = opts;
       opts = {};
@@ -194,13 +194,13 @@ class RedisStatsFactory {
 
     var self = this;
 
-    this._rediscl.keys('keuss:stats:' + qclass + ':?*', function (err, queues) {
+    this._rediscl.keys('keuss:stats:' + ns + ':?*', function (err, queues) {
       if (err) return cb(err);
 
       if (opts.full) {
         var tasks = {};
         queues.forEach(function (q) {
-          tasks[q.substring(13 + qclass.length)] = function (cb) {
+          tasks[q.substring(13 + ns.length)] = function (cb) {
             self._rediscl.hgetall (q, function (err, v) {
               if (err) {
                 return cb(err);
@@ -232,7 +232,7 @@ class RedisStatsFactory {
       else {
         var ret = [];
         queues.forEach(function (q) {
-          var qname = q.substring(13 + qclass.length);
+          var qname = q.substring(13 + ns.length);
           ret.push(qname);
         });
 

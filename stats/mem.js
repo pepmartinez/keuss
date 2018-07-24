@@ -3,10 +3,10 @@
 var _ = require ('lodash');
 
 class MemStats {
-  constructor (qclass, name, factory) {
+  constructor (ns, name, factory) {
     this._factory = factory;
     this._s = {
-      qclass: qclass,
+      ns: ns,
       name: name,
       counters: {},
       opts: {},
@@ -18,8 +18,8 @@ class MemStats {
     return this._factory.type ();
   }
 
-  qclass () {
-    return this._s.qclass;
+  ns () {
+    return this._s.ns;
   }
 
   name () {
@@ -84,7 +84,7 @@ class MemStats {
 
 class MemStatsFactory {
   constructor (opts) {
-    // map of created queues' stats: root -> qclass -> queues
+    // map of created queues' stats: root -> ns -> queues
     this._queues = {};
   }
 
@@ -96,13 +96,13 @@ class MemStatsFactory {
     return Type ();
   }
 
-  queues (qclass, opts, cb) {
+  queues (ns, opts, cb) {
     if (!cb) {
       cb = opts;
       opts = {};
     }
 
-    var cls = this._queues[qclass];
+    var cls = this._queues[ns];
 
     if (opts.full) {
       if (!cls) return cb (null, {});
@@ -128,10 +128,10 @@ class MemStatsFactory {
     }
   }
 
-  stats (qclass, name, opts) {
-    if (!this._queues[qclass]) this._queues[qclass] = {};
-    var st = new MemStats (qclass, name, this);
-    this._queues[qclass][name] = st;
+  stats (ns, name, opts) {
+    if (!this._queues[ns]) this._queues[ns] = {};
+    var st = new MemStats (ns, name, this);
+    this._queues[ns][name] = st;
     return st;
   }
 

@@ -9,6 +9,8 @@ var _ = require ('lodash');
 class QFactory {
   constructor (opts) {
     this._opts = opts || {};
+
+    this._name = opts.name || 'N';
     
     if (!this._opts.stats)      this._opts.stats = {};
     if (!this._opts.stats.opts) this._opts.stats.opts = {};
@@ -36,6 +38,10 @@ class QFactory {
     cb();
   }
   
+  name () {
+    return this._name;
+  }
+
   type () {
     return 'none';
   }
@@ -46,7 +52,7 @@ class QFactory {
   
   list (opts, cb) {
     // use stats factory
-    this._stats_factory.queues (this.type (), opts, cb);
+    this._stats_factory.queues (this.name (), opts, cb);
   }
 
   recreate_topology (cb) {
