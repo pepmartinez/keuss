@@ -14,7 +14,7 @@ class LocalSignal extends Signal {
     this._factory._emitter.on (this._channel, function (message) {
       var mature = message;
       
-      console.log ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
+      // ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
       self._master.signalInsertion (new Date (mature));
     });
   }

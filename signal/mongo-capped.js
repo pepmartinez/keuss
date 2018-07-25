@@ -17,7 +17,7 @@ class MCSignal extends Signal {
     this._factory._channel.subscribe (this._topic_name, function (message) {
       var mature = parseInt (message);
       
-      console.log ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
+      // ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
   }
@@ -25,7 +25,7 @@ class MCSignal extends Signal {
   type () {return MCSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-    console.log ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
+    // ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
     this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 }
