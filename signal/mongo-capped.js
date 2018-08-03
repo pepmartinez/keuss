@@ -33,14 +33,14 @@ class MCSignal extends Signal {
 class MCSignalFactory {
   constructor (opts) {
     var defaults = {
-      mongo_url: 'mongodb://localhost:27017/keuss_signal',
+      url: 'mongodb://localhost:27017/keuss_signal',
       channel: 'default'
     };
 
     this._opts = {};
     _.merge (this._opts, defaults, opts || {});
     
-    this._mubsub = mubsub (this._opts.mongo_url, this._opts.mongo_opts);
+    this._mubsub = mubsub (this._opts.url, this._opts.mongo_opts);
     this._channel =  this._mubsub.channel (this._opts.channel, this._opts.channel_opts); 
   }
 
