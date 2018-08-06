@@ -85,16 +85,14 @@ var q_opts = {};
 if (program.signaller) {
   var signal_provider = require ('../signal/' + program.signaller);
   q_opts.signaller = {
-    provider: new signal_provider ()
+    provider: signal_provider
   }
-
-  console.log ('use signaller %s', signal_provider.Type())
 }
   
 if (program.stats) {
   var stats_provider = require ('../stats/' + program.stats);
   q_opts.stats = {
-    provider: new stats_provider ()
+    provider: stats_provider
   }
 }
 

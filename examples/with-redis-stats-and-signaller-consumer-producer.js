@@ -14,10 +14,12 @@ var local_redis_opts = {
 var factory_opts = {
   url: 'mongodb://localhost/qeus',
   signaller: {
-    provider: new signal_redis_pubsub (local_redis_opts)
+    provider: signal_redis_pubsub,
+    opts: local_redis_opts
   },
   stats: {
-    provider: new stats_redis (local_redis_opts)
+    provider: stats_redis,
+    opts: local_redis_opts
   }
 };
     

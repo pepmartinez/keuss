@@ -1,12 +1,8 @@
 'use strict';
 
-var _ =     require('lodash');
-var async = require('async');
+var _ = require('lodash');
 
 var MongoClient = require ('mongodb').MongoClient;
-var mongo =       require ('mongodb');
-
-var _s_opts = undefined;
 
 /*
  * plain into a single mongo coll
@@ -20,17 +16,15 @@ class MongoStats {
     this._factory = factory;
     this._cache = {};
 
-    this._ensure_conn (err => {
-      if (err) return;
-
-      var upd = {
-        $set: {
-          ns: this._ns,
-          name:   this._name,
-        }
-      };
+    var upd = {
+      $set: {
+        ns:   this._ns,
+        name: this._name,
+      }
+    };
       
-      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err, ret) => {});
+    this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err, ret) => {
+//      console.log ('mongo stats created, ns %s, name %s, opts %j', ns, name, opts);
     });
   }
 
@@ -49,15 +43,11 @@ class MongoStats {
 
 
   values(cb) {
-    var self = this;
-    self._ensure_conn (function (err) {
-      if (err) return;
-
-      self._coll().findOne ({_id: self._id}, {fields: {counters: 1}}, function (err, res) {
-        if (err) return cb (err);
-        //  ('mongo stats: get %s -> %j', self._name, res);
-        cb (null, (res && res.counters) || {});
-      });
+    this._coll().findOne ({_id: this._id}, {fields: {counters: 1}}, (err, res) => {
+      if (err) return cb (err);
+    
+//      console.log ('mongo stats: get %s -> %j', this._name, res);
+      cb (null, (res && res.counters) || {});
     });
   }
 
@@ -66,11 +56,11 @@ class MongoStats {
     if (this._flusher) return;
     var self = this;
 
-    this._flusher = setTimeout(function () {
+    this._flusher = setTimeout (function () {
       var upd = {$inc: {}};
       var some_added = false;
 
-      _.forEach(self._cache, function (value, key) {
+      _.forEach(self._cache, (value, key) => {
         if (value) {
           upd.$inc['counters.' + key] = value;
           some_added = true;    
@@ -79,12 +69,8 @@ class MongoStats {
       });
 
       if (some_added) {
-        self._ensure_conn (function (err) {
-          if (err) return;
-    
-          self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
-            //  ('mongo stats: updated %s -> %j', self._name, upd);
-          });
+        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, (err) => {
+//          console.log ('mongo stats: updated %s -> %j', self._name, upd);
         });
       }
 
@@ -97,10 +83,6 @@ class MongoStats {
       clearTimeout(this._flusher);
       this._flusher = undefined;
     }
-  }
-
-  _ensure_conn (cb) {
-    this._factory._ensure_conn (cb);
   }
 
   _mongocl () {
@@ -130,62 +112,43 @@ class MongoStats {
   }
   
   opts (opts, cb) {
-    var self = this;
-
     if (!cb) {
       // get
       cb = opts;
-      self._ensure_conn (function (err) {
-        if (err) return;
-
-        self._coll().findOne ({_id: self._id}, {fields: {opts: 1}}, function (err, res) {
-          if (err) return cb (err);
-          //  ('mongo stats - opts: get %s -> %j', self._name, res);
-          cb (null, (res && res.opts) || {});
-        });
+      this._coll().findOne ({_id: this._id}, {fields: {opts: 1}}, (err, res) => {
+        if (err) return cb (err);
+//        console.log ('mongo stats - opts: get %s -> %j', this._name, res);
+        cb (null, (res && res.opts) || {});
       });
     }
     else {
       // set
-      self._ensure_conn (function (err) {
-        if (err) return;
-  
-        var upd = {$set: {opts : opts}};
-        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
-          //  ('mongo stats: updated %s -> %j', self._name, upd);
-          cb (err);
-        });
+      var upd = {$set: {opts : opts}};
+      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
+//        console.log ('mongo stats: updated %s -> %j', this._name, upd);
+        cb (err);
       });
     }
   }
   
   topology (tplg, cb) {
-    var self = this;
-
     if (!cb) {
       // get
       cb = tplg;
-      self._ensure_conn (function (err) {
-        if (err) return;
 
-        self._coll().findOne ({_id: self._id}, {fields: {topology: 1}}, function (err, res) {
-          if (err) return cb (err);
-          //  ('mongo stats - topology: get %s -> %j', self._name, res);
-          cb (null, (res && res.topology) || {});
-        });
+      this._coll().findOne ({_id: this._id}, {fields: {topology: 1}}, (err, res) => {
+        if (err) return cb (err);
+//        console.log ('mongo stats - topology: get %s -> %j', this._name, res);
+        cb (null, (res && res.topology) || {});
       });
     }
     else {
       // set
-      self._ensure_conn (function (err) {
-        if (err) return;
-  
-        var upd = {$set: {topology : tplg}};
+      var upd = {$set: {topology : tplg}};
         
-        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, function (err) {
-          //  ('mongo stats: updated %s -> %j', self._name, upd);
-          cb (err);
-        });
+      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
+//        console.log ('mongo stats: updated %s -> %j', this._name, upd);
+        cb (err);
       });
     }
   }
@@ -193,31 +156,28 @@ class MongoStats {
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
-    var self = this;
 
-    this._ensure_conn (function (err) {
-      if (err) return cb (err);
+    var upd = {
+      $unset: {
+        counters: 1, 
+        opts: 1, 
+        topology: 1
+      }
+    };
 
-      var upd = {
-        $unset: {
-          counters: 1, 
-          opts: 1, 
-          topology: 1
-        }
-      };
-
-      self._coll().updateOne ({_id: self._id}, upd, function (err) {
-        cb (err);
-      });
+    this._coll().updateOne ({_id: this._id}, upd, (err) => {
+      cb (err);
     });
   }
 }
 
 class MongoStatsFactory {
-  constructor(opts) {
+  constructor(cl, coll, opts) {
     this._opts = opts || {};
-    this._mongocl = null;
-    this._coll = null;
+    this._mongocl = cl;
+    this._coll = coll;
+
+//    console.log ('created MongoStatsFactory on coll %s, opts %j', coll, opts);
   }
 
   static Type() { return 'mongo' }
@@ -233,65 +193,66 @@ class MongoStatsFactory {
       opts = {};
     }
     
-    var self = this;
+    if (opts.full) {
+      this._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).toArray (function (err, arr) {
+        if (err) return cb (err);
 
-    this._ensure_conn (function (err) {
-      if (err) return cb (err);
-
-      if (opts.full) {
-        self._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).toArray (function (err, arr) {
-          if (err) return cb (err);
-
-          var res = {};
-          arr.forEach (function (elem){
-            res [elem.name] = {
-              ns: elem.ns,
-              name: elem.name,
-              counters: elem.counters,
-              topology: elem.topology,
-              opts: elem.opts
-            };
-          });
-
-          cb (null, res);
+        var res = {};
+        arr.forEach (function (elem){
+          res [elem.name] = {
+            ns: elem.ns,
+            name: elem.name,
+            counters: elem.counters,
+            topology: elem.topology,
+            opts: elem.opts
+          };
         });
-      }
-      else {
-        self._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).project ({_id: 1, name: 1}).toArray (function (err, arr) {
-          if (err) return cb (err);
 
-          var res = [];
-          arr.forEach (function (elem){
-            res.push (elem.name);
-          });
+        cb (null, res);
+      });
+    }
+    else {
+      this._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).project ({_id: 1, name: 1}).toArray (function (err, arr) {
+        if (err) return cb (err);
 
-          cb (null, res);
+        var res = [];
+        arr.forEach (function (elem){
+          res.push (elem.name);
         });
-      }
-    });
+
+        cb (null, res);
+      });
+    }
   }
 
   close() {
     this._mongocl.close();
   }
-
-  _ensure_conn (cb) {
-    if (this._mongocl) return cb ();
-
-    var m_url = this._opts.url || 'mongodb://localhost:27017/keuss_stats';
-    var m_coll = this._opts.coll || 'keuss_stats';
-    var self = this;
-
-    //  ('connecting to %s', m_url);
-    MongoClient.connect (m_url, function (err, db) {
-      if (err) return cb (err);
-
-    //  ('connected to %s', m_url);
-      self._mongocl = db;
-      self._coll = db.collection (m_coll);
-      cb ();
-    });
-  }
 }
 
-module.exports = MongoStatsFactory;
+function creator (opts, cb) {
+  if (!cb) {
+    cb = opts;
+    opts = null;
+  }
+
+  if (!opts) opts = {};
+
+//  console.log ('initializing creator of MongoStatsFactory, opts %j', opts);
+
+  var m_url = opts.url || 'mongodb://localhost:27017/keuss_stats';
+  var m_coll = opts.coll || 'keuss_stats';
+
+//  console.log ('initializing creator of MongoStatsFactory, connecting to %s', m_url);
+
+  MongoClient.connect (m_url, function (err, cl) {
+    if (err) return cb (err);
+
+//    console.log ('initializing creator of MongoStatsFactory, connected to %s', m_url);
+    var coll = cl.collection (m_coll);
+    cb (null, new MongoStatsFactory (cl, coll, opts));
+  });
+}
+
+module.exports = creator;
+

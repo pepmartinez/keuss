@@ -5,9 +5,6 @@ var async = require('async');
 
 var RedisConn = require('../utils/RedisConn');
 
-var _s_rediscl = undefined;
-var _s_opts = undefined;
-
 /*
  * redis using HINCRBY 
  * 
@@ -28,6 +25,8 @@ class RedisStats {
 
     this._rediscl.hset (this._id, 'name',   this._name);
     this._rediscl.hset (this._id, 'ns', this._ns);
+
+//    console.log ('created redis stats with ns %s, name %s, options %j', ns, name, opts);
   }
 
 
@@ -70,7 +69,7 @@ class RedisStats {
       _.forEach(self._cache, function (value, key) {
         if (value) {
           self._rediscl.hincrby(self._id, 'counter_' + key, value);
-          // ('stats-redis: flushed (%s) %d -> %s', self._name, value, key);
+//          console.log ('stats-redis[%s]: flushed %d -> %s', self._id, value, 'counter_' + key);
           self._cache[key] = 0;
         }
       });
@@ -177,13 +176,16 @@ class RedisStatsFactory {
   constructor(opts) {
     this._opts = opts || {};
     this._rediscl = RedisConn.conn(this._opts);
+
+//    console.log ('created redis stats factory with option %j', opts);
   }
 
   static Type() { return 'redis' }
   type() { return Type() }
 
   stats(ns, name, opts) {
-    return new RedisStats (ns, name, this);
+//    console.log ('creating redis stats with ns %s, name %s, opts %j', ns, name, opts);
+    return new RedisStats (ns, name, this, opts);
   }
   
   queues (ns, opts, cb) {
@@ -246,4 +248,15 @@ class RedisStatsFactory {
   }
 }
 
-module.exports = RedisStatsFactory;
+function creator (opts, cb) {
+  if (!cb) {
+    cb = opts;
+    opts = null;
+  }
+
+  if (!opts) opts = {};
+  
+  return cb (null, new RedisStatsFactory (opts));
+}
+
+module.exports = creator;

@@ -17,15 +17,17 @@ class MCSignal extends Signal {
     this._factory._channel.subscribe (this._topic_name, function (message) {
       var mature = parseInt (message);
       
-      // ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
+//      console.log ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
+
+//    console.log ('created mongo-capped signaller for topic %s with opts %j', this._topic_name, opts);
   }
     
   type () {return MCSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-    // ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
+//    console.log ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
     this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 }
@@ -42,6 +44,8 @@ class MCSignalFactory {
     
     this._mubsub = mubsub (this._opts.url, this._opts.mongo_opts);
     this._channel =  this._mubsub.channel (this._opts.channel, this._opts.channel_opts); 
+
+//    console.log ('created mongo-capped factory with opts %j', opts)
   }
 
   static Type () {return 'signal:mongo-capped'}
@@ -52,4 +56,13 @@ class MCSignalFactory {
   }
 }
 
-module.exports = MCSignalFactory;
+
+function creator (opts, cb) {
+  return cb (null, new MCSignalFactory (opts));
+}
+
+module.exports = creator;
+
+
+
+

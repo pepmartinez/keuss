@@ -139,4 +139,13 @@ class MemStatsFactory {
   }
 }
 
-module.exports = MemStatsFactory;
+function creator (opts, cb) {
+  if (!cb) {
+    cb = opts;
+    opts = null;
+  }
+  
+  return cb (null, new MemStatsFactory (opts));
+}
+
+module.exports = creator;

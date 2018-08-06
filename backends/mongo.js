@@ -266,7 +266,8 @@ function creator (opts, cb) {
     
   MongoClient.connect (m_url, function (err, db) {
     if (err) return cb (err);
-    return cb (null, new Factory (_opts, db));
+    var F = new Factory (_opts, db);
+    F.async_init ((err) => cb (null, F));
   });
 }
 

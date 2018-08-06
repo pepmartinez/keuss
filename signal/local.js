@@ -42,4 +42,9 @@ class LocalSignalFactory {
 }
 
 
-module.exports = LocalSignalFactory;
+function creator (opts, cb) {
+  return cb (null, new LocalSignalFactory (opts));
+}
+
+module.exports = creator;
+

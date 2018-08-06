@@ -17,7 +17,7 @@ class RPSSignal extends Signal {
     this._factory._emitter.on (this._channel, function (message) {
       var mature = parseInt (message);
       
-      // ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
+//      console.log ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
 
@@ -30,7 +30,7 @@ class RPSSignal extends Signal {
   type () {return RPSSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-    // ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
+//    console.log ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
     this._rediscl_pub.publish (this._channel, mature.getTime());
   }
 }
@@ -38,7 +38,7 @@ class RPSSignal extends Signal {
 class RPSSignalFactory {
   constructor (opts) {
     this._opts = opts || {};
-    this._emitter = mitt();
+    this._emitter = mitt ();
     this._rediscl_pub = RedisConn.conn (this._opts);
     this._rediscl_sub = RedisConn.conn (this._opts);
 
@@ -47,14 +47,22 @@ class RPSSignalFactory {
       // convey to local through mitt
       self._emitter.emit (channel, message);
     });
+
+//    console.log ('created redis-pubsub factory with opts %j', opts);
   }
 
   static Type () {return 'signal:redis-pubsub'}
   type () {return Type ()}
 
   signal (channel, opts) {
+//    console.log ('creating redis-pubsub signaller with opts %j', opts);
     return new RPSSignal (channel, this, opts);
   }
 }
 
-module.exports = RPSSignalFactory;
+
+function creator (opts, cb) {    
+  return cb (null, new RPSSignalFactory (opts));
+}
+
+module.exports = creator;

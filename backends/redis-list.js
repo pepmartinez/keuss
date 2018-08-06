@@ -137,8 +137,9 @@ class Factory extends QFactory {
 function creator (opts, cb) {
   var _opts = opts || {};
   var rediscl = RedisConn.conn (_opts.redis);
-    
-  return cb (null, new Factory (_opts, rediscl));
+  var F = new Factory (_opts, rediscl);
+//  console.log ('factory created with opts %j, calling async_init', opts)
+  F.async_init ((err) => cb (null, F));
 }
 
 module.exports = creator;

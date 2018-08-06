@@ -1,5 +1,7 @@
 'use strict';
 
+var async = require ('async');
+
 var LocalSignal = require ('./signal/local');
 var MemStats =    require ('./stats/mem');
 
@@ -17,9 +19,22 @@ class QFactory {
 
     if (!this._opts.signaller)      this._opts.signaller = {};
     if (!this._opts.signaller.opts) this._opts.signaller.opts = {};
+  }
 
-    this._signaller_factory = this._opts.signaller.provider || new LocalSignal ();
-    this._stats_factory =     this._opts.stats.provider || new MemStats ();
+  async_init (cb) {
+    var signal_provider = this._opts.signaller.provider || LocalSignal;
+    var stats_provider = this._opts.stats.provider || MemStats;
+
+    async.parallel ([
+      (cb) => signal_provider (this._opts.signaller.opts, cb),
+      (cb) => stats_provider (this._opts.stats.opts, cb)
+    ],
+    (err, res) => {
+      if (err) return cb (err);
+      this._signaller_factory = res[0];
+      this._stats_factory = res[1];
+      cb();
+    });
   }
 
   signaller_factory () {
