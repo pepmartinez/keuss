@@ -172,7 +172,8 @@ var local_redis_opts = {
 
 var f_opts = {
   signaller: {
-    provider: new signal_redis_pubsub (local_redis_opts)
+    provider: signal_redis_pubsub,
+    opts: local_redis_opts
   }
   .
   .
@@ -201,7 +202,8 @@ var local_redis_opts = {
 
 var f_opts = {
   stats: {
-    provider: new signal_redis_pubsub (local_redis_opts)
+    provider: signal_redis_pubsub,
+    opts: local_redis_opts
   }
   .
   .
@@ -296,6 +298,8 @@ var tr = q.pop (cid, opts, function (err, res) {...});
 q.cancel (tr);
 ```
 Cancels a pending pop operation, identified by the value returned by pop()
+
+If no tr is passed, or it is null, all pending pop operations on the queue are cancelled
 
 #### Commit a reserved element
 ```javascript
