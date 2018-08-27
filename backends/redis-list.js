@@ -113,11 +113,10 @@ class Factory extends QFactory {
   }
 
   close (cb) {
-    if (this._rediscl) this._rediscl.quit();
-    
-    if (cb) {
-      return cb ();
-    }
+    super.close (() => {
+      if (this._rediscl) this._rediscl.quit();
+      if (cb) return cb ();
+    });
   }
   
   type () {

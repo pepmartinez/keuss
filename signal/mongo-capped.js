@@ -54,6 +54,10 @@ class MCSignalFactory {
   signal (channel, opts) {
     return new MCSignal (channel, this, opts);
   }
+
+  close () {
+    this._mubsub.close ();
+  }
 }
 
 

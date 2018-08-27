@@ -6,8 +6,8 @@ var _ =     require ('lodash');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var Queue = require ('../Queue');
-var QFactory =   require ('../QFactory');
+var Queue =    require ('../Queue');
+var QFactory = require ('../QFactory');
 
 class SimpleMongoQueue extends Queue {
   
@@ -237,14 +237,14 @@ class Factory extends QFactory {
   }
 
   close (cb) {
-    if (this._mongo_conn) {
-      this._mongo_conn.close ();
-      this._mongo_conn = null;
-    } 
+    super.close (() => {
+      if (this._mongo_conn) {
+        this._mongo_conn.close ();
+        this._mongo_conn = null;
+      } 
     
-    if (cb) {
-      return cb ();
-    }
+      if (cb) return cb ();
+    });
   }
   
   type () {

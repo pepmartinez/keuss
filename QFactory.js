@@ -50,7 +50,9 @@ class QFactory {
   }
 
   close (cb) {
-    cb();
+    this._stats_factory.close ();
+    this._signaller_factory.close (); 
+    cb ();
   }
   
   name () {

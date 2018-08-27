@@ -312,14 +312,14 @@ class Factory extends QFactory {
   }
 
   close (cb) {
-    if (this._mongo_conn) {
-      this._mongo_conn.close ();
-      this._mongo_conn = null;
-    } 
+    super.close (() => {
+      if (this._mongo_conn) {
+        this._mongo_conn.close ();
+        this._mongo_conn = null;
+      } 
     
-    if (cb) {
-      return cb ();
-    }
+      if (cb) return cb ();
+    });
   }
   
   type () {

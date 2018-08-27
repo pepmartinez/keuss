@@ -58,6 +58,10 @@ class RPSSignalFactory {
 //    console.log ('creating redis-pubsub signaller with opts %j', opts);
     return new RPSSignal (channel, this, opts);
   }
+
+  close () {
+    this._rediscl.quit();
+  }
 }
 
 

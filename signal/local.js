@@ -38,6 +38,9 @@ class LocalSignalFactory {
 
   signal (queue, opts) {
     return new LocalSignal (queue, this, opts);
+  } 
+
+  close () {
   }
 }
 
