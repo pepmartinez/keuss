@@ -131,6 +131,8 @@ MQ (opts, function (err, factory) {
 })
 ```
 
+TODO abound on options, name-and-stats-and-signals
+
 where 'opts' is an object containing default values for queue creation (such as pollInterval, signaller or stats), plus the following backend-dependent values:
 * backends *mongo*, *pl-mongo* and *ps-mongo*
    * url: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`

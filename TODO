@@ -1,7 +1,8 @@
 * signal queue creation or read queues on refresh?
 * bridges?
-* deadletter (tied to at-least-one)?
+* expiration / deadletter (tied to at-least-one)?
 * queue traversal/query
-* allow pdate obj on pl-mongo (api dep on being mongodb)
+* allow update obj on pl-mongo (api dep on being mongodb)
 * more backends:
   + multiple-packet, nagle-like mongodb
+* priorities
