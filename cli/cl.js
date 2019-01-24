@@ -1,9 +1,10 @@
-
+var async =   require ('async');
 var program = require ('commander');
 
  program
   .version ('0.0.1')
   .usage   ('[options]')
+  .option  ('-q, --queue', 'act on this queue')
   .option  ('-c, --consumer', 'run consumer loop')
   .option  ('-C, --consumer-num <n>', 'consume n elements', parseInt)
   .option  ('-p, --producer', 'run producer loop')
@@ -17,20 +18,13 @@ var program = require ('commander');
 
 var MQ = require ('../backends/' + (program.backend || 'mongo'));
 
-var get_hrtime = process.hrtime();
-var put_hrtime = process.hrtime();
 
-
-function consume_loop (q, n) {
-  if (n == 0) {
-    return;
-  }
+/////////////////////////////////////////
+function consume_loop (q, n, cb) {
+  if (n == 0) return cb ();
   
   q.pop ('consumer', function (err, res) {
-    if (err) {
-      console.error ('consume_loop: get err --> %s', err, {});
-    }
-    
+    if (err) return cb (err);    
     if (program.dumpProduced) {
       console.log ('%j', res, {});
     }
@@ -38,22 +32,14 @@ function consume_loop (q, n) {
       console.log ('consume_loop: get %j', res, {});
     }
     
-    if (((n - 1) % 10000) == 0) {
-      var diff = process.hrtime (get_hrtime);
-      var elapsed = (diff[0] * 1e9 + diff[1]) / 1e6;
-      console.log ('consume_loop: get remaining %d, elapsed %d', n - 1, elapsed);
-      get_hrtime = process.hrtime ();
-    }
-    
-    consume_loop (q, (n ? n - 1 : n));
+    consume_loop (q, (n ? n - 1 : n), cb);
   });
 }
 
 
-function produce_loop (q, n) {   
-  if (n == 0) {
-    return;
-  }
+/////////////////////////////////////////
+function produce_loop (q, n, cb) {   
+  if (n == 0) return cb ();
   
   var opts = {};
   if (program.producerDelay) {
@@ -61,32 +47,29 @@ function produce_loop (q, n) {
   }
   
   q.push ({elem:44, tt:{a:1, b:'2'}}, opts, function (err, res) {
-    if (err) {
-      console.error ('produce_loop: put err --> %s', err, {});
-    }
+    if (err) return cb (err);
     
     if (program.verbose) {
       console.log ('produce_loop: put %s', res, {}); 
     }
-    
-    if (((n - 1) % 10000) == 0) {
-      var diff = process.hrtime (put_hrtime);
-      var elapsed = (diff[0] * 1e9 + diff[1]) / 1e6;
-      console.log ('produce_loop: put remaining: %d, elapsed %d', n - 1, elapsed);
-      put_hrtime = process.hrtime ();
-    }
   
-    produce_loop (q, (n ? n - 1 : n));
+    produce_loop (q, (n ? n - 1 : n), cb);
   });
 }
 
+
+
 var q_opts = {};
   
+console.log (`MQ.init: using backend ${program.backend || 'mongo'}`);
+
 if (program.signaller) {
   var signal_provider = require ('../signal/' + program.signaller);
   q_opts.signaller = {
     provider: signal_provider
   }
+
+  console.log (`MQ.init: using signeller ${program.signaller}`);
 }
   
 if (program.stats) {
@@ -94,24 +77,42 @@ if (program.stats) {
   q_opts.stats = {
     provider: stats_provider
   }
+
+  console.log (`MQ.init: using stats ${program.stats}`);
 }
 
+
 MQ (q_opts, function (err, factory) {
-  if (err) {
-    return console.error ('MQ.init: %s', err, {});
-  }
+  if (err) return console.error ('MQ.init: %s', err, {});
   
   console.log ('MQ.init: backend initiated');
   
-  var q = factory.queue ('test', {});
+  var q = factory.queue (program.queue || 'test', {});
+
+  var tasks = [];
   
   if (program.consumer) {
-    console.log ('MQ.init: initiating consume loop');
-    consume_loop (q, program.consumerNum);
+    tasks.push (function (cb) {
+      console.log ('MQ.init: initiating consume loop');
+      consume_loop (q, program.consumerNum, cb);
+    });
   }
   
   if (program.producer) {
-    console.log ('MQ.init: initiating produce loop');
-    produce_loop (q, program.producerNum);
+    tasks.push (function (cb) {
+      console.log ('MQ.init: initiating produce loop');
+      produce_loop (q, program.producerNum, cb);
+    });
   }
+
+  async.parallel (tasks, function (err) {
+    if (err) {
+      console.error (err);
+    }
+    else {
+      console.log (`all done`);
+
+      factory.close();
+    }
+  })
 });
