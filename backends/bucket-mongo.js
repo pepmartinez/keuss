@@ -50,7 +50,8 @@ class BucketMongoQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
-    this._insert_bucket.b.push (entry);
+    if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
+    this._insert_bucket.b.push (entry.payload);
     var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
 //    console.log (`added to bucket, ${id}`);
 
@@ -72,6 +73,8 @@ class BucketMongoQueue extends Queue {
     if (this._read_bucket && this._read_bucket.b && this._read_bucket.b.length) {
       setImmediate (function () {
         var elem = self._read_bucket.b.shift ();
+        elem.tries = 0;
+        elem.mature = self._read_bucket.mature;
         callback (null, elem);
       });
     }
