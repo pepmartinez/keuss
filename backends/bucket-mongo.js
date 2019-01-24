@@ -9,6 +9,7 @@ var mongo =       require ('mongodb');
 var Queue =    require ('../Queue');
 var QFactory = require ('../QFactory');
 
+
 class BucketMongoQueue extends Queue {
   
   //////////////////////////////////////////////
@@ -28,9 +29,8 @@ class BucketMongoQueue extends Queue {
 
     this._bucket_max_size = opts.bucket_max_size || 1024;
     this._bucket_max_wait = opts.bucket_max_wait || 500;
-    this._set_periodic_flush ();
 
-    console.log (`created BucketMongoQueue ${name}`);
+//    console.log (`created BucketMongoQueue ${name}`);
   }
   
   
@@ -56,9 +56,19 @@ class BucketMongoQueue extends Queue {
 //    console.log (`added to bucket, ${id}`);
 
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
+      clearTimeout (this._flush_timer);
+      this._flush_timer = null;
+  
+//      console.log (`cancelled periodic_flush`);
+
       this._flush_bucket (callback);
     }
     else {
+      if (this._insert_bucket.b.length == 1) {
+//        console.log (`first insert of bucket, set periodic_flush`);
+        this._set_periodic_flush ();
+      }
+
       setImmediate (function () {callback (null, id);}); 
     }
   }
@@ -102,6 +112,15 @@ class BucketMongoQueue extends Queue {
     var q = {};
     var opts = {};
     this._col.count (q, opts, callback);
+    this._col.aggregate ([
+      {$group:{_id:'t', v: {$sum: '$n'}}}
+    ], function (err, cursor) {
+      if (err) return callback (err);
+      cursor.toArray (function (err, res_array) {
+        if (err) return callback (err);
+        callback (null, res_array[0].v);
+      }); 
+    });
   }
   
   
@@ -118,10 +137,7 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
     var self = this;
 
-    if (this._flush_timer) {
-      clearTimeout (this._flush_timer);
-      this._flush_timer = null;
-    }
+    if (this._flush_timer) return;
 
     this._flush_timer = setTimeout (function () {
       this._flush_timer = null;
@@ -130,12 +146,14 @@ class BucketMongoQueue extends Queue {
 
       if (self._insert_bucket.b.length) {
         self._flush_bucket (function (err, res) {
-          self._set_periodic_flush ();
+          if (err) {
+            // keep retrying
+            self._set_periodic_flush ();
+          }
         });
       }
       else {
-        // nothing to insert, just refire
-        self._set_periodic_flush ();
+        // nothing to insert, stop
       }
     }, this._bucket_max_wait);
 
@@ -154,7 +172,7 @@ class BucketMongoQueue extends Queue {
       b: []
     };
 
-    console.log (`flushing bucket ${bucket._id} with ${bucket.b.length} elems`)
+//    console.log (`flushing bucket ${bucket._id} with ${bucket.b.length} elems`)
 
     this._col.insertOne (bucket, {}, function (err, result) {
       if (err) {
@@ -170,7 +188,7 @@ class BucketMongoQueue extends Queue {
   // get element from queue
   _get_bucket (callback) {
   /////////////////////////////////////////
-    console.log (`need to read a bucket`)
+//    console.log (`need to read a bucket`)
     
     this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
       if (err) {
@@ -180,7 +198,7 @@ class BucketMongoQueue extends Queue {
       var val = result && result.value;
 
       if (val) {
-        console.log (`read a bucket ${val._id.toString()} with ${val.n} elems`);
+//        console.log (`read a bucket ${val._id.toString()} with ${val.n} elems`);
       }
 
       callback (null, val);
