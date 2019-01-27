@@ -109,17 +109,12 @@ class BucketMongoQueue extends Queue {
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
-    var q = {};
-    var opts = {};
-    this._col.count (q, opts, callback);
     this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, cursor) {
+    ], function (err, res) {
       if (err) return callback (err);
-      cursor.toArray (function (err, res_array) {
-        if (err) return callback (err);
-        callback (null, res_array[0].v);
-      }); 
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
   

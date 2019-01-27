@@ -5,10 +5,11 @@ var program = require ('commander');
   .version ('0.0.1')
   .usage   ('[options]')
   .option  ('-q, --queue', 'act on this queue')
+  .option  ('-i, --info', 'get info about queue')
   .option  ('-c, --consumer', 'run consumer loop')
-  .option  ('-C, --consumer-num <n>', 'consume n elements', parseInt)
+  .option  ('-C, --consumer-num <n>', 'consume n elements, -1 for infinite', parseInt)
   .option  ('-p, --producer', 'run producer loop')
-  .option  ('-P, --producer-num <n>', 'produce n elements', parseInt)
+  .option  ('-P, --producer-num <n>', 'produce n elements, -1 for infinite', parseInt)
   .option  ('-d, --producer-delay <n>', 'produce with a delay of n secs', parseInt)
   .option  ('-D, --dump-produced', 'dump text of produced messages on log')
   .option  ('-b, --backend <value>', 'use queue backend. defaults to \'mongo\'')
@@ -17,6 +18,23 @@ var program = require ('commander');
   .parse   (process.argv);
 
 var MQ = require ('../backends/' + (program.backend || 'mongo'));
+
+
+/////////////////////////////////////////
+function info (q, cb) {
+  async.parallel ({
+    size:         (cb) => {q.size (cb)},
+    totalSize:    (cb) => {q.totalSize (cb)},
+    schedSize:    (cb) => {q.schedSize (cb)},
+    next_t:       (cb) => {q.next_t (cb)},
+    stats:        (cb) => {q.stats (cb)},
+    topology:     (cb) => {q.topology (cb)},
+    name:         (cb) => {cb (null, q.name())},
+    ns:           (cb) => {cb (null, q.ns())},
+    type:         (cb) => {cb (null, q.type())},
+    capabilities: (cb) => {cb (null, q.capabilities())},
+  }, cb);
+}
 
 
 /////////////////////////////////////////
@@ -32,7 +50,12 @@ function consume_loop (q, n, cb) {
       console.log ('consume_loop: get %j', res, {});
     }
     
-    consume_loop (q, (n ? n - 1 : n), cb);
+    if (n == null) {
+      consume_loop (q, null, cb);
+    }
+    else {
+      consume_loop (q, (n ? n - 1 : n), cb);
+    }
   });
 }
 
@@ -53,7 +76,12 @@ function produce_loop (q, n, cb) {
       console.log ('produce_loop: put %s', res, {}); 
     }
   
-    produce_loop (q, (n ? n - 1 : n), cb);
+    if (n == null) {
+      produce_loop (q, null, cb);
+    }
+    else {
+      produce_loop (q, (n ? n - 1 : n), cb);
+    }
   });
 }
 
@@ -91,6 +119,21 @@ MQ (q_opts, function (err, factory) {
 
   var tasks = [];
   
+  if (program.info) {
+    tasks.push (function (cb) {
+      info (q, function (err, res) {
+        if (err) {
+          console.error (err);
+        }
+        else {
+          console.log (res);
+        }
+
+        cb ();
+      });
+    })
+  }
+
   if (program.consumer) {
     tasks.push (function (cb) {
       console.log ('MQ.init: initiating consume loop');
