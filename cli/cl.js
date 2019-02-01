@@ -1,20 +1,24 @@
 var async =   require ('async');
 var program = require ('commander');
+var _ =       require ('lodash');
 
  program
   .version ('0.0.1')
   .usage   ('[options]')
-  .option  ('-q, --queue', 'act on this queue')
+  .option  ('-q, --queue [queue]', 'act on this queue')
   .option  ('-i, --info', 'get info about queue')
   .option  ('-c, --consumer', 'run consumer loop')
-  .option  ('-C, --consumer-num <n>', 'consume n elements, -1 for infinite', parseInt)
+  .option  ('-C, --consumer-num <n>', 'consume n elements', parseInt)
   .option  ('-p, --producer', 'run producer loop')
-  .option  ('-P, --producer-num <n>', 'produce n elements, -1 for infinite', parseInt)
+  .option  ('-P, --producer-num <n>', 'produce n elements', parseInt)
   .option  ('-d, --producer-delay <n>', 'produce with a delay of n secs', parseInt)
+  .option  ('-A, --producer-loop-delay <n>', 'loop delay in millisecs', parseInt)
+  .option  ('-B, --consumer-loop-delay <n>', 'loop delay in millisecs', parseInt)
   .option  ('-D, --dump-produced', 'dump text of produced messages on log')
   .option  ('-b, --backend <value>', 'use queue backend. defaults to \'mongo\'')
   .option  ('-s, --signaller <value>', 'use signaller backend. defaults to \'local\'')
   .option  ('-t, --stats <value>', 'use stats backend. defaults to \'mem\'')
+  .option  ('-v, --verbose', 'be verbose')
   .parse   (process.argv);
 
 var MQ = require ('../backends/' + (program.backend || 'mongo'));
@@ -47,14 +51,18 @@ function consume_loop (q, n, cb) {
       console.log ('%j', res, {});
     }
     else if (program.verbose) {
-      console.log ('consume_loop: get %j', res, {});
+      console.log ('consume_loop: get %j', res);
     }
     
-    if (n == null) {
-      consume_loop (q, null, cb);
+    var next_n = _.isNil (n) ? n : (n ? n - 1 : n);
+
+    if (program.consumerLoopDelay) {
+      setTimeout (function () {
+        consume_loop (q, next_n, cb);
+      }, program.consumerLoopDelay)
     }
     else {
-      consume_loop (q, (n ? n - 1 : n), cb);
+      consume_loop (q, next_n, cb);
     }
   });
 }
@@ -70,17 +78,28 @@ function produce_loop (q, n, cb) {
   }
   
   q.push ({elem:44, tt:{a:1, b:'2'}}, opts, function (err, res) {
-    if (err) return cb (err);
-    
+    if (err) {
+      if (err == 'drain') {
+        console.log ('queue in drain, stopping producer');
+        return;
+      }
+      
+      return cb (err);
+    }
+
     if (program.verbose) {
-      console.log ('produce_loop: put %s', res, {}); 
+      console.log ('produce_loop: put %s', res); 
     }
   
-    if (n == null) {
-      produce_loop (q, null, cb);
+    var next_n = _.isNil (n) ? n : (n ? n - 1 : n);
+    
+    if (program.producerLoopDelay) {
+      setTimeout (function () {
+        produce_loop (q, next_n, cb);
+      }, program.producerLoopDelay)
     }
     else {
-      produce_loop (q, (n ? n - 1 : n), cb);
+      produce_loop (q, next_n, cb);
     }
   });
 }
@@ -143,7 +162,7 @@ MQ (q_opts, function (err, factory) {
   
   if (program.producer) {
     tasks.push (function (cb) {
-      console.log ('MQ.init: initiating produce loop');
+      console.log ('MQ.init: initiating produce loop with ', program.producerNum);
       produce_loop (q, program.producerNum, cb);
     });
   }
@@ -154,8 +173,23 @@ MQ (q_opts, function (err, factory) {
     }
     else {
       console.log (`all done`);
-
-      factory.close();
+      _farewell_and_good_night ();
     }
-  })
+  });
+
+  function _farewell_and_good_night () {
+    console.log ('farewell...');
+    async.series ([
+      (cb) => q.drain (cb),
+      (cb) => {factory.close(); cb ();}
+    ], function () {
+      if (err) console.error (err);
+      console.log ('... and good night');
+    });
+  }
+
+  process.on( 'SIGINT',  _farewell_and_good_night);
+  process.on( 'SIGQUIT', _farewell_and_good_night);
+  process.on( 'SIGTERM', _farewell_and_good_night);
+  process.on( 'SIGHUP',  _farewell_and_good_night);
 });

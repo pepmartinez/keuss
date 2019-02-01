@@ -6,3 +6,4 @@
 * more backends:
   + multiple-packet, nagle-like mongodb
 * priorities
+* drain stats on factory.close()

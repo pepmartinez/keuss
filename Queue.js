@@ -65,6 +65,9 @@ class Queue {
   // pipeline: atomically passes to next queue a previously reserved element, by id
   pl_step (id, next_queue, opts, callback) {callback (null, false);}
 
+  // empty local buffers
+  drain (callback) {callback (null, null);}
+
   // queue size including non-mature elements
   totalSize (callback) {callback (null, 0);}
   
@@ -76,7 +79,7 @@ class Queue {
   
   // Date of next 
   next_t (callback) {callback (null, null);}
-  
+
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
   
