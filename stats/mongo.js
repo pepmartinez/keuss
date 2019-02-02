@@ -1,7 +1,5 @@
-'use strict';
-
-var _ = require('lodash');
-
+var _ =           require ('lodash');
+var async =       require ('async');
 var MongoClient = require ('mongodb').MongoClient;
 
 /*
@@ -52,31 +50,39 @@ class MongoStats {
   }
 
 
+  _flush (cb) {
+    var upd = {$inc: {}};
+    var some_added = false;
+
+    _.forEach(this._cache, (value, key) => {
+      if (value) {
+        upd.$inc['counters.' + key] = value;
+        some_added = true;    
+        this._cache[key] = 0;
+      }
+    });
+
+    if (some_added) {
+      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
+//        console.log ('mongo stats: updated %s -> %j', this._name, upd);
+        if (cb) cb (err);
+      });
+    }
+    else {
+      if (cb ) setImmediate (() => cb ());
+    }
+  }
+
+
   _ensureFlush() {
     if (this._flusher) return;
-    var self = this;
 
-    this._flusher = setTimeout (function () {
-      var upd = {$inc: {}};
-      var some_added = false;
-
-      _.forEach(self._cache, (value, key) => {
-        if (value) {
-          upd.$inc['counters.' + key] = value;
-          some_added = true;    
-          self._cache[key] = 0;
-        }
-      });
-
-      if (some_added) {
-        self._coll().updateOne ({_id: self._id}, upd, {upsert: true}, (err) => {
-//          console.log ('mongo stats: updated %s -> %j', self._name, upd);
-        });
-      }
-
-      self._flusher = undefined;
+    this._flusher = setTimeout (() => {
+      this._flusher = undefined;
+      this._flush ();
     }, this._opts.flush_period || 100);
   }
+
 
   _cancelFlush() {
     if (this._flusher) {
@@ -85,13 +91,16 @@ class MongoStats {
     }
   }
 
+
   _mongocl () {
     return this._factory._mongocl;
   }
 
+
   _coll () {
     return this._factory._coll;
   }
+
 
   incr(v, delta, cb) {
     if ((delta === null) || (delta === undefined)) delta = 1;
@@ -105,6 +114,7 @@ class MongoStats {
 
     if (cb) cb();
   }
+
 
   decr(v, delta, cb) {
     if ((delta === null) || (delta === undefined)) delta = 1;
@@ -169,7 +179,15 @@ class MongoStats {
       cb (err);
     });
   }
+
+
+  close (cb) {
+    this._cancelFlush();
+    this._flush (cb);
+  }
 }
+
+
 
 class MongoStatsFactory {
   constructor(cl, coll, opts) {
@@ -177,14 +195,23 @@ class MongoStatsFactory {
     this._mongocl = cl;
     this._coll = coll;
 
+    this._instances = {};
+
 //    console.log ('created MongoStatsFactory on coll %s, opts %j', coll, opts);
   }
 
   static Type() { return 'mongo' }
   type() { return Type() }
 
+
   stats(ns, name, opts) {
-    return new MongoStats (ns, name, this);
+    var k = name + '@' + ns;
+    if (!this._instances [k]) {
+      this._instances [k] = new MongoStats (ns, name, this);
+//      console.log (`created MongoStats on ${k}`);
+    }
+    
+    return this._instances [k];
   }
 
   queues (ns, opts, cb) {
@@ -225,8 +252,24 @@ class MongoStatsFactory {
     }
   }
 
-  close() {
-    this._mongocl.close();
+  close (cb) {
+    var tasks = [];
+
+    // flush pending stats
+    _.each (this._instances, (v, k) => {
+      tasks.push ((cb) => {
+//        console.log (`closing MongoStats ${k}`);
+        v.close (cb);
+      });
+    });
+    
+    async.series ([
+      (cb) => async.parallel (tasks, cb),
+      (cb) => {
+//        console.log (`closing MongoStatsFactory mongodb conn`);
+        this._mongocl.close (cb);
+      }
+    ], cb);
   }
 }
 

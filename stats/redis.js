@@ -34,10 +34,12 @@ class RedisStats {
     return this._factory.type();
    }
 
+
    ns () {
      return this._ns;
    }
  
+
    name () {
      return this._name;
    }
@@ -61,22 +63,28 @@ class RedisStats {
   }
 
 
+  _flush (cb) {
+    _.forEach (this._cache, (value, key) => {
+      if (value) {
+        this._rediscl.hincrby (this._id, 'counter_' + key, value);
+//          console.log ('stats-redis[%s]: flushed %d -> %s', this._id, value, 'counter_' + key);
+        this._cache[key] = 0;
+      }
+    });
+
+    if (cb ) setImmediate (() => cb ());
+  }
+
+
   _ensureFlush() {
     if (this._flusher) return;
-    var self = this;
 
-    this._flusher = setTimeout(function () {
-      _.forEach(self._cache, function (value, key) {
-        if (value) {
-          self._rediscl.hincrby(self._id, 'counter_' + key, value);
-//          console.log ('stats-redis[%s]: flushed %d -> %s', self._id, value, 'counter_' + key);
-          self._cache[key] = 0;
-        }
-      });
-
-      self._flusher = undefined;
+    this._flusher = setTimeout(() => {
+      this._flusher = undefined;
+      this._flush ();
     }, this._opts.flush_period || 100);
   }
+
 
   _cancelFlush() {
     if (this._flusher) {
@@ -99,11 +107,13 @@ class RedisStats {
     if (cb) cb();
   }
 
+
   decr(v, delta, cb) {
     if ((delta === null) || (delta === undefined)) delta = 1;
     this.incr(v, -delta, cb);
   }
   
+
   opts (opts, cb) {
     if (!cb) {
       // get
@@ -126,6 +136,7 @@ class RedisStats {
     }
   }
   
+
   topology (tplg, cb) {
     if (!cb) {
       // get
@@ -148,6 +159,7 @@ class RedisStats {
     }
   }
   
+
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
@@ -170,6 +182,12 @@ class RedisStats {
       });
     });
   }
+
+
+  close (cb) {
+    this._cancelFlush();
+    this._flush (cb);
+  }
 }
 
 class RedisStatsFactory {
@@ -177,17 +195,25 @@ class RedisStatsFactory {
     this._opts = opts || {};
     this._rediscl = RedisConn.conn(this._opts);
 
+    this._instances = {};
 //    console.log ('created redis stats factory with option %j', opts);
   }
 
   static Type() { return 'redis' }
   type() { return Type() }
 
+
   stats(ns, name, opts) {
-//    console.log ('creating redis stats with ns %s, name %s, opts %j', ns, name, opts);
-    return new RedisStats (ns, name, this, opts);
+    var k = name + '@' + ns;
+    if (!this._instances [k]) {
+      this._instances [k] = new RedisStats (ns, name, this, opts);
+//        console.log ('created redis stats with ns %s, name %s, opts %j', ns, name, opts);
+    }
+    
+    return this._instances [k];
   }
-  
+
+
   queues (ns, opts, cb) {
     if (!cb) {
       cb = opts;
@@ -243,8 +269,25 @@ class RedisStatsFactory {
     });
   }
 
-  close() {
-    this._rediscl.quit();
+
+  close (cb) {
+    var tasks = [];
+
+    // flush pending stats
+    _.each (this._instances, (v, k) => {
+      tasks.push ((cb) => {
+//        console.log (`closing RedisStats ${k}`);
+        v.close (cb);
+      });
+    });
+    
+    async.series ([
+      (cb) => async.parallel (tasks, cb),
+      (cb) => {
+//        console.log (`closing RedisStatsFactory redis conn`);
+        this._rediscl.quit(cb);
+      }
+    ], cb);
   }
 }
 

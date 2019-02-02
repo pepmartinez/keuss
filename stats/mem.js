@@ -80,6 +80,10 @@ class MemStats {
     
     if (cb) cb();
   } 
+
+  close (cb) {
+    cb ();
+  }
 }
 
 class MemStatsFactory {
@@ -135,7 +139,8 @@ class MemStatsFactory {
     return st;
   }
 
-  close () {
+  close (cb) {
+    if (cb) cb ();
   }
 }
 

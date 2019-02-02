@@ -59,8 +59,8 @@ class RPSSignalFactory {
     return new RPSSignal (channel, this, opts);
   }
 
-  close () {
-    this._rediscl.quit();
+  close (cb) {
+    this._rediscl.quit (cb);
   }
 }
 

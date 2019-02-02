@@ -37,8 +37,7 @@ _.forEach (tests, function (CL, CLName) {
         var mem = ftry.stats (ns, name);
         mem.values (function (err, vals) {
           vals.should.eql ({});
-          ftry.close();
-          done (err);
+          ftry.close(done);
         });
       });
     });
@@ -59,8 +58,7 @@ _.forEach (tests, function (CL, CLName) {
             mem.values (function (err, vals) {
               vals.should.eql ({v1: 1, v2: 1, v3: 1});
               mem.clear (function (err) {
-                ftry.close();
-                done (err);
+                ftry.close(done);
               });
             });
           }, 200);
@@ -83,8 +81,7 @@ _.forEach (tests, function (CL, CLName) {
             mem.values (function (err, vals) {
               vals.should.eql ({v1: 2});
               mem.clear (function (err) {
-                ftry.close();
-                done (err);
+                ftry.close(done);
               });
             });
           }, 200);
@@ -106,8 +103,7 @@ _.forEach (tests, function (CL, CLName) {
           setTimeout (function () {
             mem.values (function (err, vals) {
               vals.should.eql ({v1: 4});
-              ftry.close();
-              done (err);
+              ftry.close(done);
             });
           }, 200);
         });
@@ -128,8 +124,7 @@ _.forEach (tests, function (CL, CLName) {
           setTimeout (function () {
             mem.values (function (err, vals) {
               vals.should.eql ({v1: 1});
-              ftry.close();
-              done (err);
+              ftry.close(done);
             });
           }, 200);
         });

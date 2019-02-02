@@ -1,5 +1,3 @@
-'use strict';
-
 var async = require ('async');
 
 var LocalSignal = require ('./signal/local');
@@ -50,9 +48,10 @@ class QFactory {
   }
 
   close (cb) {
-    this._stats_factory.close ();
-    this._signaller_factory.close (); 
-    cb ();
+    async.parallel ([
+      (cb) => this._stats_factory.close (cb),
+      (cb) => this._signaller_factory.close (cb)
+    ], cb);
   }
   
   name () {
