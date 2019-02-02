@@ -26,7 +26,6 @@
   "license": "GPL-3.0",
   "dependencies": {
     "async": "2.6.1",
-    "commander": "2.13.0",
     "ioredis": "3.2.2",
     "lodash": "4.17.11",
     "mitt": "1.1.3",
