@@ -41,6 +41,9 @@ class Queue {
 
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
+
+    // if true, queue is being drained just before shutdown
+    this._in_drain = false;
   }
     
   
@@ -64,9 +67,6 @@ class Queue {
 
   // pipeline: atomically passes to next queue a previously reserved element, by id
   pl_step (id, next_queue, opts, callback) {callback (null, false);}
-
-  // empty local buffers
-  drain (callback) {callback (null, null);}
 
   // queue size including non-mature elements
   totalSize (callback) {callback (null, 0);}
@@ -193,7 +193,16 @@ class Queue {
     if (cb) cb ();
   }
   
-  
+
+  //////////////////////////////////
+  // empty local buffers
+  drain (callback) {
+    this._in_drain = true;
+    this.cancel ();
+    setImmediate (callback);
+  }
+
+
   /////////////////////////////////////////
   // add element to queue
   push (payload, opts, callback) {
@@ -202,6 +211,8 @@ class Queue {
       callback = opts;
       opts = {};
     }
+    
+    if (this._in_drain) return setImmediate (function () {callback ('drain');});
     
     // get delay from either params or config
     var mature = null;

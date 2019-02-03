@@ -32,8 +32,6 @@ class BucketMongoQueue extends Queue {
     this._bucket_max_size = opts.bucket_max_size || 1024;
     this._bucket_max_wait = opts.bucket_max_wait || 500;
 
-    this._in_drain = false;
-
 //    console.log (`created BucketMongoQueue ${name}`);
   }
   
@@ -161,14 +159,12 @@ class BucketMongoQueue extends Queue {
   // empty local buffers
   drain (callback) {
     async.series ([
-      (cb) => {this._in_drain = true; cb ();},
-      (cb) => {this.cancel (); cb ();},
+      (cb) => super.drain (cb),
       (cb) => async.parallel ([
         (cb) => this._drain_read (cb),
         (cb) => this._drain_insert (cb),
       ], cb),
       (cb) => {this.cancel (); cb ();},
-      (cb) => {this._in_drain = false; cb ();},
     ], callback);
   }
 
