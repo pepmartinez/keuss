@@ -52,8 +52,6 @@ class BucketMongoQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
-    if (this._in_drain) return setImmediate (function () {callback ('drain');});
-
     if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
     this._insert_bucket.b.push (entry.payload);
     var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
