@@ -133,9 +133,9 @@ describe ('push-pop with ' + MQ_item.label + ' queue backend', function () {
     
     async.series([
       function (cb) {
-        var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {should.equal(0,1)});
+        var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
         q.consumers().length.should.equal (1);
-        var tid2 = q.pop ('c2', {timeout: 2000}, function (err, ret) {should.equal(0,1)});
+        var tid2 = q.pop ('c2', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
         q.nConsumers().should.equal (2);
         q.cancel (tid1);
         q.nConsumers().should.equal (1);

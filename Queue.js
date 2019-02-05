@@ -44,6 +44,9 @@ class Queue {
 
     // if true, queue is being drained just before shutdown
     this._in_drain = false;
+
+    // if true, queue has been drained and is now not usable
+    this._drained = false;
   }
     
   
@@ -197,7 +200,8 @@ class Queue {
   //////////////////////////////////
   // empty local buffers
   drain (callback) {
-    this._in_drain = true;
+    this._in_drain = false;
+    this._drained = true;
     this.cancel ();
     setImmediate (callback);
   }
@@ -255,6 +259,9 @@ class Queue {
   pop (cid, opts, callback) {
   //////////////////////////////////
     // TODO fail if too many consumers?
+    
+    if (this._drained) return setImmediate (function () {callback ('drain');});
+
     if (!callback) {
       callback = opts;
       opts = {};
@@ -346,19 +353,24 @@ class Queue {
   // cancel a waiting consumer
   cancel (tid) {
   //////////////////////////////////
-    let consumer_data = this._consumers_by_tid.get (tid);
+//    console.log ('cancelling, tid is ', tid);
 
     if (tid) {
+      let consumer_data = this._consumers_by_tid.get (tid);
+
       if (!consumer_data) {
         // tid does not point to valid consume, NOOP
         return;
       }
 
-      // call callback with error-cancelled?
-      
-      // mark cancelled by deleting callback
-      consumer_data.callback = null;
-      
+      if (consumer_data.callback) {
+        // call callback with error-cancelled
+        consumer_data.callback ('cancel');
+
+        // mark cancelled by deleting callback
+        consumer_data.callback = null;
+      }
+
       // clear timeout if present
       if (consumer_data.cleanup_timeout) {
         clearTimeout (consumer_data.cleanup_timeout);
@@ -376,7 +388,15 @@ class Queue {
     else {
       // cancel all pending stuff
       this._consumers_by_tid.forEach (function (consumer_data, tid) {
-        consumer_data.callback = null;
+//        console.log (`cancelling ${tid}`);
+
+        if (consumer_data.callback) {
+          // call callback with error-cancelled
+          consumer_data.callback ('cancel');
+
+          // mark cancelled by deleting callback
+          consumer_data.callback = null;
+        }
 
         if (consumer_data.cleanup_timeout) {
           clearTimeout (consumer_data.cleanup_timeout);

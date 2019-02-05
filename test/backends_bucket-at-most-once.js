@@ -12,7 +12,7 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
   var MQ = MQ_item.mq;
 
   before (function (done) {
-    var opts = {url: 'mongodb://localhost/keuss_test_bicket_at_most_once'};
+    var opts = {url: 'mongodb://localhost/keuss_test_bucket_at_most_once'};
 
     MQ (opts, function (err, fct) {
       if (err) return done (err);
@@ -97,9 +97,9 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
     
     async.series([
       function (cb) {
-        var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {should.equal(0,1)});
+        var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
         q.consumers().length.should.equal (1);
-        var tid2 = q.pop ('c2', {timeout: 2000}, function (err, ret) {should.equal(0,1)});
+        var tid2 = q.pop ('c2', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
         q.nConsumers().should.equal (2);
         q.cancel (tid1);
         q.nConsumers().should.equal (1);

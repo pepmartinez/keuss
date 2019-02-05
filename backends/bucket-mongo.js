@@ -124,8 +124,8 @@ class BucketMongoQueue extends Queue {
 
   /////////////////////////////////////////
   _drain_read (cb) {
-    if ((this.nConsumers () == 0) && (this._read_bucket.b.length == 0)) {
-//      console.log (`no consumers, no read_buffer, drain_read done`)
+    if (this._read_bucket.b.length == 0) {
+//      console.log (`no read_buffer, drain_read done`)
       cb ();
     }
     else {
@@ -157,12 +157,15 @@ class BucketMongoQueue extends Queue {
   // empty local buffers
   drain (callback) {
     async.series ([
-      (cb) => super.drain (cb),
+      (cb) => {this._in_drain = true; cb ();},
       (cb) => async.parallel ([
         (cb) => this._drain_read (cb),
         (cb) => this._drain_insert (cb),
       ], cb),
+//      (cb) => console.log ('drain stages completed', cb ()),
+      (cb) => {this._in_drain = false; this._drained = true; cb ();},
       (cb) => {this.cancel (); cb ();},
+//      (cb) => console.log ('drain completed', cb ()),
     ], callback);
   }
 
