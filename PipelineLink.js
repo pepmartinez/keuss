@@ -1,6 +1,3 @@
-'use strict';
-
-
 var Queue = require ('./Queue');
 var _ =     require ('lodash');
 
@@ -66,7 +63,9 @@ class PipelineLink {
      // console.log ('pll %s: reserved element: %j', self._name, res);
 
       if (err) {
-       // console.log ('pll %s: error in reserve:', self._name, err);
+        if (err == 'cancel') return; // end the process loop
+
+        // console.log ('pll %s: error in reserve:', self._name, err);
         return self._process (ondata);
       }
       

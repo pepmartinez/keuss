@@ -37,7 +37,7 @@ var factory = null;
       // tie them up, q1 -> q2 -> q3
       var pll1 = new PLL (q1, q2);
       var pll2 = new PLL (q2, q3);
-
+      
       pll1.start (function (elem, done0) {
         var pl = elem.payload;
         pl.pll1 = 'done';
@@ -51,14 +51,14 @@ var factory = null;
       });
 
       var pop_opts = {};
+      
       q3.pop ('c', pop_opts, function (err, res) {
         if (err) {
           return done (err);
         }
 
-//        console.log ('got this: ', res);
         pll1.stop();
-        pll2.stop ();
+        pll2.stop();
 
         res.payload.should.eql ({ a: 5, b: 'see it run...', pll1: 'done', pll2: 'done' });
         res.tries.should.equal (0);
