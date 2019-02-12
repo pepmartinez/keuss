@@ -3,7 +3,5 @@
 * expiration / deadletter (tied to at-least-one)?
 * queue traversal/query
 * allow update obj on pl-mongo (api dep on being mongodb)
-* more backends:
-  + multiple-packet, nagle-like mongodb
 * priorities
-* drain stats on factory.close()
+* upgrade mongod driver to v3
