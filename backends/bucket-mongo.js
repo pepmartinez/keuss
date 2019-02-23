@@ -1,6 +1,8 @@
 var async = require ('async');
 var _ =     require ('lodash');
 
+var debug = require('debug')('keuss:backend:BucketMongo');
+
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
@@ -30,7 +32,7 @@ class BucketMongoQueue extends Queue {
     this._bucket_max_size = opts.bucket_max_size || 1024;
     this._bucket_max_wait = opts.bucket_max_wait || 500;
 
-//    console.log (`created BucketMongoQueue ${name}`);
+    debug ('created BucketMongoSafe %s', name);
   }
   
   
@@ -53,19 +55,19 @@ class BucketMongoQueue extends Queue {
     if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
     this._insert_bucket.b.push (entry.payload);
     var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
-//    console.log (`added to bucket, ${id}`);
+    debug ('added to bucket, %s', id);
 
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
   
-//      console.log (`cancelled periodic_flush`);
+      debug ('cancelled periodic_flush');
 
       this._flush_bucket (callback);
     }
     else {
       if (this._insert_bucket.b.length == 1) {
-//        console.log (`first insert of bucket, set periodic_flush`);
+        debug ('first insert of bucket, set periodic_flush');
         this._set_periodic_flush ();
       }
 
@@ -80,13 +82,13 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
     if (this._in_drain) {
       if (this._read_bucket.b.length == 0) {
-//        console.log (`in_drain_read: read_buffer empty, calling _drain_read_cb`)
+        debug ('in_drain_read: read_buffer empty, calling _drain_read_cb');
         this._drain_read_cb ();
         this._drain_read_cb = undefined;
         return setImmediate (function () {callback (null,  null);});
       }
       else {
-//        console.log (`in_drain_read: ${this._read_bucket.b.length} pending in read_buffer`)
+        debug ('in_drain_read: %d pending in read_buffer', this._read_bucket.b.length);
       }
     }
 
@@ -123,30 +125,31 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
   _drain_read (cb) {
     if (this._read_bucket.b.length == 0) {
-//      console.log (`no read_buffer, drain_read done`)
+      debug ('no read_buffer, drain_read done');
       cb ();
     }
     else {
-//      console.log (`drain_read: ${this._read_bucket.b.length} pending in bucket, ${this.nConsumers ()} consumers. Setting cb for later`)
+      debug ('drain_read: %d pending in bucket, %d consumers. Setting cb for later', this._read_bucket.b.length, this.nConsumers ());
       this._drain_read_cb = cb;
     }
   }
 
 
+
   /////////////////////////////////////////
   _drain_insert (cb) {
-//    console.log (`drain_insert called`);
+    debug ('drain_insert called');
 
     if (this._insert_bucket.b.length) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
   
-//      console.log (`drain_insert flushing _insert_bucket`);
+      debug ('drain_insert flushing _insert_bucket');
 
       this._flush_bucket (cb);
     }
     else {
-//      console.log (`drain_insert: nothing pending insertion, completed`);
+      debug ('drain_insert: nothing pending insertion, completed');
       cb ();
     }
   }
@@ -160,10 +163,10 @@ class BucketMongoQueue extends Queue {
         (cb) => this._drain_read (cb),
         (cb) => this._drain_insert (cb),
       ], cb),
-//      (cb) => console.log ('drain stages completed', cb ()),
-      (cb) => {this._in_drain = false; this._drained = true; cb ();},
-      (cb) => {this.cancel (); cb ();},
-//      (cb) => console.log ('drain completed', cb ()),
+      (cb) => {debug ('drain stages completed'), cb ()},
+      (cb) => {this._in_drain = false; this._drained = true; cb ()},
+      (cb) => {this.cancel (); cb ()},
+      (cb) => {debug ('drain completed'), cb ()}
     ], callback);
   }
 
@@ -200,7 +203,7 @@ class BucketMongoQueue extends Queue {
     this._flush_timer = setTimeout (function () {
       self._flush_timer = null;
 
-//      console.log (`flush_timer went off`);
+      debug ('flush_timer went off');
 
       if (self._insert_bucket.b.length) {
         self._flush_bucket (function (err, res) {
@@ -215,7 +218,7 @@ class BucketMongoQueue extends Queue {
       }
     }, this._bucket_max_wait);
 
-//    console.log (`_set_periodic_flush set, wait ${this._bucket_max_wait} msecs`);
+    debug ('_set_periodic_flush set, wait %d msecs', this._bucket_max_wait);
   }
   
 
@@ -230,7 +233,7 @@ class BucketMongoQueue extends Queue {
       b: []
     };
 
-//    console.log (`flushing bucket ${bucket._id} with ${bucket.b.length} elems`)
+    debug ('flushing bucket %s with %d elems', bucket._id.toString(), bucket.b.length);
 
     this._col.insertOne (bucket, {}, function (err, result) {
       if (err) {
@@ -246,7 +249,7 @@ class BucketMongoQueue extends Queue {
   // get element from queue
   _get_bucket (callback) {
   /////////////////////////////////////////
-//    console.log (`need to read a bucket`)
+    debug ('need to read a bucket');
     
     this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
       if (err) {
@@ -256,7 +259,7 @@ class BucketMongoQueue extends Queue {
       var val = result && result.value;
 
       if (val) {
-//        console.log (`read a bucket ${val._id.toString()} with ${val.n} elems`);
+        debug ('read a bucket %s with %d elems', val._id.toString(), val.n);
       }
 
       callback (null, val);
