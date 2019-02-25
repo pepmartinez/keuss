@@ -4,6 +4,8 @@ var async = require ('async');
 var _ =     require ('lodash');
 var uuid =  require ('uuid');
 
+var debug = require('debug')('keuss:Queue');
+
 
 class Queue {
   
@@ -47,6 +49,8 @@ class Queue {
 
     // if true, queue has been drained and is now not usable
     this._drained = false;
+
+    debug ('created queue %s', this._name);
   }
     
   
@@ -138,24 +142,24 @@ class Queue {
   /////////////////////////////////////////
     if (_.isNull (this._next_mature_t)) {
       // totally ignore it, let pop() get it via next_t()
-    //console.log ('%s - %s: signalInsertion received signalled insertion with mature %s. _next_mature_t is null, ignoring', new Date().toISOString(), this._name, mature.toISOString ());
+      debug ('%s: signalInsertion received signalled insertion with mature %s. _next_mature_t is null, ignoring', this._name, mature.toISOString ());
       if (cb) return cb ();
       else return;
     }
     else if (this._next_mature_t == 0) {
       // next_t() forced a read and the result was 'empty': trust the notif
-    //console.log ('%s - %s: signalInsertion received signalled insertion with mature %s. _next_mature_t is 0, trusting notif', new Date().toISOString(), this._name, mature.toISOString ());
+      debug ('%s: signalInsertion received signalled insertion with mature %s. _next_mature_t is 0, trusting notif', this._name, mature.toISOString ());
       this._next_mature_t = mature.getTime ();
     }
     else if (this._next_mature_t <= mature.getTime ()) {
       // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it 
-    //console.log ('%s - %s: signalInsertion received signalled insertion with mature %s. _next_mature_t (%s) is lower, ignoring', new Date().toISOString(), this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
+      debug ('%s: signalInsertion received signalled insertion with mature %s. _next_mature_t (%s) is lower, ignoring', this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
       if (cb) return cb ();
       else return;
     }
     else {
       // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it 
-    //console.log ('%s - %s: signalInsertion received signalled insertion with mature %s. _next_mature_t (%s) is higher, trusting notif', new Date().toISOString(), this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
+      debug ('%s: signalInsertion received signalled insertion with mature %s. _next_mature_t (%s) is higher, trusting notif', this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
       this._next_mature_t = mature.getTime ();
     }
 
@@ -236,7 +240,7 @@ class Queue {
       tries: opts.tries || 0
     }
 
-   // console.log ('%s - %s: about to insert %j', new Date().toISOString(), this._name, msg);
+    debug ('%s: about to insert %o', this._name, msg);
 
     var self = this;
     
@@ -248,7 +252,7 @@ class Queue {
       
       self._stats.incr ('put');
       self._signaller.signalInsertion (mature);
-     // console.log ('%s: signalled insertion with mature %s', new Date().toISOString(), mature.toISOString ());
+      debug ('%s: signalled insertion with mature %s', this._name, mature.toISOString ());
       callback (null, result.insertedId);
     })
   }
@@ -286,7 +290,7 @@ class Queue {
     
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
-       // console.log ('%s - %s: get: timed out %d msecs on transaction %s', new Date().toISOString(), self._name, opts.timeout, tid);
+        debug ('%s: get: timed out %d msecs on transaction %s', self._name, opts.timeout, tid);
         consumer_data.cleanup_timeout = null;
 
         if (consumer_data.wakeup_timeout) {
@@ -307,7 +311,7 @@ class Queue {
     this._consumers_by_tid.set (tid, consumer_data);
 
     // attempt a read
-  //console.log ('%s - %s: calling initial onetime_pop on %j', new Date().toISOString(), self._name, consumer_data)
+    debug ('%s: calling initial onetime_pop on %j', self._name, consumer_data)
     this._onetime_pop (consumer_data);
 
     return tid;
@@ -338,7 +342,7 @@ class Queue {
       
       if (res) {
         var t = new Date (next_t || null);
-       // console.log ('%s - %s: ko : tid %s rolled back, new mature is %s', new Date().toISOString(), self._name, id, t);
+        debug ('%s: ko : tid %s rolled back, new mature is %s', self._name, id, t);
       
         // signal correct time
         self._signaller.signalInsertion (t);
@@ -353,7 +357,7 @@ class Queue {
   // cancel a waiting consumer
   cancel (tid) {
   //////////////////////////////////
-//    console.log ('cancelling, tid is ', tid);
+    console.log ('%s: cancelling, tid is ', this._name, tid);
 
     if (tid) {
       let consumer_data = this._consumers_by_tid.get (tid);
@@ -387,8 +391,9 @@ class Queue {
     }
     else {
       // cancel all pending stuff
+      var self = this;
       this._consumers_by_tid.forEach (function (consumer_data, tid) {
-//        console.log (`cancelling ${tid}`);
+        debug ('%s: cancelling %s', self._name, tid);
 
         if (consumer_data.callback) {
           // call callback with error-cancelled
@@ -438,7 +443,7 @@ class Queue {
   _onetime_pop (consumer) {
     var self = this;
     var getOrReserve_cb = function (err, result) {
-    //console.log ('%s - %s - %s: called getOrReserve_cb : err %j, result %j', new Date().toISOString(), self._name, consumer.tid, err, result);
+    debug ('%s - %s: called getOrReserve_cb : err %o, result %o', self._name, consumer.tid, err, result);
       
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
@@ -451,7 +456,7 @@ class Queue {
       // TODO eat up errors?
       if (err) {
         // get/reserve in error
-      //console.log ('%s - %s - %s: getOrReserve_cb in error: err %j', new Date().toISOString(), self._name, consumer.tid, err);
+        debug ('%s - %s: getOrReserve_cb in error: err %o', self._name, consumer.tid, err);
 
         // clean timeout timer
         if (consumer.cleanup_timeout) {
@@ -470,11 +475,11 @@ class Queue {
       if (!result) {
         // queue is empty or non-mature: put us to sleep, to-rearm-in-future
     
-       // console.log ('%s - %s - %s: getOrReserve_cb no result, setting wakeup', new Date().toISOString(), self._name, consumer.tid);
+        debug ('%s - %s: getOrReserve_cb no result, setting wakeup', self._name, consumer.tid);
 
         // clear this._next_mature_t if it's in the past
         if (self._next_mature_t && (self._next_mature_t < new Date().getTime ())) {
-         // console.log ('%s - %s - %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', new Date().toISOString(), self._name);
+         debug ('%s - %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', self._name);
 
           self._next_mature_t = null;
         }
@@ -482,11 +487,11 @@ class Queue {
         // obtain time to sleep (capped)
         self._nextDelta (function (delta_ms) {
           // TODO cancel previous wakeup_timeout if not null?
-        //console.log ('%s - %s - %s: getOrReserve_cb : set wakeup in %d ms', new Date().toISOString(), self._name, consumer.tid, delta_ms);
+          debug ('%s - %s: getOrReserve_cb : set wakeup in %d ms', self._name, consumer.tid, delta_ms);
 
           consumer.wakeup_timeout = setTimeout (
             function () {
-             // console.log ('%s - %s - %s: wakey wakey... calling onetime_pop', new Date().toISOString(), self._name, consumer.tid);
+              debug ('%s - %s: wakey wakey... calling onetime_pop', self._name, consumer.tid);
               consumer.wakeup_timeout = null;
               self._onetime_pop (consumer);
             },
@@ -501,7 +506,7 @@ class Queue {
       self._next_mature_t = null;
       self._stats.incr ('get');
 
-    //console.log ('%s - %s - %s: getOrReserve_cb : got result %j', new Date().toISOString(), self._name, consumer.tid, result);
+      debug ('%s - %s: getOrReserve_cb : got result %j', self._name, consumer.tid, result);
 
       // clean timeout timer
       if (consumer.cleanup_timeout) {
@@ -530,18 +535,18 @@ class Queue {
   _nextDelta (cb) {
   /////////////////////////////
     if (this._next_mature_t == 0) {
-    //console.log ('%s - %s : _nextDelta:  _next_mature_t is zero, serving default', new Date().toISOString(), this._name);
+      debug ('%s: _nextDelta:  _next_mature_t is zero, serving default', this._name);
       return cb (this._pollInterval);
     }
 
     if (_.isNull (this._next_mature_t)) {
       // there's no precalculated value, get it from backend
-    //console.log ('%s - %s : _nextDelta: null _next_mature_t, getting it from backend', new Date().toISOString(), this._name);
+      debug ('%s: _nextDelta: null _next_mature_t, getting it from backend',this._name);
       var self = this;
 
       this.next_t (function (err, res) {
         if (err) {
-          //console.log ('%s - %s : _nextDelta error from backend, serving default', new Date().toISOString(), self._name);
+          debug ('%s: _nextDelta error from backend, serving default', self._name);
           return cb (self._pollInterval);
         }
 
@@ -550,12 +555,12 @@ class Queue {
           self._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
           if (delta > self._pollInterval) delta = self._pollInterval;
-          //console.log ('%s - %s : _nextDelta: _next_mature_t from backend is %d, calc delta is %d', new Date().toISOString(), self._name, res, delta);
+          debug ('%s: _nextDelta: _next_mature_t from backend is %d, calc delta is %d', self._name, res, delta);
           return cb (delta);
         }
         else {
           // no res, set _next_mature_t to 0, serve default
-          //console.log ('%s - %s : _nextDelta: no _next_mature_t from backend, use default', new Date().toISOString(), self._name);
+          debug ('%s: _nextDelta: no _next_mature_t from backend, use default', self._name);
           self._next_mature_t = 0;
           return cb (self._pollInterval);
         }
@@ -567,7 +572,7 @@ class Queue {
       if (delta > this._pollInterval) delta = this._pollInterval;
       if (delta < 0) delta = 0;
 
-      //console.log ('%s - %s : _nextDelta: using _next_mature_t %s, calc delta is %d', new Date().toISOString(), this._name, new Date(this._next_mature_t).toISOString (), delta);
+      debug ('%s: _nextDelta: using _next_mature_t %s, calc delta is %d', this._name, new Date(this._next_mature_t).toISOString (), delta);
 
       return cb (delta);
     }
