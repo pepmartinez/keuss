@@ -252,7 +252,7 @@ class Queue {
       
       self._stats.incr ('put');
       self._signaller.signalInsertion (mature);
-      debug ('%s: signalled insertion with mature %s', this._name, mature.toISOString ());
+      debug ('%s: signalled insertion with mature %s', self._name, mature.toISOString ());
       callback (null, result.insertedId);
     })
   }
@@ -357,7 +357,7 @@ class Queue {
   // cancel a waiting consumer
   cancel (tid) {
   //////////////////////////////////
-    console.log ('%s: cancelling, tid is ', this._name, tid);
+   debug ('%s: cancelling, tid is ', this._name, tid);
 
     if (tid) {
       let consumer_data = this._consumers_by_tid.get (tid);
@@ -479,7 +479,7 @@ class Queue {
 
         // clear this._next_mature_t if it's in the past
         if (self._next_mature_t && (self._next_mature_t < new Date().getTime ())) {
-         debug ('%s - %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', self._name);
+         debug ('%s - %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', self._name, consumer.tid);
 
           self._next_mature_t = null;
         }
