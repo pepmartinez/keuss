@@ -39,6 +39,8 @@ class Bucket {
       Deleted:   0
     };
 
+    this._last_b_idx = 0;
+
     _.each (this._b, (e) => {
       if (e) {
         this._b_states.push (State.Available);
@@ -56,25 +58,42 @@ class Bucket {
   id () {return this._id.toString();}
   exhausted () {return this._b_counts.Available == 0;}
 
-
+  
   ////////////////////////////////////
-  get_element () {
-    for (var i = 0; i <  this._b_states.length; i++) {
+  get_element (is_reserve) {
+    // return null if Available count is 0
+    if (this.exhausted ()) {
+      debug ('Bucket:got_element: got no available elem after iterating %d states -> %o', i, this._b_states);
+      return null;
+    }
+
+    debug ('Bucket:got_element: look for next available elem starting at pos %d', this._last_b_idx);
+        
+    for (var i = this._last_b_idx; i <  this._b_states.length; i++) {
       if (this._b_states[i] == State.Available) {
         var elem = this._b[i];
         elem.tries = this._tries;
         elem.mature = this._mature;
 
-        this._b_states[i] = State.Committed;
-        this._b_counts.Committed++;
+        if (is_reserve) {
+          this._b_states[i] = State.Reserved;
+          this._b_counts.Reserved++;
+        }
+        else {
+          this._b_states[i] = State.Committed;
+          this._b_counts.Committed++;
+        }
+
         this._b_counts.Available--;
         
         debug ('Bucket:got_element: got an available elem at pos %d, states are %o (%o)', i, this._b_states, this._b_counts);
+        this._last_b_idx = i;
         return elem;
       }
     }
 
-    debug ('Bucket:got_element: got no available elem after iterating %d states -> %o', i, this._b_states);
+    // this should be unreachable
+    debug ('Bucket:got_element: (WARNING, UNREACHABLE) got no available elem after iterating %d states -> %o', i, this._b_states);
     return null;
   } 
 
@@ -238,7 +257,7 @@ class BucketSet {
 
 
   /////////////////////////////
-  get_element (cb) {
+  _obtain_element (is_reserve, cb) {
     if (!this._active_bucket) {
       return this._read_bucket ((err, active_bucket) => {
         if (err) return cb (err);          // error
@@ -246,16 +265,16 @@ class BucketSet {
 
         // we got a bucket
         this._ensure_flush_state_changes ();
-        this.get_element (cb);
+        this._obtain_element (is_reserve, cb);
       }); 
     }
     else {
-      var elem = this._active_bucket.get_element ();
+      var elem = this._active_bucket.get_element (is_reserve);
 
       if (!elem) {
         debug ('BucketSet:getElement: active bucket exhausted, get another');
         this._active_bucket = null;
-        setImmediate (() => this.get_element (cb));
+        setImmediate (() => this._obtain_element (is_reserve, cb));
       }
       else {
         debug ('BucketSet:getElement: returning element %o', elem);
@@ -264,8 +283,16 @@ class BucketSet {
     }
   }
 
+  get_element (cb) {
+    this._obtain_element (false, cb);
+  }
 
-  reserve_element (cb) {}
+
+  reserve_element (cb) {
+    this._obtain_element (true, cb);
+  }
+  
+  
   commit_element (cb) {}
   rollback_element (cb) {}
 
@@ -378,6 +405,7 @@ class BucketMongoSafeQueue extends Queue {
     return 'mongo:bucket-safe';
   }
   
+
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
@@ -409,20 +437,6 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
-    if (this._in_drain) {
-      if (this._read_bucket.b.length == 0) {
-        debug ('in_drain_read: read_buffer empty, calling _drain_read_cb');
-        this._drain_read_cb ();
-        this._drain_read_cb = undefined;
-        return setImmediate (function () {callback (null,  null);});
-      }
-      else {
-        debug ('in_drain_read: %d pending in read_buffer', this._read_bucket.b.length);
-      }
-    }
-
-
     this._read_bucket.get_element ((err, elem) => {
       if (err) return callback (err);
       callback (null, elem);
@@ -430,13 +444,22 @@ class BucketMongoSafeQueue extends Queue {
   }
 
 
-  reserve (callback) {callback (null, {mature: 0, payload: null, tries: 0}, null);}
+  /////////////////////////////////////////
+  // reserve element from queue
+  reserve (callback) {
+    this._read_bucket.reserve_element ((err, elem) => {
+      if (err) return callback (err);
+      callback (null, elem);
+    });
+  }
   
 
   commit (id, callback) {callback (null, false);}
   
 
   rollback (id, next_t, callback) {callback (null, false);}
+
+
 
   //////////////////////////////////
   // queue size including non-mature elements
@@ -496,6 +519,7 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
   _drain_read (cb) {
     debug ('drain_read called');
+
     this._read_bucket._cancel_flush_state_changes ();
     this._read_bucket._flush_state_changes ((err) => {
       debug ('drain_read completed');
