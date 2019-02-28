@@ -74,6 +74,7 @@ class Bucket {
         var elem = this._b[i];
         elem.tries = this._tries;
         elem.mature = this._mature;
+        elem._id = this.id () + ':' + i;
 
         if (is_reserve) {
           this._b_states[i] = State.Reserved;
@@ -283,20 +284,37 @@ class BucketSet {
     }
   }
 
+
+  /////////////////////////////
   get_element (cb) {
     this._obtain_element (false, cb);
   }
 
 
+  /////////////////////////////
   reserve_element (cb) {
     this._obtain_element (true, cb);
   }
   
-  
-  commit_element (cb) {}
-  rollback_element (cb) {}
+
+  /////////////////////////////
+  commit_element (id, cb) {
+    var aid = id.split (':');
+    var bucket_id = aid[0];
+    var bucket_idx = parseInt(aid[1]);
+
+    var bucket = this._buckets[bucket_id];
+    if (!bucket) return cb (null, false);
+    if (bucket._b_states[bucket_idx] != State.Reserved) return cb (null, false);
+    bucket._b_states[bucket_idx] = State.Committed;
+    bucket._b_counts.Reserved--;
+    bucket._b_counts.Committed++;
+
+    debug ('Bucket:commit_element: committed elem at pos %d, states are %o (%o)', bucket_idx, bucket._b_states, bucket._b_counts);
+  }
 
 
+  rollback_element (id, cb) {}
 
 
   /////////////////////////////
@@ -454,11 +472,24 @@ class BucketMongoSafeQueue extends Queue {
   }
   
 
-  commit (id, callback) {callback (null, false);}
+  /////////////////////////////////////////
+  // commit a reserved element from queue
+  commit (id, callback) {
+    this._read_bucket.commit_element (id, (err, elem) => {
+      if (err) return callback (err);
+      callback (null, elem);
+    });
+  }
   
 
-  rollback (id, next_t, callback) {callback (null, false);}
-
+  /////////////////////////////////////////
+  // rollback a reserved element from queue
+  rollback (id, next_t, callback) {
+    this._read_bucket.rollback_element (id, (err, elem) => {
+      if (err) return callback (err);
+      callback (null, elem);
+    });
+  }
 
 
   //////////////////////////////////
