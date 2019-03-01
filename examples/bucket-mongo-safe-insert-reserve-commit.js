@@ -33,26 +33,21 @@ MQ(factory_opts, (err, factory) => {
         console.log('reserved element %j, id is %s', res, id)
         cb(err);
     }),
-
-    /*
+    (cb) => q.stats ((err, res) => {
+        console.log('queue stats now: %j', res);
+        cb(err);
+    }),
+    (cb) => q.ko(id, (err, res) => {
+      console.log('rolled back element %s', id);
+      cb();
+    }),
     (cb) => q.stats ((err, res) => {
         console.log('queue stats now: %j', res);
         cb(err);
     }),
 
-    
-    function (cb) {
-      q.ko(id, function (err, res) {
-        console.log('rolled back element %s', id);
-        cb();
-      })
-    },
-    function (cb) {
-      q.stats(function (err, res) {
-        console.log('queue stats now: %j', res);
-        cb(err);
-      })
-    },
+    /*
+
     function (cb) {
       q.pop('c1', { reserve: true }, function (err, res) {
         id = res._id;
@@ -60,12 +55,7 @@ MQ(factory_opts, (err, factory) => {
         cb(err);
       });
     },
-    function (cb) {
-      q.stats(function (err, res) {
-        console.log('queue stats now: %j', res);
-        cb(err);
-      })
-    },
+
 */
 
     (cb) => q.ok (id, (err, res) => {
