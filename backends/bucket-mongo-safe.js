@@ -289,7 +289,7 @@ class BucketSet {
   ///////////////////////////////
   _read_bucket (cb) {
     var query = {
-      mature: {$lte: Queue.nowPlusSecs (0)}
+      mature: {$lte: Queue.now ()}
     };
 
     var update = {
@@ -599,7 +599,6 @@ class BucketMongoSafeQueue extends Queue {
   // queue size including non-mature elements
   totalSize (callback) {
     this._col.aggregate ([
-      // TODO only matured
       {$group:{_id:'t', v: {$sum: '$n'}}}
     ], function (err, res) {
       if (err) return callback (err);
@@ -612,38 +611,34 @@ class BucketMongoSafeQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-    this.totalSize (callback);
+    this._col.aggregate ([
+      {$match: {mature: {$lte: Queue.now ()}}},
+      {$group:{_id:'t', v: {$sum: '$n'}}}
+    ], function (err, res) {
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
 
-    /*
-  size (callback) {
-      var q = {
-        mature : {$lte : Queue.now ()}
-      };
-      
-      var opts = {};
-      
-      this._col.count (q, opts, callback);
-    }
-    */
     
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-    var q = {
-      mature : {$gt : Queue.now ()}
-    };
-      
-    var opts = {};
-      
-    this._col.count (q, opts, callback);
+    this._col.aggregate ([
+      {$match: {mature: {$gt: Queue.now ()}}},
+      {$group:{_id:'t', v: {$sum: '$n'}}}
+    ], function (err, res) {
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
   
     
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-    var self = this;
     this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
       if (err) return callback (err);
       callback (null, result && result.mature);
