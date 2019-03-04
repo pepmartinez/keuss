@@ -25,10 +25,16 @@ class Bucket {
     this._col = col;
     this._opts = opts;
 
+    this._reject_delta_base = opts.reject_delta_base || 10000;
+    this._reject_delta_factor = opts.reject_delta_factor || (opts.reserve_delay * 1000) || 30000;
+    this._reject_timeout_grace = opts.reject_timeout_grace || (opts.reserve_delay * 200);
+
     this._id = bucket_in_db._id;
     this._b = bucket_in_db.b;
     this._mature = bucket_in_db.mature;
     this._tries = bucket_in_db.tries;
+
+    this._mature_t = this._mature.getTime();
 
     this._b_states = [];
     this._b_counts = {
@@ -53,6 +59,7 @@ class Bucket {
     });
 
     debug ('initialized Bucket, %O', this._b_counts);
+    debug ('initialized Bucket, from %O', bucket_in_db);
   }
 
   id () {return this._id.toString();}
@@ -179,6 +186,43 @@ class Bucket {
 
 
   /////////////////////////////////////////
+  _flush_reject_bucket (cb) {
+    var tries = this._tries || 1;
+    var delta = this._reject_delta_factor * tries + this._reject_delta_base;
+
+    var q = {_id: this._id};
+    var upd = {
+      $set: {
+        mature: new Date (new Date().getTime () + delta)
+      },
+      $unset: {
+        reserved: 1
+      }
+    };
+
+    debug ('Bucket: rejecting whole bucket %o -> %o (now  + %d msecs) ', q, upd, delta);
+
+    this._col.updateOne (q, upd, (err, res) => {
+      if (err) return cb({
+        err: 'Bucket flush: mongodb error',
+        e: err,
+        q: q
+      });
+
+      if ((res && res.result && res.result.nModified) != 1) return cb({
+        err: 'Bucket flush: exactly one must be updated',
+        e: err,
+        q: q,
+        upd: upd
+      });
+
+      debug ('Bucket: rejected whole bucket %o -> %o', q, upd);
+      cb (null, null);
+    });
+  }
+
+
+  /////////////////////////////////////////
   flush (cb) {
     if (
       (this._b_counts.Available == 0) &&
@@ -189,7 +233,36 @@ class Bucket {
       this._flush_delete_bucket (cb);
     }
     else {
-      this._flush_update_bucket (cb);
+      async.series ([
+        cb => this._flush_update_bucket (cb),
+        cb => {
+          if (
+            (this._b_counts.Available == 0) &&
+            (this._b_counts.Reserved == 0)  &&
+            (this._b_counts.Rejected != 0)
+          ) {
+            this._flush_reject_bucket (cb);
+          }
+          else {
+            var time_left = this._mature_t - new Date().getTime();
+            debug ('time left is %d, grce is %d', time_left, this._reject_timeout_grace);
+          
+            if (time_left < this._reject_timeout_grace) {
+              debug ('bucket timed out, rejecting');
+              this._flush_reject_bucket (cb);
+            }
+            else {
+              cb (null, true);
+            }
+          }
+        }
+      ], (err, res) => {
+        debug ('XXXXXXXXXXX %o %o', err, res);
+        if (err) return cb (err);
+        if (_.isNull (res[1])) return cb (null, null);
+        cb ();
+      });
+      
     }
   }
 }
@@ -201,7 +274,8 @@ class BucketSet {
   constructor (col, opts) {
     this._opts = opts;
     this._col = col;
-    this._reserve_delay = this._opts.reserve_delay || 30;
+
+    this._reserve_delay =              this._opts.reserve_delay      || 30;
     this._flush_state_changes_period = this._opts.state_flush_period || 500;
 
     this._buckets = {
@@ -225,7 +299,7 @@ class BucketSet {
     
     var opts = {
       sort: {mature : 1}, 
-      returnOriginal: true
+      returnOriginal: false
     };
     
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
@@ -344,7 +418,7 @@ class BucketSet {
     var tasks = {};
     _.each (this._buckets, (bucket, id) => {
       tasks[id] = (cb) => {
-        debug ('BucketSet:_flush_state_changes: flushing bucker %s', bucket.id());
+        debug ('BucketSet:_flush_state_changes: flushing bucket %s', bucket.id());
         bucket.flush (cb);
       };
     });
@@ -406,6 +480,17 @@ class BucketSet {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class BucketMongoSafeQueue extends Queue {
   
+  /*
+
+  options:
+    bucket_max_size    || 1024;
+    bucket_max_wait    || 500;
+    reserve_delay      || 30;
+    state_flush_period || 500;
+    reject_delta_base || 10000;
+    reject_delta_factor || (opts.reserve_delay * 1000) || 30000;
+    reject_timeout_grace || (opts.reserve_delay * 0.8);
+  */
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
@@ -514,6 +599,7 @@ class BucketMongoSafeQueue extends Queue {
   // queue size including non-mature elements
   totalSize (callback) {
     this._col.aggregate ([
+      // TODO only matured
       {$group:{_id:'t', v: {$sum: '$n'}}}
     ], function (err, res) {
       if (err) return callback (err);
@@ -744,8 +830,3 @@ function creator (opts, cb) {
 }
 
 module.exports = creator;
-
-
-
-
-
