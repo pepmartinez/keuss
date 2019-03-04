@@ -70,7 +70,7 @@ class Bucket {
   get_element (is_reserve) {
     // return null if Available count is 0
     if (this.exhausted ()) {
-      debug ('Bucket:got_element: got no available elem after iterating %d states -> %o', i, this._b_states);
+      debug ('Bucket:got_element: got no available elem (exhausted) -> %o', this._b_states);
       return null;
     }
 
@@ -433,6 +433,11 @@ class BucketSet {
         if (_.isNull (v)) {
           delete this._buckets[k];
           debug ('BucketSet: removed finished bucket %s', k);
+
+          if ((this._active_bucket) && (this._active_bucket.id() == k)) {
+            this._active_bucket = null;
+            debug ('BucketSet: removed finished ACTIVE bucket %s', k);
+          }
         }
       });
       
