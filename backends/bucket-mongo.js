@@ -1,5 +1,6 @@
-var async = require ('async');
-var _ =     require ('lodash');
+var async =     require ('async');
+var _ =         require ('lodash');
+var AsyncLock = require ('async-lock');
 
 var debug = require('debug')('keuss:backend:BucketMongo');
 
@@ -32,6 +33,8 @@ class BucketMongoQueue extends Queue {
     this._bucket_max_size = opts.bucket_max_size || 1024;
     this._bucket_max_wait = opts.bucket_max_wait || 500;
 
+    this._lock = new AsyncLock ();
+
     debug ('created BucketMongoSafe %s', name);
   }
   
@@ -51,7 +54,6 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
     this._insert_bucket.b.push (entry.payload);
     var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
@@ -79,7 +81,6 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     if (this._in_drain) {
       if (this._read_bucket.b.length == 0) {
         debug ('in_drain_read: read_buffer empty, calling _drain_read_cb');
@@ -92,33 +93,46 @@ class BucketMongoQueue extends Queue {
       }
     }
 
-    var self = this;
+    debug ('_ensure_bucket: acquire lock');
 
-    if (this._read_bucket.b.length) {
-      setImmediate (function () {
-        var elem = {payload: self._read_bucket.b.shift ()};
+    this._lock.acquire ('ensure-bucket', done => {
+      debug ('_ensure_bucket: lock acquired');
+
+      if (this._read_bucket.b.length) {
+        debug ('_ensure_bucket: end (already present)');
+        return done ();
+      }
+
+      this._get_bucket ((err, res) => {
+        if (err) {
+          debug ('_ensure_bucket: end (error) %o', err);
+          return done (err);
+        }
+
+        if (!res) {
+          debug ('_ensure_bucket: end (no bucket)');
+          this._read_bucket = {b: []};
+          return done ();
+        }
+
+        debug ('_ensure_bucket: end (bucket read)');
+        this._read_bucket = res;
+        done (null, res);
+      });
+    }, (err, ret) => {
+      debug ('BucketSet:_ensure_bucket: lock released');
+      if (err) return callback (err);
+
+      if (this._read_bucket.b.length) {
+        var elem = {payload: this._read_bucket.b.shift ()};
         elem.tries = 0;
-        elem.mature = self._read_bucket.mature;
-        callback (null, elem);
-      });
-    }
-    else {
-      this._get_bucket (function (err, res) {
-        if (err) return callback (err);
-        self._read_bucket = res;
-
-        if (self._read_bucket) {
-          var elem = {payload: self._read_bucket.b.shift ()};
-          elem.tries = 0;
-          elem.mature = self._read_bucket.mature;
-          callback (null, elem);
-        }
-        else {
-          self._read_bucket = {b: []};
-          setImmediate (function () {callback();});
-        }
-      });
-    }
+        elem.mature = this._read_bucket.mature;
+        setImmediate (() => callback (null, elem));
+      }
+      else {
+        setImmediate (callback);
+      }
+    });
   }
 
 

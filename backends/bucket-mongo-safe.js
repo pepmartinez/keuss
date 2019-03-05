@@ -1,5 +1,7 @@
-var async = require ('async');
-var _ =     require ('lodash');
+var async =     require ('async');
+var _ =         require ('lodash');
+var AsyncLock = require ('async-lock');
+
 
 var debug = require('debug')('keuss:backend:BucketMongoSafe');
 
@@ -27,7 +29,7 @@ class Bucket {
 
     this._reject_delta_base = opts.reject_delta_base || 10000;
     this._reject_delta_factor = opts.reject_delta_factor || (opts.reserve_delay * 1000) || 30000;
-    this._reject_timeout_grace = opts.reject_timeout_grace || (opts.reserve_delay * 200);
+    this._reject_timeout_grace = opts.reject_timeout_grace || (opts.reserve_delay * 200) || 6000;
 
     this._id = bucket_in_db._id;
     this._b = bucket_in_db.b;
@@ -245,7 +247,7 @@ class Bucket {
           }
           else {
             var time_left = this._mature_t - new Date().getTime();
-            debug ('time left is %d, grce is %d', time_left, this._reject_timeout_grace);
+            debug ('time left is %d, grace is %d', time_left, this._reject_timeout_grace);
           
             if (time_left < this._reject_timeout_grace) {
               debug ('bucket timed out, rejecting');
@@ -278,11 +280,9 @@ class BucketSet {
     this._reserve_delay =              this._opts.reserve_delay      || 30;
     this._flush_state_changes_period = this._opts.state_flush_period || 500;
 
-    this._buckets = {
-
-    };
-
+    this._buckets = {};
     this._active_bucket = null;
+    this._lock = new AsyncLock ();
   }
 
 
@@ -302,6 +302,8 @@ class BucketSet {
       returnOriginal: false
     };
     
+    debug ('reading a new bucket');
+
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
       if (err) return callback (err);
         
@@ -316,6 +318,7 @@ class BucketSet {
         if (bcket.exhausted ()) {
           debug ('bucket %s already exhausted, read another', bcket.id());
           this._active_bucket = null;
+          // TODO loop internally!!!!!
           cb ();
         }
         else {
@@ -332,18 +335,55 @@ class BucketSet {
 
 
   /////////////////////////////
-  _obtain_element (is_reserve, cb) {
-    if (!this._active_bucket) {
-      return this._read_bucket ((err, active_bucket) => {
-        if (err) return cb (err);          // error
-        if (!active_bucket) return cb ();  // coll empty or not mature
+  _ensure_bucket (cb) {
+    debug ('BucketSet:_ensure_bucket: acquire lock');
 
+    this._lock.acquire ('ensure-bucket', done => { 
+      debug ('BucketSet:_ensure_bucket: lock acquired');
+      if (this._active_bucket) {
+        debug ('BucketSet:_ensure_bucket: end (already present)');
+        return done ();
+      }
+
+      this._read_bucket ((err, active_bucket) => {
+        if (err) {
+          debug ('BucketSet:_ensure_bucket: end (error) %o', err);
+          return done (err);
+        }
+  
+        if (!active_bucket) {
+          debug ('BucketSet:_ensure_bucket: end (no bucket)');
+          return done ();
+        }
+  
         // we got a bucket
-        this._ensure_flush_state_changes ();
-        this._obtain_element (is_reserve, cb);
+        done (null, active_bucket);
       }); 
-    }
-    else {
+    }, (err, ret) => {
+      debug ('BucketSet:_ensure_bucket: lock released');
+
+      if (ret) {
+        this._ensure_flush_state_changes ();
+      }
+
+      cb (err, ret);
+    });
+  }
+
+
+  /////////////////////////////
+  _obtain_element (is_reserve, cb) {
+    this._ensure_bucket (err => {
+      if (err) {
+        debug ('BucketSet:_obtain_element: error %o', err);
+        return cb (err);
+      }
+
+      if (!this._active_bucket) {
+        debug ('BucketSet:_obtain_element: no active bucket', err);
+        return cb ();  // coll empty or not mature
+      }
+
       var elem = this._active_bucket.get_element (is_reserve);
 
       if (!elem) {
@@ -355,7 +395,7 @@ class BucketSet {
         debug ('BucketSet:getElement: returning element %o', elem);
         setImmediate (() => cb (null, elem));
       }
-    }
+    });
   }
 
 

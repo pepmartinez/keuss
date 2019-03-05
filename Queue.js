@@ -50,7 +50,7 @@ class Queue {
     // if true, queue has been drained and is now not usable
     this._drained = false;
 
-    debug ('created queue %s', this._name);
+    debug ('created queue %s with opts %o', this._name, this._opts);
   }
     
   
@@ -165,16 +165,10 @@ class Queue {
 
     var self = this;
     this._nextDelta (function (delta_ms) {
-      // run a wakeup on all consumers with the wakeup timer set
-    //console.log ('%s - %s: signalInsertion sees that the delta_ms is now %d', new Date().toISOString(), self._name, delta_ms);
-//    //console.log ('%s - %s: signalInsertion : consumers:  %d', new Date().toISOString(), self._name, self.nConsumers());
-        
+      // run a wakeup on all consumers with the wakeup timer set 
       self._consumers_by_tid.forEach (function (consumer, tid) {
-//      //console.log ('%s - %s: signalInsertion checking wakeup state for consumer %j', new Date().toISOString(), self._name, consumer);
-          
-        if (consumer.wakeup_timeout) {
-//        //console.log ('%s - %s: signalInsertion rescheduling consumer %j', new Date().toISOString(), self._name, consumer);
-            
+  
+        if (consumer.wakeup_timeout) {       
           clearTimeout (consumer.wakeup_timeout);
           consumer.wakeup_timeout = null;
 
@@ -186,12 +180,9 @@ class Queue {
               },
               delta_ms
             );
-
-          //console.log ('%s - %s: signalInsertion rescheduled consumer %j', new Date().toISOString(), self._name, consumer);
           }
           else {
             setImmediate (function () {self._onetime_pop (consumer)});
-          //console.log ('%s - %s: signalInsertion immediately waking up consumer %j', new Date().toISOString(), self._name, consumer); 
           } 
         }
       });
@@ -443,7 +434,7 @@ class Queue {
   _onetime_pop (consumer) {
     var self = this;
     var getOrReserve_cb = function (err, result) {
-    debug ('%s - %s: called getOrReserve_cb : err %o, result %o', self._name, consumer.tid, err, result);
+      debug ('%s - %s: called getOrReserve_cb : err %o, result %o', self._name, consumer.tid, err, result);
       
       if (!consumer.callback) {
         // consumer was cancelled mid-flight

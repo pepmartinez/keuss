@@ -32,7 +32,8 @@
     "mongodb": "~2.2.34",
     "uuid": "~3.3.2",
     "mubsub": "~1.4.0",
-    "debug": "~4.1.1"
+    "debug": "~4.1.1",
+    "async-lock": "~1.1.4"
   },
   "devDependencies": {
     "mocha": "~5.2.0",
