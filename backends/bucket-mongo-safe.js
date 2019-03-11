@@ -578,7 +578,7 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
     if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
     this._insert_bucket.b.push (entry.payload);
-    var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
+    var id = this._insert_bucket._id.toString () + ':' + this._insert_bucket.b.length;
     debug ('added to bucket, %s', id);
 
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
