@@ -5,7 +5,7 @@ var should =  require ('should');
 var factory = null;
 
 [
-  {label: 'MongoDB Bucket', mq: require ('../backends/bucket-mongo')}
+  {label: 'MongoDB Bucket',     mq: require ('../backends/bucket-mongo')}
 ].forEach (function (MQ_item) {
 
 describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', function () {
@@ -87,6 +87,7 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
         cb();
       })},
     ], function(err, results) {
+      q.drain();
       done();
     });
   });
@@ -127,6 +128,7 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
         cb();
       })},
     ], function(err, results) {
+      q.drain();
       done();
     });
   });
