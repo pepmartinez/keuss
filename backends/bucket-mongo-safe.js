@@ -80,7 +80,7 @@ class Bucket {
         
     for (var i = this._last_b_idx; i <  this._b_states.length; i++) {
       if (this._b_states[i] == State.Available) {
-        var elem = this._b[i];
+        var elem = {payload: this._b[i]};   
         elem.tries = this._tries;
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
