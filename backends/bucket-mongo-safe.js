@@ -190,12 +190,20 @@ class Bucket {
   /////////////////////////////////////////
   _flush_reject_bucket (cb) {
     var tries = this._tries || 1;
-    var delta = this._reject_delta_factor * tries + this._reject_delta_base;
+    var mature = null;
+
+    if (this._rollback_next_t) {
+      mature = new Date (this._rollback_next_t);
+    }
+    else {
+      var delta = this._reject_delta_factor * tries + this._reject_delta_base;
+      mature = new Date (new Date().getTime () + delta)
+    }
 
     var q = {_id: this._id};
     var upd = {
       $set: {
-        mature: new Date (new Date().getTime () + delta)
+        mature: mature
       },
       $unset: {
         reserved: 1
@@ -259,7 +267,6 @@ class Bucket {
           }
         }
       ], (err, res) => {
-        debug ('XXXXXXXXXXX %o %o', err, res);
         if (err) return cb (err);
         if (_.isNull (res[1])) return cb (null, null);
         cb ();
@@ -444,6 +451,9 @@ class BucketSet {
     bucket._b_counts.Reserved--;
     bucket._b_counts.Rejected++;
 
+    if (!bucket._rollback_next_t) bucket._rollback_next_t = next_t;
+    else if (bucket._rollback_next_t < next_t)bucket._rollback_next_t = next_t;
+
     debug ('Bucket:rollback_element: rolled-back elem at pos %d, states are %o (%o)', bucket_idx, bucket._b_states, bucket._b_counts);
     setImmediate (() => cb (null, true));
   }
@@ -576,7 +586,9 @@ class BucketMongoSafeQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
-    if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
+    if (!this._insert_bucket.mature) this._insert_bucket.mature = entry.mature;
+    else if (this._insert_bucket.mature.getTime () < entry.mature.getTime ()) this._insert_bucket.mature = entry.mature;
+
     this._insert_bucket.b.push (entry.payload);
     var id = this._insert_bucket._id.toString () + ':' + this._insert_bucket.b.length;
     debug ('added to bucket, %s', id);
@@ -595,7 +607,7 @@ class BucketMongoSafeQueue extends Queue {
         this._set_periodic_flush ();
       }
 
-      setImmediate (function () {callback (null, id);}); 
+      setImmediate (() => callback (null, id)); 
     }
   }
   
