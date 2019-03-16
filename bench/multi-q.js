@@ -1,10 +1,11 @@
 var async =  require ('async');
 var should = require ('should');
-var random = require ('random-to');
+var Chance = require ('chance');
 
 var produced = 0;
 var consumed = 0;
 
+var chance = new Chance();
 
 
 //var MQ = require ('../backends/redis-oq');
@@ -42,7 +43,7 @@ function run_consumer (q) {
       if (!(consumed % 10000)) console.log ('< %d', consumed)
 //    setTimeout (function () {
       run_consumer (q);
-//    }, random.from0to (2000) + 100);
+//    }, chance.integer({ min: 200, max: 2000 }));
     }
   });
 }
@@ -58,7 +59,7 @@ function run_producer (q) {
       if (!(produced % 10000)) console.log ('> %d', produced)
 //    setTimeout (function () {
       run_producer (q);
-//    }, (random.from0to (10) + 5) * 1000);
+//    }, chance.integer({ min: 200, max: 2000 }));
     }
   });
 }

@@ -1,7 +1,8 @@
 var async =  require ('async');
 var should = require ('should');
-var random = require ('random-to');
+var Chance = require ('chance');
 
+var chance = new Chance();
 
 function run_consumer (q) {
   q.pop ('c1', {}, function (err, res) {
@@ -10,7 +11,7 @@ function run_consumer (q) {
 
 //    setTimeout (function () {
       run_consumer (q);
-//    }, random.from0to (2000) + 100);
+//    }, chance.integer({ min: 200, max: 2000 }));
   });
 }
 

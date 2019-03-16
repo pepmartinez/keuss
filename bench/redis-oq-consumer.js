@@ -1,6 +1,5 @@
 var async =  require ('async');
 var should = require ('should');
-var random = require ('random-to');
 
 var counter = 0;
 

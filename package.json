@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "mocha": "~5.2.0",
-    "random-to": "0.0.2",
+    "chance":"~1.0.18",
     "should": "~13.2.1"
   },
   "scripts": {
