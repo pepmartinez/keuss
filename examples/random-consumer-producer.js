@@ -32,6 +32,8 @@ var selfs = {
   producers: {}
 };
 
+var shareds = {};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function consume_one (shared_ctx, self_ctx, cb) {
@@ -66,6 +68,8 @@ function run_consumers (q, cnt, cb) {
     pop_max: cnt,
     pop_opts: {}
   };
+
+  shareds.pc = shared_ctx;
 
   var tasks = [];
   for (var i = 0; i < 7; i++) tasks.push ((cb) => run_a_pop_consumer (shared_ctx, cb));
@@ -121,6 +125,8 @@ function run_rcr_consumers (q, cnt, cb) {
     }
   };
 
+  shareds.rcrc = shared_ctx;
+
   var tasks = [];
   for (var i = 0; i < 7; i++) tasks.push ((cb) => run_a_rcr_consumer (shared_ctx, cb));
   async.parallel (tasks, cb);
@@ -162,6 +168,8 @@ function run_producers (q, cnt, cb) {
     push_max: cnt
   };
 
+  shareds.prod = shared_ctx;
+
   var tasks = [];
   for (var i = 0; i < 3; i++) tasks.push ((cb) => run_a_producer (shared_ctx, cb));
   async.parallel (tasks, cb);
@@ -178,10 +186,11 @@ MQ (factory_opts, function (err, factory) {
   var q_opts = {};
   var q = factory.queue ('test_queue_456', q_opts);
 
+  setInterval (() => console.log ('**** state: %j', _.map (shareds, (v, k) => {return {cnt: v.push_count || v.pop_count, max: v.push_max || v.pop_max }})), 2000);
   async.parallel ([
-    (cb) => run_producers (q, 500000, cb),
-//    (cb) => setTimeout (() => run_consumers (q, 250000, cb), 1000),
-    (cb) => setTimeout (() => run_rcr_consumers (q, 500000, cb), 1000),
+    (cb) => run_producers (q, 50000, cb),
+    (cb) => setTimeout (() => run_consumers (q, 25000, cb), 1000),
+    (cb) => setTimeout (() => run_rcr_consumers (q, 25000, cb), 1000),
   ], (err) => {
     if (err) {
       console.error (err);
@@ -192,9 +201,9 @@ MQ (factory_opts, function (err, factory) {
     var tot_resv = 0;
     var tot_ok = 0;
 
-    console.log ('Producers: ');
+    console.log ('\nProducers: ');
     _.each (selfs.producers, (v, k) => {console.log ('  %s: popped %d', v.id, v.push_count), tot_push += v.push_count});
-    console.log ('Consumers: ');
+    console.log ('\nConsumers: ');
     _.each (selfs.consumers, (v, k) => {
       console.log ('  %s: pushed %d, resvd %d, committed %d', v.id, v.pop_count, v.resv_count, v.ok_count);
       tot_pop += v.pop_count;
@@ -202,7 +211,7 @@ MQ (factory_opts, function (err, factory) {
       tot_ok += v.ok_count;
     });
     
-    console.log ('Totals: %d popped, %d pushed, resvd %d, committed %d', tot_pop, tot_push, tot_resv, tot_ok);
+    console.log ('  \nTotals: %d popped, %d pushed, resvd %d, committed %d', tot_pop, tot_push, tot_resv, tot_ok);
 
     q.drain (() => factory.close ());
   });

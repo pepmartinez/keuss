@@ -249,10 +249,9 @@ class BucketMongoQueue extends Queue {
 
     debug ('flushing bucket %s with %d elems', bucket._id.toString(), bucket.b.length);
 
-    this._col.insertOne (bucket, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
+    this._col.insertOne (bucket, {}, (err, result) => {
+      if (err) return callback (err);
+      this._signal_insertion_own (bucket.mature);
   
       callback (null, bucket);
     });
@@ -278,6 +277,19 @@ class BucketMongoQueue extends Queue {
 
       callback (null, val);
     });
+  }
+
+
+  ////////////////////////////////////////
+  // redefine signalling of insertion: 
+  //
+  // inhibit inherited one
+  _signal_insertion (t) {
+  }
+
+  // and define own one
+  _signal_insertion_own (t) {
+    this._signaller.signalInsertion (t);
   }
 };
 

@@ -23,8 +23,9 @@ var State = {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class Bucket {
   ////////////////////////////////////////
-  constructor (bucket_in_db, col, opts) {
+  constructor (bucket_in_db, col, q, opts) {
     this._col = col;
+    this._q = q;
     this._opts = opts;
 
     this._reject_delta_base = opts.reject_delta_base || 10000;
@@ -227,6 +228,7 @@ class Bucket {
       });
 
       debug ('Bucket: rejected whole bucket %o -> %o', q, upd);
+      this._q._signal_insertion_own (mature);
       cb (null, null);
     });
   }
@@ -280,8 +282,9 @@ class Bucket {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class BucketSet {
   /////////////////////////////////
-  constructor (col, opts) {
+  constructor (col, q, opts) {
     this._opts = opts;
+    this._q = q;
     this._col = col;
 
     this._reserve_delay =              this._opts.reserve_delay      || 30;
@@ -318,7 +321,7 @@ class BucketSet {
 
       if (val) {
         debug ('read a bucket %s with %d elems', val._id.toString(), val.n);
-        var bcket = new Bucket (val, this._col, this._opts);
+        var bcket = new Bucket (val, this._col, this._q, this._opts);
         this._buckets[bcket.id()] = bcket;
 
         // is already exhausted?
@@ -560,7 +563,7 @@ class BucketMongoSafeQueue extends Queue {
       b: []
     };
     
-    this._read_bucket = new BucketSet (this._col, opts);
+    this._read_bucket = new BucketSet (this._col, this, opts);
 
     this._bucket_max_size = opts.bucket_max_size || 1024;
     this._bucket_max_wait = opts.bucket_max_wait || 500;
@@ -793,7 +796,7 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
     var bucket = this._insert_bucket;
     bucket.n = bucket.b.length;
-
+    
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
       b: []
@@ -801,11 +804,10 @@ class BucketMongoSafeQueue extends Queue {
 
     debug ('flushing bucket %s with %d elems', bucket._id.toString(), bucket.b.length);
 
-    this._col.insertOne (bucket, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
+    this._col.insertOne (bucket, {}, (err, result) => {
+      if (err) return callback (err);
   
+      this._signal_insertion_own (bucket.mature);
       callback (null, bucket);
     });
   }
@@ -830,6 +832,19 @@ class BucketMongoSafeQueue extends Queue {
 
       callback (null, val);
     });
+  }
+
+    
+  ////////////////////////////////////////
+  // redefine signalling of insertion: 
+  //
+  // inhibit inherited one
+  _signal_insertion (t) {
+  }
+
+  // and define own one
+  _signal_insertion_own (t) {
+    this._signaller.signalInsertion (t);
   }
 };
 

@@ -1,5 +1,3 @@
-'use strict';
-
 var async = require ('async');
 var _ =     require ('lodash');
 var uuid =  require ('uuid');
@@ -233,17 +231,16 @@ class Queue {
 
     debug ('%s: about to insert %o', this._name, msg);
 
-    var self = this;
-    
     // insert into queue
-    this.insert (msg, function (err, result) {
+    this.insert (msg, (err, result) => {
       if (err) {
         return callback (err);
       }
       
-      self._stats.incr ('put');
-      self._signaller.signalInsertion (mature);
-      debug ('%s: signalled insertion with mature %s', self._name, mature.toISOString ());
+      this._stats.incr ('put');
+      this._signal_insertion (mature);
+
+      debug ('%s: signalled insertion with mature %s', this._name, mature.toISOString ());
       callback (null, result.insertedId);
     })
   }
@@ -324,19 +321,15 @@ class Queue {
       next_t = null;
     }
 
-    var self = this;
-    
-    this.rollback (id, next_t, function (err, res) {
+    this.rollback (id, next_t, (err, res) => {
       if (err) {
         return cb (err);
       }
       
       if (res) {
         var t = new Date (next_t || null);
-        debug ('%s: ko : tid %s rolled back, new mature is %s', self._name, id, t);
-      
-        // signal correct time
-        self._signaller.signalInsertion (t);
+        debug ('%s: ko : tid %s rolled back, new mature is %s', this._name, id, t);
+        this._signal_insertion (t);
       }
       
       cb (null, res);
@@ -573,19 +566,23 @@ class Queue {
   
   ///////////////////////////////////////////////////////////
   _reinsert (result) {
-  ///////////////////////////////////////////////////////////
     if (result) {
-      var self = this;
-      this.insert (result, function (err, r) {
+      this.insert (result, (err, r) => {
         if (err) {
         }
         else {
-          self._signaller.signalInsertion (result.mature);
+          this._signal_insertion (result.mature);
         }
       });
     }
   }
-};
+
+
+  ////////////////////////////////////////
+  _signal_insertion (t) {
+    this._signaller.signalInsertion (t);
+  }
+}
 
 
 module.exports = Queue;
