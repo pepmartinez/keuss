@@ -60,7 +60,7 @@ class Bucket {
         this._b_counts.Deleted++;
       }
     });
-
+    
     debug ('initialized Bucket, %O', this._b_counts);
     debug ('initialized Bucket, from %O', bucket_in_db);
   }
@@ -86,6 +86,8 @@ class Bucket {
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
 
+        // TODO optimization: set this._b[i] = null
+
         if (is_reserve) {
           this._b_states[i] = State.Reserved;
           this._b_counts.Reserved++;
@@ -96,7 +98,7 @@ class Bucket {
         }
 
         this._b_counts.Available--;
-        
+                
         debug ('Bucket:got_element: got an available elem at pos %d, states are %o (%o)', i, this._b_states, this._b_counts);
         this._last_b_idx = i;
         return elem;
@@ -134,35 +136,76 @@ class Bucket {
 
 
   /////////////////////////////////////////
-  _flush_update_bucket (cb) {
-    var upd = {};
-    var committed_pos = [];
+  _flush_bucket (cb) {
+    var upd = {
+      $set: {}
+    };
 
-    _.each (this._b_states, (v, k) => {
-      if (v == State.Committed) {
-        committed_pos.push (k);
-        upd['b.' + k] = null;
+    var has_update = false;
+    var committed_pos = [];
+    var mature = null;
+    var timed_out = false;
+    var is_reject = false;
+    
+    var time_left = this._mature_t - new Date().getTime();
+    debug ('time left is %d, grace is %d', time_left, this._reject_timeout_grace);
+    
+    if (time_left < this._reject_timeout_grace) {
+      debug ('bucket timed out, rejecting');
+      timed_out = true;
+    }
+
+    if (this._b_counts.Committed) {
+      _.each (this._b_states, (v, k) => {
+        if (v == State.Committed) {
+          committed_pos.push (k);
+          upd.$set['b.' + k] = null;
+        }
+      });
+
+      upd.$inc = {n: -(committed_pos.length)};
+      has_update = true;
+
+      debug ('Bucket: flushing %d committed entries', committed_pos.length);
+    }
+
+    if (
+      timed_out || 
+      (
+        (this._b_counts.Available == 0) &&
+        (this._b_counts.Reserved == 0)  &&
+        (this._b_counts.Rejected != 0)
+      )
+    ) {
+      debug ('Bucket: flushing entire bucket for retry (%o)', this._b_counts);
+      is_reject = true;
+      var tries = this._tries || 1;
+  
+      if (this._rollback_next_t) {
+        mature = new Date (this._rollback_next_t);
       }
-    });
-    
-    if (committed_pos.length) {
-      upd = {
-        '$inc': {n: -(committed_pos.length)},
-        '$set': upd
-      };
-    
-      debug ('Bucket: got %d elements to commit: %o, %o', committed_pos.length, committed_pos, upd);
-    
+      else {
+        var delta = this._reject_delta_factor * tries + this._reject_delta_base;
+        mature = new Date (new Date().getTime () + delta)
+      }
+  
+      upd.$set.mature = mature;
+      upd.$unset = {reserved: 1};
+      has_update = true;
+    }      
+
+    if (has_update) {
       var q = {_id: this._id};
-    
+
+      debug ('update on bucket: q is %o, upd is %o', q, upd);
+
       this._col.updateOne (q, upd, (err, res) => {
         if (err) return cb({
           err: 'Bucket flush: mongodb error',
           e: err,
-          q: q,
-          upd: upd
+          q: q
         });
-    
+  
         if ((res && res.result && res.result.nModified) != 1) return cb({
           err: 'Bucket flush: exactly one must be updated',
           e: err,
@@ -177,60 +220,16 @@ class Bucket {
           this._b_counts.Deleted++;
         });
     
+        if (mature) this._q._signal_insertion_own (mature);
+
         debug ('Bucket: flushed ok, states are %o (%o)', this._b_states, this._b_counts);
-        cb (null, this._b_counts);
+        cb (null, is_reject ? null : this._b_counts);
       });
     }
     else {
-      debug ('Bucket: nothing to commit');
-      setImmediate (() => cb ());
+      debug ('Bucket: nothing to flush');
+      setImmediate (() => cb (null, this._b_counts));
     }
-  }
-
-
-  /////////////////////////////////////////
-  _flush_reject_bucket (cb) {
-    var tries = this._tries || 1;
-    var mature = null;
-
-    if (this._rollback_next_t) {
-      mature = new Date (this._rollback_next_t);
-    }
-    else {
-      var delta = this._reject_delta_factor * tries + this._reject_delta_base;
-      mature = new Date (new Date().getTime () + delta)
-    }
-
-    var q = {_id: this._id};
-    var upd = {
-      $set: {
-        mature: mature
-      },
-      $unset: {
-        reserved: 1
-      }
-    };
-
-    debug ('Bucket: rejecting whole bucket %o -> %o (now  + %d msecs) ', q, upd, delta);
-
-    this._col.updateOne (q, upd, (err, res) => {
-      if (err) return cb({
-        err: 'Bucket flush: mongodb error',
-        e: err,
-        q: q
-      });
-
-      if ((res && res.result && res.result.nModified) != 1) return cb({
-        err: 'Bucket flush: exactly one must be updated',
-        e: err,
-        q: q,
-        upd: upd
-      });
-
-      debug ('Bucket: rejected whole bucket %o -> %o', q, upd);
-      this._q._signal_insertion_own (mature);
-      cb (null, null);
-    });
   }
 
 
@@ -245,35 +244,7 @@ class Bucket {
       this._flush_delete_bucket (cb);
     }
     else {
-      async.series ([
-        cb => this._flush_update_bucket (cb),
-        cb => {
-          if (
-            (this._b_counts.Available == 0) &&
-            (this._b_counts.Reserved == 0)  &&
-            (this._b_counts.Rejected != 0)
-          ) {
-            this._flush_reject_bucket (cb);
-          }
-          else {
-            var time_left = this._mature_t - new Date().getTime();
-            debug ('time left is %d, grace is %d', time_left, this._reject_timeout_grace);
-          
-            if (time_left < this._reject_timeout_grace) {
-              debug ('bucket timed out, rejecting');
-              this._flush_reject_bucket (cb);
-            }
-            else {
-              cb (null, true);
-            }
-          }
-        }
-      ], (err, res) => {
-        if (err) return cb (err);
-        if (_.isNull (res[1])) return cb (null, null);
-        cb ();
-      });
-      
+      this._flush_bucket (cb);
     }
   }
 }
@@ -315,7 +286,7 @@ class BucketSet {
     debug ('reading a new bucket');
 
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
-      if (err) return callback (err);
+      if (err) return cb (err);
         
       var val = result && result.value;
 
@@ -434,7 +405,7 @@ class BucketSet {
     bucket._b_states[bucket_idx] = State.Committed;
     bucket._b_counts.Reserved--;
     bucket._b_counts.Committed++;
-
+    
     debug ('Bucket:commit_element: committed elem at pos %d, states are %o (%o)', bucket_idx, bucket._b_states, bucket._b_counts);
     setImmediate (() => cb (null, true));
   }
