@@ -1,9 +1,10 @@
 var async = require ('async');
+var _ = require ('lodash');
 
 var LocalSignal = require ('./signal/local');
 var MemStats =    require ('./stats/mem');
 
-var _ = require ('lodash');
+var debug = require('debug')('keuss:QFactory');
 
 
 class QFactory {
@@ -17,6 +18,8 @@ class QFactory {
 
     if (!this._opts.signaller)      this._opts.signaller = {};
     if (!this._opts.signaller.opts) this._opts.signaller.opts = {};
+
+    debug ('created QFactory %s with opts %o', this._name, this._opts);
   }
 
   async_init (cb) {
@@ -28,6 +31,8 @@ class QFactory {
       (cb) => stats_provider (this._opts.stats.opts, cb)
     ],
     (err, res) => {
+      debug ('%s: async init completed, err is %o', this._name, err);
+
       if (err) return cb (err);
       this._signaller_factory = res[0];
       this._stats_factory = res[1];
@@ -48,6 +53,7 @@ class QFactory {
   }
 
   close (cb) {
+    debug ('%s: closing', this._name);
     async.parallel ([
       (cb) => this._stats_factory.close (cb),
       (cb) => this._signaller_factory.close (cb)
@@ -72,16 +78,16 @@ class QFactory {
   }
 
   recreate_topology (cb) {
-    var self = this;
+    debug ('%s: recreating topology', this._name);
 
-    this.list ({full: true}, function (err, ql) {
+    this.list ({full: true}, (err, ql) => {
       if (err) return cb (err);
 
       var ret = {};
 
-      _.forEach (ql, function (v, k) {
-        var q = self.queue (k, v.opts);
-        ret[k] = q;
+      _.each (ql, (v, k) => {
+        debug ('%s: recreating topology: adding queue %s with opts %o', this._name, k, v.opts);
+        ret[k] = this.queue (k, v.opts);
       });
 
       cb (null, ret);
