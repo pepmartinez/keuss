@@ -1,5 +1,3 @@
-'use strict';
-
 var mubsub = require('mubsub');
 var _ =      require('lodash');
 

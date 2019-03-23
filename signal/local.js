@@ -1,5 +1,3 @@
-'use strict';
-
 var mitt = require ('mitt');
 
 var Signal = require ('../Signal');
