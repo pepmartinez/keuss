@@ -1,6 +1,8 @@
 var Queue = require ('./Queue');
 var _ =     require ('lodash');
 
+var debug = require('debug')('keuss:PipelineLink');
+
 
 class PipelineLink {
   constructor (src_q, dst_q, opts) {
@@ -26,6 +28,8 @@ class PipelineLink {
     this._opts = opts || {};
     this._src = src_q;
     this._dst = dst_q;
+
+    debug ('created PipelineLink %s', this._name);
   }
 
   src () {return this._src}
@@ -57,37 +61,37 @@ class PipelineLink {
   _process (ondata) {
     var self = this;
 
-   // console.log ('pll %s: attempting reserve', self._name);
+    debug ('pll %s: attempting reserve', self._name);
 
     this.src().pop('c1', { reserve: true }, function (err, res) {
-     // console.log ('pll %s: reserved element: %j', self._name, res);
+      debug ('pll %s: reserved element: %o', self._name, res);
 
       if (err) {
         if (err == 'cancel') return; // end the process loop
 
-        // console.log ('pll %s: error in reserve:', self._name, err);
+         debug ('pll %s: error in reserve:', self._name, err);
         return self._process (ondata);
       }
       
       if (!res) {
-       // console.log ('pll %s: reserve produced nothing', self._name);
+        debug ('pll %s: reserve produced nothing', self._name);
         return self._process (ondata);
       }
       
       // do something
       ondata (res, function (err, res0) {
-       // console.log ('pll %s: processed: %s', self._name, res._id);
+        debug ('pll %s: processed: %s', self._name, res._id);
 
         if (err) {
           // error: drop or retry?
           if (err.drop === true) {
-         // console.log ('pll %s: marked to be dropped: %s', self._name, res._id);
+            debug ('pll %s: marked to be dropped: %s', self._name, res._id);
             return self._process (ondata);
           }
           else {
             // rollback. TODO set some limit, drop afterwards?
             self.src().ko (res._id, self._rollback_next_t (res), function (err) {
-             // console.log ('pll %s: rolled back: %s', self._name, res._id);
+              debug ('pll %s: rolled back: %s', self._name, res._id);
               self._process (ondata);
             });
 
@@ -102,9 +106,10 @@ class PipelineLink {
 
         self._next (res._id, opts, function (err, res0) {
           if (err) {
-//           // console.log ('error in next:', err);
+            debug ('error in next:', err);
           }
-         // console.log ('pll %s: passed to next: %s', self._name, res._id);
+ 
+          debug ('pll %s: passed to next: %s', self._name, res._id);
           self._process (ondata);
         });
       });

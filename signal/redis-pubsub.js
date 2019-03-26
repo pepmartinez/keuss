@@ -3,6 +3,8 @@ var mitt = require ('mitt');
 var RedisConn = require ('../utils/RedisConn');
 var Signal =    require ('../Signal');
 
+var debug = require('debug')('keuss:Signal:RedisPubsub');
+
 class RPSSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
@@ -15,7 +17,7 @@ class RPSSignal extends Signal {
     this._factory._emitter.on (this._channel, function (message) {
       var mature = parseInt (message);
       
-//      console.log ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
+      debug ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
 
@@ -23,12 +25,14 @@ class RPSSignal extends Signal {
     this._rediscl_sub = this._factory._rediscl_sub;
     
     this._rediscl_sub.subscribe (this._channel);
+
+    debug ('created redis-pubsub signaller for topic %s with opts %o', this._topic_name, opts);
   }
     
   type () {return RPSSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-//    console.log ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
+    debug ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
     this._rediscl_pub.publish (this._channel, mature.getTime());
   }
 }
@@ -46,14 +50,14 @@ class RPSSignalFactory {
       self._emitter.emit (channel, message);
     });
 
-//    console.log ('created redis-pubsub factory with opts %j', opts);
+    debug ('created redis-pubsub factory with opts %o', opts);
   }
 
   static Type () {return 'signal:redis-pubsub'}
   type () {return Type ()}
 
   signal (channel, opts) {
-//    console.log ('creating redis-pubsub signaller with opts %j', opts);
+    debug ('creating redis-pubsub signaller with opts %o', opts);
     return new RPSSignal (channel, this, opts);
   }
 

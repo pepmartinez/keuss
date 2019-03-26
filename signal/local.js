@@ -2,6 +2,9 @@ var mitt = require ('mitt');
 
 var Signal = require ('../Signal');
 
+var debug = require('debug')('keuss:Signal:local');
+
+
 class LocalSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
@@ -12,15 +15,17 @@ class LocalSignal extends Signal {
     this._factory._emitter.on (this._channel, function (message) {
       var mature = message;
       
-      // ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
+      debug ('got event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message);
       self._master.signalInsertion (new Date (mature));
     });
+
+    debug ('created LocalSignal for channel %s', this._channel);
   }
   
   type () {return LocalSignalFactory.Type ()}
   
   emitInsertion (mature, cb) {
-    // convey to local through mitt
+    debug ('got event [%o], relay on local mitt', mature);
     this._factory._emitter.emit (this._channel, mature.getTime ());
   }
 }

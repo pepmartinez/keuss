@@ -3,6 +3,8 @@ var _ =      require('lodash');
 
 var Signal = require ('../Signal');
 
+var debug = require('debug')('keuss:Signal:MongoCapped');
+
 class MCSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
@@ -15,17 +17,17 @@ class MCSignal extends Signal {
     this._factory._channel.subscribe (this._topic_name, function (message) {
       var mature = parseInt (message);
       
-//      console.log ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
+      debug ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
       self._master.signalInsertion (new Date (mature));
     });
 
-//    console.log ('created mongo-capped signaller for topic %s with opts %j', this._topic_name, opts);
+    debug ('created mongo-capped signaller for topic %s with opts %o', this._topic_name, opts);
   }
     
   type () {return MCSignalFactory.Type ()}
   
   emitInsertion (mature, cb) { 
-//    console.log ('emit mongo-capped pubsub on topic [%s] mature %d)', this._topic_name, mature);
+    debug ('emit mongo-capped pubsub on topic [%s] mature %o)', this._topic_name, mature);
     this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 }
@@ -43,7 +45,7 @@ class MCSignalFactory {
     this._mubsub = mubsub (this._opts.url, this._opts.mongo_opts);
     this._channel =  this._mubsub.channel (this._opts.channel, this._opts.channel_opts); 
 
-//    console.log ('created mongo-capped factory with opts %j', opts)
+    debug ('created mongo-capped factory with opts %o', opts);
   }
 
   static Type () {return 'signal:mongo-capped'}
