@@ -244,8 +244,8 @@ class Queue {
       this._stats.incr ('put');
       this._signal_insertion (mature);
 
-      debug ('%s: elem pushed, given id %s, signalled insertion with mature %s', this._name, result.insertedId, mature.toISOString ());
-      callback (null, result.insertedId);
+      debug ('%s: elem pushed, given id %s, signalled insertion with mature %s', this._name, result, mature.toISOString ());
+      callback (null, result);
     })
   }
   
