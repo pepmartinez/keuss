@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "keywords": [
     "queue",
     "persistent",
@@ -41,6 +41,7 @@
     "should": "~13.2.1"
   },
   "scripts": {
-    "test": "mocha --reporter spec --check-leaks --no-timeouts --exit test/"
+    "test": "mocha --reporter spec --check-leaks --no-timeouts --exit test/",
+    "test-with-coverage": "nyc --reporter=text -- mocha --reporter spec --check-leaks --no-timeouts --exit test/"
   }
 }
