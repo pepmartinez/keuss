@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "keywords": [
     "queue",
     "persistent",
@@ -8,7 +8,8 @@
     "mongodb",
     "redis",
     "HA",
-    "pipeline"
+    "pipeline",
+    "bucket"
   ],
   "homepage": "https://github.com/pepmartinez/keuss",
   "bugs": {
