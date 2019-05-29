@@ -12,20 +12,20 @@ var QFactory = require ('../QFactory');
 
 
 class BucketMongoQueue extends Queue {
-  
+
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
     super (name, factory, opts);
 
     this._factory = factory;
-    this._col = factory._mongo_conn.collection (name);
+    this._col = factory._db.collection (name);
 
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
       b: []
     };
-    
+
     this._read_bucket = {
       b: []
     }
@@ -37,8 +37,8 @@ class BucketMongoQueue extends Queue {
 
     debug ('created BucketMongoSafe %s', name);
   }
-  
-  
+
+
   /////////////////////////////////////////
   static Type () {
   /////////////////////////////////////////
@@ -50,7 +50,7 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
     return 'mongo:bucket';
   }
-  
+
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
@@ -62,7 +62,7 @@ class BucketMongoQueue extends Queue {
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
-  
+
       debug ('cancelled periodic_flush');
 
       this._flush_bucket (callback);
@@ -73,11 +73,11 @@ class BucketMongoQueue extends Queue {
         this._set_periodic_flush ();
       }
 
-      setImmediate (function () {callback (null, id);}); 
+      setImmediate (function () {callback (null, id);});
     }
   }
-  
-  
+
+
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
@@ -157,7 +157,7 @@ class BucketMongoQueue extends Queue {
     if (this._insert_bucket.b.length) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
-  
+
       debug ('drain_insert flushing _insert_bucket');
 
       this._flush_bucket (cb);
@@ -167,7 +167,7 @@ class BucketMongoQueue extends Queue {
       cb ();
     }
   }
-  
+
   /////////////////////////////////////////
   // empty local buffers
   drain (callback) {
@@ -191,14 +191,17 @@ class BucketMongoQueue extends Queue {
   //////////////////////////////////
     this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, res) {
+    ], function (err, cursor) {
       if (err) return callback (err);
-      if (res.length == 0) return callback (null, 0);
-      callback (null, res[0].v);
+      cursor.toArray ((err, res) => {
+        if (err) return callback (err);
+        if (res.length == 0) return callback (null, 0);
+        callback (null, res[0].v);
+      });
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
@@ -234,7 +237,7 @@ class BucketMongoQueue extends Queue {
 
     debug ('_set_periodic_flush set, wait %d msecs', this._bucket_max_wait);
   }
-  
+
 
   /////////////////////////////////////////
   _flush_bucket (callback) {
@@ -252,7 +255,7 @@ class BucketMongoQueue extends Queue {
     this._col.insertOne (bucket, {}, (err, result) => {
       if (err) return callback (err);
       this._signal_insertion_own (bucket.mature);
-  
+
       callback (null, bucket);
     });
   }
@@ -263,12 +266,12 @@ class BucketMongoQueue extends Queue {
   _get_bucket (callback) {
   /////////////////////////////////////////
     debug ('need to read a bucket');
-    
+
     this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
       if (err) {
         return callback (err);
       }
-        
+
       var val = result && result.value;
 
       if (val) {
@@ -281,7 +284,7 @@ class BucketMongoQueue extends Queue {
 
 
   ////////////////////////////////////////
-  // redefine signalling of insertion: 
+  // redefine signalling of insertion:
   //
   // inhibit inherited one
   _signal_insertion (t) {
@@ -298,6 +301,7 @@ class Factory extends QFactory {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;
+    this._db = mongo_conn.db();
   }
 
   queue (name, opts) {
@@ -311,12 +315,12 @@ class Factory extends QFactory {
       if (this._mongo_conn) {
         this._mongo_conn.close ();
         this._mongo_conn = null;
-      } 
-    
+      }
+
       if (cb) return cb ();
     });
   }
-  
+
   type () {
     return BucketMongoQueue.Type ();
   }
@@ -333,10 +337,10 @@ class Factory extends QFactory {
 function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
-    
-  MongoClient.connect (m_url, function (err, db) {
+
+  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
     if (err) return cb (err);
-    var F = new Factory (_opts, db);
+    var F = new Factory (_opts, cl);
     F.async_init ((err) => cb (null, F));
   });
 }

@@ -20,30 +20,30 @@ class MongoStats {
         name: this._name,
       }
     };
-      
+
     this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err, ret) => {
 //      console.log ('mongo stats created, ns %s, name %s, opts %j', ns, name, opts);
     });
   }
 
 
-  type() { 
+  type() {
     return this._factory.type();
    }
 
    ns () {
      return this._ns;
    }
- 
+
    name () {
      return this._name;
    }
 
 
   values(cb) {
-    this._coll().findOne ({_id: this._id}, {fields: {counters: 1}}, (err, res) => {
+    this._coll().findOne ({_id: this._id}, {projection: {counters: 1}}, (err, res) => {
       if (err) return cb (err);
-    
+
 //      console.log ('mongo stats: get %s -> %j', this._name, res);
       cb (null, (res && res.counters) || {});
     });
@@ -57,7 +57,7 @@ class MongoStats {
     _.forEach(this._cache, (value, key) => {
       if (value) {
         upd.$inc['counters.' + key] = value;
-        some_added = true;    
+        some_added = true;
         this._cache[key] = 0;
       }
     });
@@ -120,12 +120,12 @@ class MongoStats {
     if ((delta === null) || (delta === undefined)) delta = 1;
     this.incr(v, -delta, cb);
   }
-  
+
   opts (opts, cb) {
     if (!cb) {
       // get
       cb = opts;
-      this._coll().findOne ({_id: this._id}, {fields: {opts: 1}}, (err, res) => {
+      this._coll().findOne ({_id: this._id}, {projection: {opts: 1}}, (err, res) => {
         if (err) return cb (err);
 //        console.log ('mongo stats - opts: get %s -> %j', this._name, res);
         cb (null, (res && res.opts) || {});
@@ -140,13 +140,13 @@ class MongoStats {
       });
     }
   }
-  
+
   topology (tplg, cb) {
     if (!cb) {
       // get
       cb = tplg;
 
-      this._coll().findOne ({_id: this._id}, {fields: {topology: 1}}, (err, res) => {
+      this._coll().findOne ({_id: this._id}, {projection: {topology: 1}}, (err, res) => {
         if (err) return cb (err);
 //        console.log ('mongo stats - topology: get %s -> %j', this._name, res);
         cb (null, (res && res.topology) || {});
@@ -155,22 +155,22 @@ class MongoStats {
     else {
       // set
       var upd = {$set: {topology : tplg}};
-        
+
       this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
 //        console.log ('mongo stats: updated %s -> %j', this._name, upd);
         cb (err);
       });
     }
   }
-  
+
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
 
     var upd = {
       $unset: {
-        counters: 1, 
-        opts: 1, 
+        counters: 1,
+        opts: 1,
         topology: 1
       }
     };
@@ -210,7 +210,7 @@ class MongoStatsFactory {
       this._instances [k] = new MongoStats (ns, name, this);
 //      console.log (`created MongoStats on ${k}`);
     }
-    
+
     return this._instances [k];
   }
 
@@ -219,7 +219,7 @@ class MongoStatsFactory {
       cb = opts;
       opts = {};
     }
-    
+
     if (opts.full) {
       this._coll.find({_id: {$regex: '^keuss:stats:' + ns}}).toArray (function (err, arr) {
         if (err) return cb (err);
@@ -262,7 +262,7 @@ class MongoStatsFactory {
         v.close (cb);
       });
     });
-    
+
     async.series ([
       (cb) => async.parallel (tasks, cb),
       (cb) => {
@@ -288,11 +288,11 @@ function creator (opts, cb) {
 
 //  console.log ('initializing creator of MongoStatsFactory, connecting to %s', m_url);
 
-  MongoClient.connect (m_url, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
     if (err) return cb (err);
 
 //    console.log ('initializing creator of MongoStatsFactory, connected to %s', m_url);
-    var coll = cl.collection (m_coll);
+    var coll = cl.db().collection (m_coll);
     cb (null, new MongoStatsFactory (cl, coll, opts));
   });
 }

@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "keywords": [
     "queue",
     "persistent",
@@ -30,7 +30,7 @@
     "ioredis": "~4.6.2",
     "lodash": "~4.17.11",
     "mitt": "~1.1.3",
-    "mongodb": "~2.2.34",
+    "mongodb": "~3.2.6",
     "uuid": "~3.3.2",
     "mubsub": "~1.4.0",
     "debug": "~4.1.1",

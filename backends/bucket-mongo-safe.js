@@ -15,7 +15,7 @@ var State = {
   Available: 1,
   Reserved:  2,
   Committed: 3,
-  Rejected:  4, 
+  Rejected:  4,
   Deleted:   5
 };
 
@@ -44,7 +44,7 @@ class Bucket {
       Available: 0,
       Reserved:  0,
       Committed: 0,
-      Rejected:  0, 
+      Rejected:  0,
       Deleted:   0
     };
 
@@ -54,13 +54,13 @@ class Bucket {
       if (e) {
         this._b_states.push (State.Available);
         this._b_counts.Available++;
-      } 
+      }
       else {
         this._b_states.push (State.Deleted);
         this._b_counts.Deleted++;
       }
     });
-    
+
     debug ('initialized Bucket, %O', this._b_counts);
     debug ('initialized Bucket, from %O', bucket_in_db);
   }
@@ -68,7 +68,7 @@ class Bucket {
   id () {return this._id.toString();}
   exhausted () {return this._b_counts.Available == 0;}
 
-  
+
   ////////////////////////////////////
   get_element (is_reserve) {
     // return null if Available count is 0
@@ -78,10 +78,10 @@ class Bucket {
     }
 
     debug ('Bucket:got_element: look for next available elem starting at pos %d', this._last_b_idx);
-        
+
     for (var i = this._last_b_idx; i <  this._b_states.length; i++) {
       if (this._b_states[i] == State.Available) {
-        var elem = {payload: this._b[i]};   
+        var elem = {payload: this._b[i]};
         elem.tries = this._tries;
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
@@ -98,7 +98,7 @@ class Bucket {
         }
 
         this._b_counts.Available--;
-                
+
         debug ('Bucket:got_element: got an available elem at pos %d, states are %o (%o)', i, this._b_states, this._b_counts);
         this._last_b_idx = i;
         return elem;
@@ -108,7 +108,7 @@ class Bucket {
     // this should be unreachable
     debug ('Bucket:got_element: (WARNING, UNREACHABLE) got no available elem after iterating %d states -> %o', i, this._b_states);
     return null;
-  } 
+  }
 
 
   /////////////////////////////////////////
@@ -122,7 +122,7 @@ class Bucket {
         e: err,
         q: q
       });
-  
+
       if ((res && res.result && res.result.n) != 1) return cb({
         err: 'Bucket flush: exactly one must be deleted',
         e: err,
@@ -146,10 +146,10 @@ class Bucket {
     var mature = null;
     var timed_out = false;
     var is_reject = false;
-    
+
     var time_left = this._mature_t - new Date().getTime();
     debug ('time left is %d, grace is %d', time_left, this._reject_timeout_grace);
-    
+
     if (time_left < this._reject_timeout_grace) {
       debug ('bucket timed out, rejecting');
       timed_out = true;
@@ -170,7 +170,7 @@ class Bucket {
     }
 
     if (
-      timed_out || 
+      timed_out ||
       (
         (this._b_counts.Available == 0) &&
         (this._b_counts.Reserved == 0)  &&
@@ -180,7 +180,7 @@ class Bucket {
       debug ('Bucket: flushing entire bucket for retry (%o)', this._b_counts);
       is_reject = true;
       var tries = this._tries || 1;
-  
+
       if (this._rollback_next_t) {
         mature = new Date (this._rollback_next_t);
       }
@@ -188,11 +188,11 @@ class Bucket {
         var delta = this._reject_delta_factor * tries + this._reject_delta_base;
         mature = new Date (new Date().getTime () + delta)
       }
-  
+
       upd.$set.mature = mature;
       upd.$unset = {reserved: 1};
       has_update = true;
-    }      
+    }
 
     if (has_update) {
       var q = {_id: this._id};
@@ -205,21 +205,21 @@ class Bucket {
           e: err,
           q: q
         });
-  
+
         if ((res && res.result && res.result.nModified) != 1) return cb({
           err: 'Bucket flush: exactly one must be updated',
           e: err,
           q: q,
           upd: upd
         });
-    
+
         _.each (committed_pos, (v) => {
           this._b_states[v] = State.Deleted;
           this._b[v] = null;
           this._b_counts.Committed--;
           this._b_counts.Deleted++;
         });
-    
+
         if (mature) this._q._signal_insertion_own (mature);
 
         debug ('Bucket: flushed ok, states are %o (%o)', this._b_states, this._b_counts);
@@ -277,17 +277,17 @@ class BucketSet {
       $set: {mature: Queue.nowPlusSecs (this._reserve_delay), reserved: new Date ()},
       $inc: {tries: 1}
     };
-    
+
     var opts = {
-      sort: {mature : 1}, 
+      sort: {mature : 1},
       returnOriginal: false
     };
-    
+
     debug ('reading a new bucket');
 
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
       if (err) return cb (err);
-        
+
       var val = result && result.value;
 
       if (val) {
@@ -319,7 +319,7 @@ class BucketSet {
   _ensure_bucket (cb) {
     debug ('BucketSet:_ensure_bucket: acquire lock');
 
-    this._lock.acquire ('ensure-bucket', done => { 
+    this._lock.acquire ('ensure-bucket', done => {
       debug ('BucketSet:_ensure_bucket: lock acquired');
       if (this._active_bucket) {
         debug ('BucketSet:_ensure_bucket: end (already present)');
@@ -331,15 +331,15 @@ class BucketSet {
           debug ('BucketSet:_ensure_bucket: end (error) %o', err);
           return done (err);
         }
-  
+
         if (!active_bucket) {
           debug ('BucketSet:_ensure_bucket: end (no bucket)');
           return done ();
         }
-  
+
         // we got a bucket
         done (null, active_bucket);
-      }); 
+      });
     }, (err, ret) => {
       debug ('BucketSet:_ensure_bucket: lock released');
 
@@ -390,7 +390,7 @@ class BucketSet {
   reserve_element (cb) {
     this._obtain_element (true, cb);
   }
-  
+
 
   /////////////////////////////
   commit_element (id, cb) {
@@ -405,7 +405,7 @@ class BucketSet {
     bucket._b_states[bucket_idx] = State.Committed;
     bucket._b_counts.Reserved--;
     bucket._b_counts.Committed++;
-    
+
     debug ('Bucket:commit_element: committed elem at pos %d, states are %o (%o)', bucket_idx, bucket._b_states, bucket._b_counts);
     setImmediate (() => cb (null, true));
   }
@@ -452,7 +452,7 @@ class BucketSet {
         debug ('BucketSet: error in flush-states: %o', err);
         return cb (err);
       }
-      
+
       _.each (res, (v, k) => {
         if (_.isNull (v)) {
           delete this._buckets[k];
@@ -464,7 +464,7 @@ class BucketSet {
           }
         }
       });
-      
+
       if (_.size (this._buckets) == 0) {
         debug ('BucketSet: empty, no buckets. stop flush');
         this._cancel_flush_state_changes ();
@@ -508,7 +508,7 @@ class BucketSet {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class BucketMongoSafeQueue extends Queue {
-  
+
   /*
 
   options:
@@ -526,14 +526,14 @@ class BucketMongoSafeQueue extends Queue {
     super (name, factory, opts);
 
     this._factory = factory;
-    this._col = factory._mongo_conn.collection (name);
+    this._col = factory._db.collection (name);
     this._ensureIndexes (function (err) {});
 
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
       b: []
     };
-    
+
     this._read_bucket = new BucketSet (this._col, this, opts);
 
     this._bucket_max_size = opts.bucket_max_size || 1024;
@@ -541,8 +541,8 @@ class BucketMongoSafeQueue extends Queue {
 
     debug ('created BucketMongoSafeQueue %s', name);
   }
-  
-  
+
+
   /////////////////////////////////////////
   static Type () {
   /////////////////////////////////////////
@@ -554,7 +554,7 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
     return 'mongo:bucket-safe';
   }
-  
+
 
   /////////////////////////////////////////
   // add element to queue
@@ -570,7 +570,7 @@ class BucketMongoSafeQueue extends Queue {
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
-  
+
       debug ('cancelled periodic_flush');
 
       this._flush_bucket (callback);
@@ -581,11 +581,11 @@ class BucketMongoSafeQueue extends Queue {
         this._set_periodic_flush ();
       }
 
-      setImmediate (() => callback (null, id)); 
+      setImmediate (() => callback (null, id));
     }
   }
-  
-  
+
+
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
@@ -604,7 +604,7 @@ class BucketMongoSafeQueue extends Queue {
       callback (null, elem);
     });
   }
-  
+
 
   /////////////////////////////////////////
   // commit a reserved element from queue
@@ -614,7 +614,7 @@ class BucketMongoSafeQueue extends Queue {
       callback (null, elem);
     });
   }
-  
+
 
   /////////////////////////////////////////
   // rollback a reserved element from queue
@@ -631,42 +631,51 @@ class BucketMongoSafeQueue extends Queue {
   totalSize (callback) {
     this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, res) {
+    ], function (err, cursor) {
       if (err) return callback (err);
-      if (res.length == 0) return callback (null, 0);
-      callback (null, res[0].v);
+      cursor.toArray ((err, res) => {
+        if (err) return callback (err);
+        if (res.length == 0) return callback (null, 0);
+        callback (null, res[0].v);
+      });
     });
   }
-    
-    
+
+
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
     this._col.aggregate ([
       {$match: {mature: {$lte: Queue.now ()}}},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, res) {
+    ], function (err, cursor) {
       if (err) return callback (err);
-      if (res.length == 0) return callback (null, 0);
-      callback (null, res[0].v);
+      cursor.toArray ((err, res) => {
+        if (err) return callback (err);
+        if (res.length == 0) return callback (null, 0);
+        callback (null, res[0].v);
+      });
     });
   }
 
-    
+
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
     this._col.aggregate ([
       {$match: {mature: {$gt: Queue.now ()}}},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, res) {
+    ], function (err, cursor) {
       if (err) return callback (err);
-      if (res.length == 0) return callback (null, 0);
-      callback (null, res[0].v);
+      cursor.toArray ((err, res) => {
+        if (err) return callback (err);
+        if (res.length == 0) return callback (null, 0);
+        callback (null, res[0].v);
+      });
     });
   }
-  
-    
+
+
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
@@ -674,7 +683,7 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
       callback (null, result && result.mature);
     });
-  }  
+  }
 
 
   /////////////////////////////////////////
@@ -696,7 +705,7 @@ class BucketMongoSafeQueue extends Queue {
     if (this._insert_bucket.b.length) {
       if (this._flush_timer) clearTimeout (this._flush_timer);
       this._flush_timer = null;
-  
+
       debug ('drain_insert flushing _insert_bucket');
 
       this._flush_bucket (cb);
@@ -707,7 +716,7 @@ class BucketMongoSafeQueue extends Queue {
     }
   }
 
-  
+
   /////////////////////////////////////////
   // empty local buffers
   drain (callback) {
@@ -727,7 +736,7 @@ class BucketMongoSafeQueue extends Queue {
 
   /////////////////////////////////////////
   _ensureIndexes (cb) {
-    this._col.ensureIndex ({mature : 1}, function (err) {
+    this._col.createIndex ({mature : 1}, function (err) {
       return cb (err);
     });
   }
@@ -760,14 +769,14 @@ class BucketMongoSafeQueue extends Queue {
 
     debug ('_set_periodic_flush set, wait %d msecs', this._bucket_max_wait);
   }
-  
+
 
   /////////////////////////////////////////
   _flush_bucket (callback) {
   /////////////////////////////////////////
     var bucket = this._insert_bucket;
     bucket.n = bucket.b.length;
-    
+
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
       b: []
@@ -777,7 +786,7 @@ class BucketMongoSafeQueue extends Queue {
 
     this._col.insertOne (bucket, {}, (err, result) => {
       if (err) return callback (err);
-  
+
       this._signal_insertion_own (bucket.mature);
       callback (null, bucket);
     });
@@ -789,12 +798,12 @@ class BucketMongoSafeQueue extends Queue {
   _get_bucket (callback) {
   /////////////////////////////////////////
     debug ('need to read a bucket');
-    
+
     this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
       if (err) {
         return callback (err);
       }
-        
+
       var val = result && result.value;
 
       if (val) {
@@ -805,9 +814,9 @@ class BucketMongoSafeQueue extends Queue {
     });
   }
 
-    
+
   ////////////////////////////////////////
-  // redefine signalling of insertion: 
+  // redefine signalling of insertion:
   //
   // inhibit inherited one
   _signal_insertion (t) {
@@ -824,6 +833,7 @@ class Factory extends QFactory {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;
+    this._db = mongo_conn.db();
   }
 
   queue (name, opts) {
@@ -837,12 +847,12 @@ class Factory extends QFactory {
       if (this._mongo_conn) {
         this._mongo_conn.close ();
         this._mongo_conn = null;
-      } 
-    
+      }
+
       if (cb) return cb ();
     });
   }
-  
+
   type () {
     return BucketMongoSafeQueue.Type ();
   }
@@ -859,10 +869,10 @@ class Factory extends QFactory {
 function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
-    
-  MongoClient.connect (m_url, function (err, db) {
+
+  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
     if (err) return cb (err);
-    var F = new Factory (_opts, db);
+    var F = new Factory (_opts, cl);
     F.async_init ((err) => cb (null, F));
   });
 }

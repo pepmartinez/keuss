@@ -4,6 +4,5 @@
 * queue traversal/query
 * allow update obj on pl-mongo (api dep on being mongodb)
 * priorities
-* upgrade mongod driver to v3
 * add factory archetypes (all-mongo, all-mongo-bucket...)
 

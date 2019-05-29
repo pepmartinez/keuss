@@ -8,18 +8,18 @@ var Queue =    require ('../Queue');
 var QFactory = require ('../QFactory');
 
 class SimpleMongoQueue extends Queue {
-  
+
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
     super (name, factory, opts);
 
     this._factory = factory;
-    this._col = factory._mongo_conn.collection (name);
+    this._col = factory._db.collection (name);
     this.ensureIndexes (function (err) {});
   }
-  
-  
+
+
   /////////////////////////////////////////
   static Type () {
   /////////////////////////////////////////
@@ -31,7 +31,7 @@ class SimpleMongoQueue extends Queue {
   /////////////////////////////////////////
     return 'mongo:simple';
   }
-  
+
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
@@ -47,8 +47,8 @@ class SimpleMongoQueue extends Queue {
       callback (null, result.insertedId);
     });
   }
-  
-  
+
+
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
@@ -58,19 +58,19 @@ class SimpleMongoQueue extends Queue {
       if (err) {
         return callback (err);
       }
-      
+
       callback (null, result && result.value);
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {
     var self = this;
-    
+
     var delay = this._opts.reserve_delay || 120;
-    
+
     var query = {
       mature: {$lte: Queue.nowPlusSecs (0)}
     };
@@ -79,47 +79,47 @@ class SimpleMongoQueue extends Queue {
       $set: {mature: Queue.nowPlusSecs (delay), reserved: new Date ()},
       $inc: {tries: 1}
     };
-    
+
     var opts = {
-      sort: {mature : 1}, 
+      sort: {mature : 1},
       returnOriginal: true
     };
-    
+
     this._col.findOneAndUpdate (query, update, opts, function (err, result) {
       if (err) {
         return callback (err);
       }
-      
+
       callback (null, result && result.value);
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // commit previous reserve, by p.id
   commit (id, callback) {
     var self = this;
-    
+
     try {
       var query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
         reserved: {$exists: true}
       };
     }
     catch (e) {
       return callback ('id [' + id + '] can not be used as rollback id: ' + e);
     }
-    
+
     this._col.deleteOne (query, {}, function (err, result) {
       if (err) {
         return callback (err);
       }
-      
+
       callback (null, result && (result.deletedCount == 1));
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // rollback previous reserve, by p.id
   rollback (id, next_t, callback) {
@@ -129,19 +129,19 @@ class SimpleMongoQueue extends Queue {
     }
 
     var self = this;
-    
+
     try {
       var query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id), 
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
         reserved: {$exists: true}
       };
     }
     catch (e) {
       return callback ('id [' + id + '] can not be used as rollback id: ' + e);
     }
-    
+
     var update = {
-      $set:   {mature: (next_t ? new Date (next_t) : Queue.now ())}, 
+      $set:   {mature: (next_t ? new Date (next_t) : Queue.now ())},
       $unset: {reserved: ''}
     };
 
@@ -149,22 +149,22 @@ class SimpleMongoQueue extends Queue {
       if (err) {
         return callback (err);
       }
-      
+
       callback (null, result && (result.modifiedCount == 1));
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
     var q = {};
     var opts = {};
-    this._col.count (q, opts, callback);
+    this._col.countDocuments (q, opts, callback);
   }
-  
-  
+
+
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
@@ -172,13 +172,13 @@ class SimpleMongoQueue extends Queue {
     var q = {
       mature : {$lte : Queue.now ()}
     };
-    
+
     var opts = {};
-    
-    this._col.count (q, opts, callback);
+
+    this._col.countDocuments (q, opts, callback);
   }
-  
-  
+
+
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
@@ -186,13 +186,13 @@ class SimpleMongoQueue extends Queue {
     var q = {
       mature : {$gt : Queue.now ()}
     };
-    
+
     var opts = {};
-    
-    this._col.count (q, opts, callback);
+
+    this._col.countDocuments (q, opts, callback);
   }
 
-  
+
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
@@ -202,12 +202,12 @@ class SimpleMongoQueue extends Queue {
       if (err) {
         return callback (err);
       }
-      
+
       callback (null, result && result.mature);
     });
   }
-  
-  
+
+
   ///////////////////////////////////////////////////////////////////////////////
   // private parts
 
@@ -215,7 +215,7 @@ class SimpleMongoQueue extends Queue {
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
   //////////////////////////////////////////////////////////////////
-    this._col.ensureIndex ({mature : 1}, function (err) {
+    this._col.createIndex ({mature : 1}, function (err) {
       return cb (err);
     })
   }
@@ -226,6 +226,7 @@ class Factory extends QFactory {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;
+    this._db = mongo_conn.db();
   }
 
   queue (name, opts) {
@@ -239,12 +240,12 @@ class Factory extends QFactory {
       if (this._mongo_conn) {
         this._mongo_conn.close ();
         this._mongo_conn = null;
-      } 
-    
+      }
+
       if (cb) return cb ();
     });
   }
-  
+
   type () {
     return SimpleMongoQueue.Type ();
   }
@@ -261,10 +262,10 @@ class Factory extends QFactory {
 function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
-    
-  MongoClient.connect (m_url, function (err, db) {
+
+  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
     if (err) return cb (err);
-    var F = new Factory (_opts, db);
+    var F = new Factory (_opts, cl);
     F.async_init ((err) => cb (null, F));
   });
 }
