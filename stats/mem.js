@@ -1,5 +1,7 @@
 var _ = require ('lodash');
 
+var debug = require('debug')('keuss:Stats:Mem');
+
 class MemStats {
   constructor (ns, name, factory) {
     this._factory = factory;

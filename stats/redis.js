@@ -3,6 +3,8 @@ var async = require('async');
 
 var RedisConn = require('../utils/RedisConn');
 
+var debug = require('debug')('keuss:Stats:Redis');
+
 /*
  * redis using HINCRBY
  *
@@ -24,7 +26,7 @@ class RedisStats {
     this._rediscl.hset (this._id, 'name', this._name);
     this._rediscl.hset (this._id, 'ns',   this._ns);
 
-//    console.log ('created redis stats with ns %s, name %s, options %j', ns, name, opts);
+    debug ('created redis stats with ns %s, name %s, options %j', ns, name, opts);
   }
 
 
@@ -77,7 +79,7 @@ class RedisStats {
     _.forEach (this._cache, (value, key) => {
       if (value) {
         this._rediscl.hincrby (this._id, 'counter_' + key, value);
-//          console.log ('stats-redis[%s]: flushed %d -> %s', this._id, value, 'counter_' + key);
+        debug ('stats-redis[%s]: flushed %d -> %s', this._id, value, 'counter_' + key);
         this._cache[key] = 0;
       }
     });
@@ -206,7 +208,7 @@ class RedisStatsFactory {
     this._rediscl = RedisConn.conn(this._opts);
 
     this._instances = {};
-//    console.log ('created redis stats factory with option %j', opts);
+    debug ('created redis stats factory with option %j', opts);
   }
 
   static Type() { return 'redis' }
@@ -217,7 +219,7 @@ class RedisStatsFactory {
     var k = name + '@' + ns;
     if (!this._instances [k]) {
       this._instances [k] = new RedisStats (ns, name, this, opts);
-//        console.log ('created redis stats with ns %s, name %s, opts %j', ns, name, opts);
+      debug ('created redis stats with ns %s, name %s, opts %j', ns, name, opts);
     }
 
     return this._instances [k];
@@ -286,7 +288,7 @@ class RedisStatsFactory {
     // flush pending stats
     _.each (this._instances, (v, k) => {
       tasks.push ((cb) => {
-//        console.log (`closing RedisStats ${k}`);
+        debug (`closing RedisStats ${k}`);
         v.close (cb);
       });
     });
@@ -294,7 +296,7 @@ class RedisStatsFactory {
     async.series ([
       (cb) => async.parallel (tasks, cb),
       (cb) => {
-//        console.log (`closing RedisStatsFactory redis conn`);
+        debug (`closing RedisStatsFactory redis conn`);
         this._rediscl.quit(cb);
       }
     ], cb);
