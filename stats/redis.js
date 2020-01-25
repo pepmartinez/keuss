@@ -4,8 +4,8 @@ var async = require('async');
 var RedisConn = require('../utils/RedisConn');
 
 /*
- * redis using HINCRBY 
- * 
+ * redis using HINCRBY
+ *
  * stores in:
  *   - counters                   in keuss:stats:<ns>:<name>:counter_<counter> -> int
  *   - opts (queue creation opts) in keuss:stats:<ns>:<name>:opts              -> string/json
@@ -21,33 +21,28 @@ class RedisStats {
     this._rediscl = factory._rediscl;
     this._cache = {};
 
-    this._rediscl.hset (this._id, 'name',   this._name);
-    this._rediscl.hset (this._id, 'ns', this._ns);
+    this._rediscl.hset (this._id, 'name', this._name);
+    this._rediscl.hset (this._id, 'ns',   this._ns);
 
 //    console.log ('created redis stats with ns %s, name %s, options %j', ns, name, opts);
   }
 
 
-  type() { 
+  type() {
     return this._factory.type();
-   }
+  }
 
+  ns () {
+    return this._ns;
+  }
 
-   ns () {
-     return this._ns;
-   }
- 
-
-   name () {
-     return this._name;
-   }
-
+  name () {
+    return this._name;
+  }
 
   values(cb) {
-    this._rediscl.hgetall (this._id, function (err, v) {
-      if (err) {
-        return cb(err);
-      }
+    this._rediscl.hgetall (this._id, (err, v) => {
+      if (err) return cb(err);
 
       // convert values to numeric
       var ret = {};
@@ -60,6 +55,23 @@ class RedisStats {
     });
   }
 
+  paused (val, cb) {
+    if (!cb) {
+      // get, val is cb
+      cb = val;
+      val = undefined;
+
+      this._rediscl.hget (this._id, 'paused', (err, res) => {
+        if (err) return cb(err);
+        if (!res) return cb(null, false);
+        return (res == 'true' ? true : false);
+      });
+    }
+    else {
+      // set
+      this._rediscl.hset (this._id, 'paused', val ? 'true' : 'false', err => cb (err));
+    }
+  }
 
   _flush (cb) {
     _.forEach (this._cache, (value, key) => {
@@ -110,13 +122,13 @@ class RedisStats {
     if ((delta === null) || (delta === undefined)) delta = 1;
     this.incr(v, -delta, cb);
   }
-  
+
 
   opts (opts, cb) {
     if (!cb) {
       // get
       cb = opts;
-      this._rediscl.hget (this._id, 'opts', function (err, res){
+      this._rediscl.hget (this._id, 'opts', (err, res) => {
         if (err) return cb(err);
         if (!res) return cb(null, {});
         try {
@@ -133,7 +145,7 @@ class RedisStats {
       this._rediscl.hset (this._id, 'opts', JSON.stringify (opts || {}), cb);
     }
   }
-  
+
 
   topology (tplg, cb) {
     if (!cb) {
@@ -156,13 +168,13 @@ class RedisStats {
       this._rediscl.hset (this._id, 'topology', JSON.stringify (tplg), cb);
     }
   }
-  
+
 
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
     var self = this;
-    
+
     var tasks = [
       function (cb) {self._rediscl.hdel(self._id, 'opts', cb);},
       function (cb) {self._rediscl.hdel(self._id, 'topology', cb);}
@@ -207,7 +219,7 @@ class RedisStatsFactory {
       this._instances [k] = new RedisStats (ns, name, this, opts);
 //        console.log ('created redis stats with ns %s, name %s, opts %j', ns, name, opts);
     }
-    
+
     return this._instances [k];
   }
 
@@ -231,7 +243,7 @@ class RedisStatsFactory {
               if (err) {
                 return cb(err);
               }
-        
+
               var ret = {counters: {}};
               for (let k in v) {
                 if (k.startsWith ('counter_')) {
@@ -247,12 +259,12 @@ class RedisStatsFactory {
                   ret[k] = v[k];
                 }
               }
-        
+
               cb (null, ret);
             });
           };
         });
-          
+
         async.parallel (tasks, cb);
       }
       else {
@@ -278,7 +290,7 @@ class RedisStatsFactory {
         v.close (cb);
       });
     });
-    
+
     async.series ([
       (cb) => async.parallel (tasks, cb),
       (cb) => {
@@ -296,7 +308,7 @@ function creator (opts, cb) {
   }
 
   if (!opts) opts = {};
-  
+
   return cb (null, new RedisStatsFactory (opts));
 }
 

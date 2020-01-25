@@ -49,6 +49,27 @@ class MongoStats {
     });
   }
 
+  paused (val, cb) {
+    if (!cb) {
+      // get, val is cb
+      cb = val;
+      val = undefined;
+
+      this._coll().findOne ({_id: this._id}, {projection: {paused: 1}}, (err, res) => {
+        if (err) return cb (err);
+//        console.log ('mongo stats - paused: get %s -> %j', this._name, res);
+        cb (null, (res && res.paused) || false);
+      });
+    }
+    else {
+      // set
+      var upd = {$set: {paused : val}};
+      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
+//        console.log ('mongo stats: updated %s -> %j', this._name, upd);
+        cb (err);
+      });
+    }
+  }
 
   _flush (cb) {
     var upd = {$inc: {}};

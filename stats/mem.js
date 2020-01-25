@@ -8,10 +8,11 @@ class MemStats {
       name: name,
       counters: {},
       opts: {},
-      topology: {}
+      topology: {},
+      paused: false
     };
   }
-  
+
   type () {
     return this._factory.type ();
   }
@@ -27,22 +28,36 @@ class MemStats {
   values (cb) {
     cb (null, this._s.counters);
   }
-  
+
+  paused (val, cb) {
+    if (!cb) {
+      // get, val is cb
+      cb = val;
+      val = undefined;
+      cb (null, this._paused);
+    }
+    else {
+      // set
+      this._paused = val;
+      cb ();
+    }
+  }
+
   incr (v, delta, cb) {
     if (!this._s.counters[v]) {
       this._s.counters[v] = 0;
     }
-    
+
     if ((delta == null) || (delta == undefined)) delta = 1;
     this._s.counters[v] = this._s.counters[v] + delta;
     if (cb) cb(null, this._s.counters[v]);
   }
-  
+
   decr (v, delta, cb) {
     if ((delta == null) || (delta == undefined)) delta = 1;
     this.incr (v, -delta, cb);
   }
-  
+
   opts (opts, cb) {
     if (!cb) {
       // get
@@ -55,7 +70,7 @@ class MemStats {
       cb ();
     }
   }
-  
+
   topology (tplg, cb) {
     if (!cb) {
       // get
@@ -73,11 +88,11 @@ class MemStats {
     this._s.counters = {}
     this._s.opts = {};
     this._s.topology = {};
-    
-    // TODO remove from factory 
-    
+
+    // TODO remove from factory
+
     if (cb) cb();
-  } 
+  }
 
   close (cb) {
     cb ();
@@ -93,7 +108,7 @@ class MemStatsFactory {
   static Type () {
     return 'mem';
   }
-  
+
   type () {
     return Type ();
   }
@@ -147,7 +162,7 @@ function creator (opts, cb) {
     cb = opts;
     opts = null;
   }
-  
+
   return cb (null, new MemStatsFactory (opts));
 }
 
