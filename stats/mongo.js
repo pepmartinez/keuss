@@ -254,7 +254,8 @@ class MongoStatsFactory {
             name: elem.name,
             counters: elem.counters,
             topology: elem.topology,
-            opts: elem.opts
+            opts: elem.opts,
+            paused: elem.paused || false
           };
         });
 

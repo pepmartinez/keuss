@@ -19,20 +19,20 @@ var tests = {
   Mongo: Mongo
 };
 
-_.forEach (tests, function (CL, CLName) {
+_.forEach (tests, (CL, CLName) => {
 
   describe (CLName + ' stats provider', function () {
-    
-    before (function (done) {
+
+    before (done => {
       done();
     });
-    
-    after  (function (done) {
+
+    after  (done => {
       done();
     });
-    
-    it ('creates ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('creates ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
         mem.values (function (err, vals) {
@@ -41,156 +41,171 @@ _.forEach (tests, function (CL, CLName) {
         });
       });
     });
-    
-    it ('initializes ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('initializes ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.incr ('v1', 1, cb)},
-          function (cb) {mem.incr ('v2', 1, cb)},
-          function (cb) {mem.incr ('v3', 1, cb)}
-        ], function(err, results) {
-          setTimeout (function () {
+          cb => mem.incr ('v1', 1, cb),
+          cb => mem.incr ('v2', 1, cb),
+          cb => mem.incr ('v3', 1, cb)
+        ], (err, results) => {
+          async.series ([
+            cb => setTimeout (cb, 200),
+            cb => mem.values (cb),
+            cb => mem.paused (cb)
+          ], (err, res) => {
+            if (err) return done (err);
             mem.ns().should.equal (ns);
             mem.name().should.equal (name);
-            mem.values (function (err, vals) {
-              vals.should.eql ({v1: 1, v2: 1, v3: 1});
-              mem.clear (function (err) {
-                ftry.close(done);
-              });
-            });
-          }, 200);
+            res[1].should.eql ({v1: 1, v2: 1, v3: 1});
+            res[2].should.eql (false);
+            mem.clear (() => ftry.close(done));
+          });
         });
       });
     });
-    
-    it ('increments (default by 1) ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('increments (default by 1) ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.incr ('v1', 0, cb)},
-          function (cb) {mem.incr ('v1', undefined, cb)},
-          function (cb) {mem.incr ('v1', undefined, cb)}
-        ], function(err, results) {
-          setTimeout (function () {
-            mem.values (function (err, vals) {
-              vals.should.eql ({v1: 2});
-              mem.clear (function (err) {
-                ftry.close(done);
-              });
-            });
-          }, 200);
+          cb => mem.clear (cb),
+          cb => mem.incr ('v1', 0, cb),
+          cb => mem.incr ('v1', undefined, cb),
+          cb => mem.incr ('v1', undefined, cb)
+        ], (err, results) => {
+          setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({v1: 2});
+            mem.clear (() => ftry.close(done));
+          }), 200);
         });
       });
     });
-    
-    it ('increments (explicit deltas) ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('increments (explicit deltas) ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.incr ('v1', 0, cb)},
-          function (cb) {mem.incr ('v1', undefined, cb)},
-          function (cb) {mem.incr ('v1', 3, cb)}
-        ], function(err, results) {
-          setTimeout (function () {
-            mem.values (function (err, vals) {
-              vals.should.eql ({v1: 4});
-              ftry.close(done);
-            });
-          }, 200);
+          cb => mem.clear (cb),
+          cb => mem.incr ('v1', 0, cb),
+          cb => mem.incr ('v1', undefined, cb),
+          cb => mem.incr ('v1', 3, cb)
+        ], (err, results) => {
+          setTimeout ( () => mem.values ((err, vals) => {
+            vals.should.eql ({v1: 4});
+            ftry.close(done);
+          }), 200);
         });
       });
     });
-    
-    it ('decrements (default by 1) ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('decrements (default by 1) ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.incr ('v1', 1, cb)},
-          function (cb) {mem.incr ('v1', undefined, cb)},
-          function (cb) {mem.decr ('v1', undefined, cb)}
-        ], function(err, results) {
-          setTimeout (function () {
-            mem.values (function (err, vals) {
-              vals.should.eql ({v1: 1});
-              ftry.close(done);
-            });
-          }, 200);
+          cb => mem.clear (cb),
+          cb => mem.incr ('v1', 1, cb),
+          cb => mem.incr ('v1', undefined, cb),
+          cb => mem.decr ('v1', undefined, cb)
+        ], (err, results) => {
+          setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({v1: 1});
+            ftry.close(done);
+          }), 200);
         });
       });
     });
-    
-    it ('decrements (explicit deltas) ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('decrements (explicit deltas) ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.incr ('v1', 0, cb)},
-          function (cb) {mem.incr ('v1', 6, cb)},
-          function (cb) {mem.decr ('v1', 4, cb)},
-          function (cb) {
-            setTimeout (function () {
-              mem.values (function (err, vals) {vals.should.eql ({v1: 2});cb();});
-            }, 200);
-          },
-          function (cb) {mem.decr ('v1', 4, cb)},
-          function (cb) {
-            setTimeout (function () {
-              mem.values (function (err, vals) {vals.should.eql ({v1: -2});cb();});
-            }, 200);
-          }
-        ], function(err, results) {
+          cb => mem.clear (cb),
+          cb => mem.incr ('v1', 0, cb),
+          cb => mem.incr ('v1', 6, cb),
+          cb => mem.decr ('v1', 4, cb),
+          cb => setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({v1: 2});
+            cb();
+          }), 200),
+          cb => mem.decr ('v1', 4, cb),
+          cb => setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({v1: -2});
+            cb();
+          }), 200)
+        ], (err, results) => {
           ftry.close();
           done (err);
         });
       });
     });
-    
-    it ('manages topology ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('manages topology ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
         var topology = {a:1, b: {t:'yy', tt: 99}};
 
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.topology (topology, cb)},
-          function (cb) {
-            setTimeout (function () {
-              mem.topology (function (err, tplg) {
-                tplg.should.eql (topology);
-                cb();
-              });
-            }, 200);
-          },
-          function (cb) {mem.clear (cb)},
-          function (cb) {
-            setTimeout (function () {
-              cb();
-            }, 200);
-          }
-        ], function(err, results) {
+          cb => mem.clear (cb),
+          cb => mem.topology (topology, cb),
+          cb => setTimeout (() => mem.topology ((err, tplg) => {
+            tplg.should.eql (topology);
+            cb();
+          }), 200),
+          cb => mem.clear (cb),
+          cb => setTimeout (cb, 200)
+        ], (err, results) => {
           ftry.close();
           done (err);
         });
       });
     });
-    
-    it ('manages concise & full listing ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('manages pause/resume ok', done => {
+      CL ((err, ftry) => {
+        if (err) return done(err);
+        var mem = ftry.stats (ns, name);
+
+        async.series([
+          cb => mem.clear (cb),
+          cb => mem.paused (cb),
+          cb => mem.paused (true, cb),
+          cb => mem.paused (cb),
+          cb => mem.paused (false, cb),
+          cb => mem.paused (cb),
+          cb => mem.paused (false, cb),
+          cb => mem.paused (cb),
+          cb => setTimeout (cb, 200)
+        ], (err, results) => {
+          results.should.eql ([ undefined,
+  false,
+  undefined,
+  true,
+  undefined,
+  false,
+  undefined,
+  false,
+  undefined ]);
+          ftry.close();
+          done (err);
+        });
+      });
+    });
+
+    it ('manages concise & full listing ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem1 = ftry.stats (ns, name);
         var mem2 = ftry.stats (ns, name + '-2');
@@ -200,68 +215,58 @@ _.forEach (tests, function (CL, CLName) {
         var topology2 = {a:17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7};
 
         async.series([
-          function (cb) {mem1.clear (cb)},
-          function (cb) {mem2.clear (cb)},
-          function (cb) {mem1.topology (topology1, cb)},
-          function (cb) {mem2.topology (topology2, cb)},
-          function (cb) {mem1.opts (opts1, cb)},
-          function (cb) {mem2.opts (opts2, cb)},
-          function (cb) {mem1.incr ('v1', 8, cb)},
-          function (cb) {mem1.incr ('v2', 6, cb)},
-          function (cb) {mem2.incr ('v1', 4, cb)},
-          function (cb) {mem2.incr ('v3', 45, cb)},
-          function (cb) {
-            setTimeout (function () {
-              ftry.queues (ns, function (err, res) {
-                if (err) return cb (err);
-                res.sort().should.eql ([ 'test-stats', 'test-stats-2' ]);
-                cb ();
-              });
-            }, 200);
-          },
-          function (cb) {
-            setTimeout (function () {
-              ftry.queues (ns, {full: true}, function (err, res) {
-                if (err) return cb (err);
-                res.should.eql ({ 
-                  'test-stats': { name: 'test-stats', ns: 'some-class', topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 } },
-                  'test-stats-2': { name: 'test-stats-2', ns: 'some-class', topology: topology2, opts: opts2, counters: {v1: 4, v3: 45} } 
-                });
-              
-                cb ();
-              });
-            }, 200);
-          }
-        ], function(err, results) {
+          cb => mem1.clear (cb),
+          cb => mem2.clear (cb),
+          cb => mem1.topology (topology1, cb),
+          cb => mem2.topology (topology2, cb),
+          cb => mem1.opts (opts1, cb),
+          cb => mem2.opts (opts2, cb),
+          cb => mem1.incr ('v1', 8, cb),
+          cb => mem1.incr ('v2', 6, cb),
+          cb => mem2.incr ('v1', 4, cb),
+          cb => mem2.incr ('v3', 45, cb),
+          cb => setTimeout (() => ftry.queues (ns, (err, res) => {
+            if (err) return cb (err);
+            res.sort().should.eql ([ 'test-stats', 'test-stats-2' ]);
+            cb ();
+          }), 200),
+          cb => setTimeout (() => ftry.queues (ns, {full: true}, (err, res) => {
+            if (err) return cb (err);
+            res.should.eql ({
+              'test-stats': { name: 'test-stats', ns: 'some-class', topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 }, paused: false },
+              'test-stats-2': { name: 'test-stats-2', ns: 'some-class', topology: topology2, opts: opts2, counters: {v1: 4, v3: 45}, paused: false }
+            });
+
+            cb ();
+          }), 200)
+        ], (err, results) => {
           ftry.close();
           done (err);
         });
       });
     });
-    
-    it ('clears ok', function (done) {
-      CL (function (err, ftry) {
+
+    it ('clears ok', done => {
+      CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-      
+
         async.series([
-          function (cb) {mem.clear (cb)},
-          function (cb) {mem.incr ('v1', 0, cb)},
-          function (cb) {mem.incr ('v1', 6, cb)},
-          function (cb) {mem.incr ('v2', 6, cb)},
-          function (cb) {mem.decr ('v2', 4, cb)},
-          function (cb) {
-            setTimeout (function () {
-              mem.values (function (err, vals) {vals.should.eql ({v1: 6, v2: 2});cb();});
-            }, 200);
-          },
-          function (cb) {mem.clear (cb)},
-          function (cb) {
-            setTimeout (function () {
-              mem.values (function (err, vals) {vals.should.eql ({});cb();});
-            }, 200);
-          }
-        ], function(err, results) {
+          cb => mem.clear (cb),
+          cb => mem.incr ('v1', 0, cb),
+          cb => mem.incr ('v1', 6, cb),
+          cb => mem.incr ('v2', 6, cb),
+          cb => mem.decr ('v2', 4, cb),
+          cb => setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({v1: 6, v2: 2});
+            cb();
+          }), 200),
+          cb => mem.clear (cb),
+          cb => setTimeout (() => mem.values ((err, vals) => {
+            vals.should.eql ({});
+            cb();
+          }), 200)
+        ], (err, results) => {
           ftry.close();
           done (err);
         });

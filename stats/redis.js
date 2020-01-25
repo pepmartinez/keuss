@@ -66,7 +66,7 @@ class RedisStats {
       this._rediscl.hget (this._id, 'paused', (err, res) => {
         if (err) return cb(err);
         if (!res) return cb(null, false);
-        return (res == 'true' ? true : false);
+        return cb (null, (res == 'true' ? true : false));
       });
     }
     else {
@@ -257,10 +257,18 @@ class RedisStatsFactory {
                 else if (k == 'opts') {
                   ret[k] = JSON.parse (v[k]);
                 }
+                else if (k == 'opts') {
+                  ret[k] = JSON.parse (v[k]);
+                }
+                else if (k == 'paused') {
+                  ret[k] = (v[k] == 'true' ? true : false);
+                }
                 else {
                   ret[k] = v[k];
                 }
               }
+
+              if (ret.paused === undefined) ret.paused = false;
 
               cb (null, ret);
             });

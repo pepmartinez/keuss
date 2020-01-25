@@ -36,11 +36,11 @@ class MemStats {
       // get, val is cb
       cb = val;
       val = undefined;
-      cb (null, this._paused);
+      cb (null, this._s.paused);
     }
     else {
       // set
-      this._paused = val;
+      this._s.paused = val;
       cb ();
     }
   }
@@ -90,6 +90,7 @@ class MemStats {
     this._s.counters = {}
     this._s.opts = {};
     this._s.topology = {};
+    this._s.paused = false;
 
     // TODO remove from factory
 
