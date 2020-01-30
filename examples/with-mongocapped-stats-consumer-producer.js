@@ -20,8 +20,8 @@ var factory_opts = {
     }
   }
 };
-    
-// initialize factory 
+
+// initialize factory
 MQ (factory_opts, function (err, factory) {
   if (err) {
     return console.error (err);

@@ -2,25 +2,25 @@ var async = require ('async');
 var _ =     require ('lodash');
 var uuid =  require ('uuid');
 
-var debug = require('debug')('keuss:Queue');
+var debug = require('debug')('keuss:Queue:base');
 
 
 class Queue {
-  
+
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
   //////////////////////////////////////////////
     if (!name) {
       throw new Error ('provide a queue name');
     }
-    
+
     this._opts = opts || {};
 
     this._name = name;
     this._factory = factory;
-    
+
     // most mature
-    // values: 
+    // values:
     // * null: unknown, triggers read this.next_t() from backend
     // * 0:    known to be no element in queue, accepts values from insertNotifs
     // * <non-zero int>: a know value, to be trusted.  accepts values from insertNotifs if lower
@@ -28,10 +28,10 @@ class Queue {
 
     // defaults
     this._pollInterval = this._opts.pollInterval || 60000;
-    
+
     // map of active consumers
     this._consumers_by_tid = new Map();
-    
+
     this._signaller = factory._signaller_factory.signal (this, this._opts.signaller.opts);
     this._stats = factory._stats_factory.stats (factory.name(), this.name (), this._opts.stats.opts);
 
@@ -50,23 +50,23 @@ class Queue {
 
     debug ('created queue %s with opts %o', this._name, this._opts);
   }
-    
-  
+
+
   ////////////////////////////////////////////////////////////////////////////
   // expected redefinitions on subclasses
-  
+
   // add element to queue
   insert (entry, callback) {callback (null, null);}
-  
+
   // get element from queue
   get (callback) {callback (null, {mature: 0, payload: null, tries: 0});}
-  
+
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {callback (null, {mature: 0, payload: null, tries: 0}, null);}
-  
+
   // commit previous reserve, by p.id: call cb (err, true|false), true if element committed
   commit (id, callback) {callback (null, false);}
-  
+
   // rollback previous reserve, by p.id: call cb (err, true|false), true if element rolled back
   rollback (id, next_t, callback) {callback (null, false);}
 
@@ -75,22 +75,22 @@ class Queue {
 
   // queue size including non-mature elements
   totalSize (callback) {callback (null, 0);}
-  
+
   // queue size NOT including non-mature elements
   size (callback) {callback (null, 0);}
-  
+
   // queue size of non-mature elements only
   schedSize (callback) {callback (null, 0);}
-  
-  // Date of next 
+
+  // Date of next
   next_t (callback) {callback (null, null);}
 
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
-  
+
   stats    (cb) {this._stats.values (cb);}
   topology (cb) {this._stats.topology (cb);}
-    
+
   // placeholder methods
   name () {return this._name;}
   ns ()   {return this._factory.name();}
@@ -100,19 +100,19 @@ class Queue {
   capabilities () {
     return this._factory.capabilities ();
   }
-    
+
   // T of next mature
   nextMatureDate () {return this._next_mature_t;}
 
   static now ()             {return (new Date ());}
   static nowPlusSecs (secs) {return (new Date (Date.now () + secs * 1000));}
-  
-  
+
+
   /////////////////////////////////////////
   consumers () {
   /////////////////////////////////////////
     let r = [];
-    
+
     this._consumers_by_tid.forEach (function (value, key) {
       r.push ({
         tid: value.tid,
@@ -122,22 +122,25 @@ class Queue {
         wakeup_timeout: (value.wakeup_timeout ? 'set' : 'unset')
       });
     });
-    
+
     return r;
   }
-  
-  
+
+
   /////////////////////////////////////////
   nConsumers () {
   /////////////////////////////////////////
     return this._consumers_by_tid.size;
   }
 
-  
+
   /////////////////////////////////////////
   // called when an insertion has been signaled
   signalInsertion (mature, cb) {
-  /////////////////////////////////////////
+
+    // TODO ignore if paused
+
+
     if (_.isNull (this._next_mature_t)) {
       // totally ignore it, let pop() get it via next_t()
       debug ('%s: signalInsertion received with mature %s. _next_mature_t is null, ignoring', this._name, mature.toISOString ());
@@ -150,23 +153,24 @@ class Queue {
       this._next_mature_t = mature.getTime ();
     }
     else if (this._next_mature_t <= mature.getTime ()) {
-      // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it 
+      // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it
       debug ('%s: signalInsertion received with mature %s. _next_mature_t (%s) is lower, ignoring', this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
       if (cb) return cb ();
       else return;
     }
     else {
-      // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it 
+      // _next_mature_t is numeric and non-null, so an active wait is happening. ignore it
       debug ('%s: signalInsertion received with mature %s. _next_mature_t (%s) is higher, trusting notif', this._name, mature.toISOString (), new Date(this._next_mature_t).toISOString());
       this._next_mature_t = mature.getTime ();
     }
 
     this._nextDelta ((delta_ms) => {
-      // run a wakeup on all consumers with the wakeup timer set 
+      // run a wakeup on all consumers with the wakeup timer set
+      debug ('%s: signalInsertion: waking up all consumers with wakeup already set', this._name);
       this._consumers_by_tid.forEach ((consumer, tid) => {
         debug ('%s: signalInsertion: waking up consumer %d', this._name, tid);
 
-        if (consumer.wakeup_timeout) {       
+        if (consumer.wakeup_timeout) {
           clearTimeout (consumer.wakeup_timeout);
           consumer.wakeup_timeout = null;
 
@@ -180,14 +184,55 @@ class Queue {
           }
           else {
             setImmediate (() => this._onetime_pop (consumer));
-          } 
+          }
         }
       });
     });
 
     if (cb) cb ();
   }
-  
+
+
+  /////////////////////////////////////////
+  // called when a pause/resume has been signaled
+  signalPaused (paused, cb) {
+    if (paused == false) {
+      // run a wakeup on all consumers with or without wakeup timer set
+      debug ('%s: signalInsertion: waking up all consumers', this._name);
+
+      this._consumers_by_tid.forEach ((consumer, tid) => {
+        debug ('%s: signalInsertion: waking up consumer %s', this._name, tid);
+
+        if (consumer.wakeup_timeout) {
+          clearTimeout (consumer.wakeup_timeout);
+          consumer.wakeup_timeout = null;
+        }
+
+        setImmediate (() => this._onetime_pop (consumer));
+      });
+    }
+    else {
+      this._consumers_by_tid.forEach ((consumer_data, tid) => {
+        debug ('%s: pausing tid %s (cid %s)', this._name, tid, consumer_data.cid);
+
+        if (consumer_data.wakeup_timeout) {
+          clearTimeout (consumer_data.wakeup_timeout);
+          consumer_data.wakeup_timeout = null;
+        }
+      });
+    }
+
+    if (cb) cb ();
+  }
+
+
+  ////////////////////////////////////////
+  // pause/resume
+  pause (v) {
+    if (v == undefined) v = true;
+    this._stats.paused (v, () => this._signaller.signalPaused (v));
+  }
+
 
   //////////////////////////////////
   // empty local buffers
@@ -208,12 +253,12 @@ class Queue {
       callback = opts;
       opts = {};
     }
-    
+
     if (this._in_drain) return setImmediate (() => {
       debug ('%s: push while in drain, return error', this._name);
       callback ('drain');
     });
-    
+
     // get delay from either params or config
     var mature = null;
 
@@ -240,7 +285,7 @@ class Queue {
         debug ('%s: push : error when pushing elem: %o', this._name, err);
         return callback (err);
       }
-      
+
       this._stats.incr ('put');
       this._signal_insertion (mature);
 
@@ -248,14 +293,13 @@ class Queue {
       callback (null, result);
     })
   }
-  
-  
+
+
   //////////////////////////////////
   // obtain element from queue
   pop (cid, opts, callback) {
-  //////////////////////////////////
     // TODO fail if too many consumers?
-    
+
     if (this._drained) return setImmediate (() => {
       debug ('%s: pop while drained, return error', this._name);
       callback ('drain');
@@ -265,13 +309,13 @@ class Queue {
       callback = opts;
       opts = {};
     }
-    
+
     if (!opts) {
       opts = {};
     }
-    
+
     var tid = opts.tid || uuid.v4 ();
-    
+
     var consumer_data = {
       tid: tid,               // unique id for this transaction
       cid: cid,
@@ -281,9 +325,9 @@ class Queue {
       cleanup_timeout: null,  // timer for timeout cancellation
       wakeup_timeout: null     // timer for rearming, awaiting data available
     };
-    
+
     var self = this;
-    
+
     if (opts.timeout) {
       consumer_data.cleanup_timeout = setTimeout (function () {
         debug ('%s: pop: timed out %d msecs on transaction %s', self._name, opts.timeout, tid);
@@ -297,14 +341,17 @@ class Queue {
         self._consumers_by_tid.delete (consumer_data.tid);
 
         if (consumer_data.callback) consumer_data.callback ({
-          timeout: true, 
+          timeout: true,
           tid: consumer_data.tid,
           since: consumer_data.since
         });
       }, opts.timeout);
     }
-    
+
     this._consumers_by_tid.set (tid, consumer_data);
+
+    // TODO end here if paused
+
 
     // attempt a read
     debug ('%s: pop: calling initial onetime_pop on cid %s, tid %s', self._name, cid, tid);
@@ -312,15 +359,15 @@ class Queue {
 
     return tid;
   }
-  
-  
+
+
   //////////////////////////////////
   // high level commit
   ok (id, cb) {
     this.commit (id, cb);
   }
-  
-  
+
+
   //////////////////////////////////
   // high level rollback
   ko (id, next_t, cb) {
@@ -334,22 +381,21 @@ class Queue {
         debug ('%s: ko : error when rolling back tid %s: %o', this._name, id, err);
         return cb (err);
       }
-      
+
       if (res) {
         var t = new Date (next_t || null);
         debug ('%s: ko : tid %s rolled back, new mature is %s', this._name, id, t);
         this._signal_insertion (t);
       }
-      
+
       cb (null, res);
     });
   }
-  
-  
+
+
   //////////////////////////////////
   // cancel a waiting consumer
   cancel (tid) {
-  //////////////////////////////////
    debug ('%s: cancelling tid %s', this._name, tid);
 
     if (tid) {
@@ -373,7 +419,7 @@ class Queue {
         clearTimeout (consumer_data.cleanup_timeout);
         consumer_data.cleanup_timeout = null;
       }
-      
+
       if (consumer_data.wakeup_timeout) {
         clearTimeout (consumer_data.wakeup_timeout);
         consumer_data.wakeup_timeout = null;
@@ -400,7 +446,7 @@ class Queue {
           clearTimeout (consumer_data.cleanup_timeout);
           consumer_data.cleanup_timeout = null;
         }
-       
+
         if (consumer_data.wakeup_timeout) {
           clearTimeout (consumer_data.wakeup_timeout);
           consumer_data.wakeup_timeout = null;
@@ -416,7 +462,7 @@ class Queue {
   status (cb) {
   //////////////////////////////////
     var self = this;
-      
+
     async.parallel ({
       type:          function (cb) {cb (null, self.type())},
       stats:         function (cb) {self.stats (cb)},
@@ -427,8 +473,8 @@ class Queue {
       schedSize:     function (cb) {self.schedSize (cb)}
     }, cb);
   }
-  
-  
+
+
   ///////////////////////////////////////////////////////////////////////////////
   // private parts
 
@@ -437,7 +483,7 @@ class Queue {
     var self = this;
     var getOrReserve_cb = function (err, result) {
       debug ('%s - tid %s: called getOrReserve_cb : err %o, result %o', self._name, consumer.tid, err, result);
-      
+
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         // do not reinsert if it's using reserve
@@ -445,7 +491,7 @@ class Queue {
           return self._reinsert (result);
         }
       }
-      
+
       // TODO eat up errors?
       if (err) {
         // get/reserve in error
@@ -456,7 +502,7 @@ class Queue {
           clearTimeout (consumer.cleanup_timeout);
           consumer.cleanup_timeout = null;
         }
-      
+
         // remove consumer from map
         self._consumers_by_tid.delete (consumer.tid);
 
@@ -467,7 +513,7 @@ class Queue {
 
       if (!result) {
         // queue is empty or non-mature: put us to sleep, to-rearm-in-future
-    
+
         debug ('%s - tid %s: getOrReserve_cb no result, setting wakeup', self._name, consumer.tid);
 
         // clear this._next_mature_t if it's in the past
@@ -489,12 +535,12 @@ class Queue {
               self._onetime_pop (consumer);
             },
             delta_ms
-          ); 
+          );
         });
 
         return;
       }
-      
+
       // got an element
       self._next_mature_t = null;
       self._stats.incr ('get');
@@ -506,15 +552,15 @@ class Queue {
         clearTimeout (consumer.cleanup_timeout);
         consumer.cleanup_timeout = null;
       }
-        
+
       // remove consumer from map
       self._consumers_by_tid.delete (consumer.tid);
 
       // call final callback
-      if (consumer.callback) consumer.callback (null, result);  
+      if (consumer.callback) consumer.callback (null, result);
       return;
     };
-    
+
     if (consumer.reserve) {
       this.reserve (getOrReserve_cb);
     }
@@ -571,8 +617,7 @@ class Queue {
     }
   }
 
-  
-  
+
   ///////////////////////////////////////////////////////////
   _reinsert (result) {
     if (result) {
