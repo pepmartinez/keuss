@@ -137,9 +137,11 @@ class Queue {
   /////////////////////////////////////////
   // called when an insertion has been signaled
   signalInsertion (mature, cb) {
-
-    // TODO ignore if paused
-
+    // ignore if paused
+    if (this._local_paused) {
+      if (cb) return cb ();
+      else return;
+    }
 
     if (_.isNull (this._next_mature_t)) {
       // totally ignore it, let pop() get it via next_t()
@@ -167,6 +169,7 @@ class Queue {
     this._nextDelta ((delta_ms) => {
       // run a wakeup on all consumers with the wakeup timer set
       debug ('%s: signalInsertion: waking up all consumers with wakeup already set', this._name);
+
       this._consumers_by_tid.forEach ((consumer, tid) => {
         debug ('%s: signalInsertion: waking up consumer %d', this._name, tid);
 
@@ -196,12 +199,15 @@ class Queue {
   /////////////////////////////////////////
   // called when a pause/resume has been signaled
   signalPaused (paused, cb) {
+    debug ('%s: signalPaused: received pause notif %s', this._name, paused ? 'true' : 'false');
+    this._local_paused = paused;
+
     if (paused == false) {
       // run a wakeup on all consumers with or without wakeup timer set
-      debug ('%s: signalInsertion: waking up all consumers', this._name);
+      debug ('%s: signaPaused: waking up all consumers', this._name);
 
       this._consumers_by_tid.forEach ((consumer, tid) => {
-        debug ('%s: signalInsertion: waking up consumer %s', this._name, tid);
+        debug ('%s: signalPaused: waking up consumer %s', this._name, tid);
 
         if (consumer.wakeup_timeout) {
           clearTimeout (consumer.wakeup_timeout);
@@ -326,11 +332,9 @@ class Queue {
       wakeup_timeout: null     // timer for rearming, awaiting data available
     };
 
-    var self = this;
-
     if (opts.timeout) {
-      consumer_data.cleanup_timeout = setTimeout (function () {
-        debug ('%s: pop: timed out %d msecs on transaction %s', self._name, opts.timeout, tid);
+      consumer_data.cleanup_timeout = setTimeout (() => {
+        debug ('%s: pop: timed out %d msecs on transaction %s', this._name, opts.timeout, tid);
         consumer_data.cleanup_timeout = null;
 
         if (consumer_data.wakeup_timeout) {
@@ -338,7 +342,7 @@ class Queue {
           consumer_data.wakeup_timeout = null;
         }
 
-        self._consumers_by_tid.delete (consumer_data.tid);
+        this._consumers_by_tid.delete (consumer_data.tid);
 
         if (consumer_data.callback) consumer_data.callback ({
           timeout: true,
@@ -350,14 +354,37 @@ class Queue {
 
     this._consumers_by_tid.set (tid, consumer_data);
 
-    // TODO end here if paused
+    // end here if paused
+    if (this._local_paused == undefined) {
+      debug ('%s: local_paused undefined, read it from stats', this._name);
 
+      this._stats.paused (v => {
+        this._local_paused = v;
 
-    // attempt a read
-    debug ('%s: pop: calling initial onetime_pop on cid %s, tid %s', self._name, cid, tid);
-    this._onetime_pop (consumer_data);
+        if (!this._local_paused) {
+          // attempt a read
+          debug ('%s: pop: calling initial onetime_pop on cid %s, tid %s', this._name, cid, tid);
+          this._onetime_pop (consumer_data);
+        }
+        else {
+          debug ('%s: pop: queue paused for cid %s, tid %s', this._name, cid, tid);
+        }
+      });
 
-    return tid;
+      return tid;
+    }
+    else {
+      if (!this._local_paused) {
+        // attempt a read
+        debug ('%s: pop: calling initial onetime_pop on cid %s, tid %s', this._name, cid, tid);
+        this._onetime_pop (consumer_data);
+      }
+      else {
+        debug ('%s: pop: queue paused for cid %s, tid %s', this._name, cid, tid);
+      }
+
+      return tid;
+    }
   }
 
 

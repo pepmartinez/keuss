@@ -14,30 +14,30 @@ var factory = null;
 
     before (function (done) {
       var opts = {};
-    
+
       MQ (opts, function (err, fct) {
         if (err) return done (err);
         factory = fct;
         done();
       });
     });
-  
-    after (function (done) {
-      factory.close (function (err) {
-        done (err);
-      });
-    });
-  
+
+
+    after (done => async.series ([
+      cb => setTimeout (cb, 1000),
+      cb => factory.close (cb)
+    ], done));
+
     it ('3-elem pipeline flows begin to end', function (done){
       var q_opts = {};
       var q1 = factory.queue ('test_1_pl_1', q_opts);
       var q2 = factory.queue ('test_1_pl_2', q_opts);
       var q3 = factory.queue ('test_1_pl_3', q_opts);
-    
+
       // tie them up, q1 -> q2 -> q3
       var pll1 = new PLL (q1, q2);
       var pll2 = new PLL (q2, q3);
-      
+
       pll1.start (function (elem, done0) {
         var pl = elem.payload;
         pl.pll1 = 'done';
@@ -51,7 +51,7 @@ var factory = null;
       });
 
       var pop_opts = {};
-      
+
       q3.pop ('c', pop_opts, function (err, res) {
         if (err) {
           return done (err);
@@ -63,7 +63,7 @@ var factory = null;
         res.payload.should.eql ({ a: 5, b: 'see it run...', pll1: 'done', pll2: 'done' });
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
-      
+
         done ();
       });
 
@@ -80,7 +80,7 @@ var factory = null;
       // intermediate state
       var stage1_retries = 0;
       var stage2_retries = 0;
-    
+
       // tie them up, q1 -> q2 -> q3
       var pll1 = new PLL (q1, q2);
       var pll2 = new PLL (q2, q3);
@@ -93,19 +93,19 @@ var factory = null;
           stage1_retries++;
           done0 ({e: 'error, retry'});
         }
-        else 
+        else
           done0();
       });
 
       pll2.start (function (elem, done0) {
         var pl = elem.payload;
         pl.pll2++;
-        
+
         if ((pl.a == 1) && (elem.tries < 3)) {
           stage2_retries++;
           done0 ({e: 'error, retry'});
         }
-        else 
+        else
            done0();
       });
 
@@ -138,10 +138,10 @@ var factory = null;
         res[4].payload.should.eql ({ a: 3, b: 'see it run...', pll1: 1, pll2: 1 });
         res[4].tries.should.equal (0);
         res[4]._q.should.equal ('test_2_pl_3');
-      
+
         pll1.stop();
         pll2.stop ();
-  
+
         done ();
       });
 
@@ -152,6 +152,6 @@ var factory = null;
       });
     });
 
-    
+
   });
 });

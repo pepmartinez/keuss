@@ -20,17 +20,18 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
       done();
     });
   });
-  
-  
-  after (function (done) {
-    factory.close (done);
-  });
-  
+
+
+  after (done => async.series ([
+    cb => setTimeout (cb, 1000),
+    cb => factory.close (cb)
+  ], done));
+
   it ('queue is created empty and ok', function (done){
     var q = factory.queue('test_queue');
     should.equal (q.nextMatureDate (), null);
     q.name ().should.equal ('test_queue');
-    
+
     async.series([
       function (cb) {q.stats(cb)},
       function (cb) {q.size (cb)},
@@ -41,11 +42,11 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
       done();
     });
   });
-  
+
 
   it ('sequential push & pops, go as expected', function (done){
     var q = factory.queue('test_queue');
-    
+
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
       function (cb) {q.push ({elem:2, pl:'twetrwte'}, cb)},
@@ -91,11 +92,11 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
       done();
     });
   });
-  
-  
+
+
   it ('pop cancellation works as expected', function (done){
     var q = factory.queue('test_queue');
-    
+
     async.series([
       function (cb) {
         var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
@@ -132,6 +133,6 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
       done();
     });
   });
-  
+
 });
 });

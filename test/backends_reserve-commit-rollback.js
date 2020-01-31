@@ -1,5 +1,6 @@
 var async = require('async');
 var should = require('should');
+var MongoClient = require ('mongodb').MongoClient;
 
 var factory = null;
 
@@ -13,7 +14,9 @@ var factory = null;
     var MQ = MQ_item.mq;
 
     before(function (done) {
-      var opts = {};
+      var opts = {
+        url: 'mongodb://localhost/keuss_test_backends_rcr',
+      };
 
       MQ(opts, function (err, fct) {
         if (err) return done(err);
@@ -22,9 +25,14 @@ var factory = null;
       });
     });
 
-    after(function (done) {
-      factory.close(done);
-    });
+    after (done => async.series ([
+      cb => setTimeout (cb, 1000),
+      cb => factory.close (cb),
+      cb => MongoClient.connect ('mongodb://localhost/keuss_test_backends_rcr', (err, cl) => {
+        if (err) return done (err);
+        cl.db().dropDatabase (() => cl.close (cb))
+      })
+    ], done));
 
     it('queue is created empty and ok', function (done) {
       var q = factory.queue('test_queue');

@@ -45,6 +45,7 @@ var factory = null;
 
         after (done => {
           async.series ([
+            cb => setTimeout (cb, 1000),
             cb => factory.close (cb),
             cb => MongoClient.connect ('mongodb://localhost/keuss_test_pause', (err, cl) => {
               if (err) return done (err);
@@ -58,6 +59,7 @@ var factory = null;
 
           async.series ([
             cb => q._stats.clear (cb),
+
             cb => async.parallel ([
               cb => q.push ({q:0, a: 'ryetyeryre 0'}, cb),
               cb => q.push ({q:1, a: 'ryetyeryre 1'}, cb),
@@ -79,14 +81,16 @@ var factory = null;
               cb => setTimeout (() => {q.pause(false); cb ();}, 2000),
             ], cb),
 
+            cb => setTimeout (cb, 1000),
+
             cb => q.stats(cb),
             cb => q.size (cb),
             cb => q._stats.clear (cb),
 
           ], (err, res) => {
             if (err) return done (err);
-            res[3].should.eql ({ put: 6, get: 6 });
-            res[4].should.equal (0);
+            res[4].should.eql ({ put: 6, get: 6 });
+            res[5].should.equal (0);
             q.nConsumers().should.equal (0);
 
             done ();

@@ -27,9 +27,9 @@ _.forEach (tests, (CL, CLName) => {
       done();
     });
 
-    after  (done => {
-      done();
-    });
+    after (done => async.series ([
+      cb => setTimeout (cb, 1000),
+    ], done));
 
     it ('creates ok', done => {
       CL ((err, ftry) => {

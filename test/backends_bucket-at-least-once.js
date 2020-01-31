@@ -20,18 +20,19 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       done();
     });
   });
-  
-  
-  after (function (done) {
-    factory.close (done);
-  });
-  
+
+
+  after (done => async.series ([
+    cb => setTimeout (cb, 1000),
+    cb => factory.close (cb)
+  ], done));
+
 
   it ('queue is created empty and ok', function (done){
     var q = factory.queue('test_queue_1');
     should.equal (q.nextMatureDate (), null);
     q.name ().should.equal ('test_queue_1');
-    
+
     async.series([
       function (cb) {q.stats(cb)},
       function (cb) {q.size (cb)},
@@ -42,11 +43,11 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       done();
     });
   });
-  
+
 
   it ('sequential push & pops, go as expected', function (done){
     var q = factory.queue('test_queue_2');
-    
+
     async.series([
       function (cb) {q.push ({elem:1, pl:'twetrwte'}, cb)},
       function (cb) {q.push ({elem:2, pl:'twetrwte'}, cb)},
@@ -92,11 +93,11 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       done();
     });
   });
-  
-  
+
+
   it ('pop cancellation works as expected', function (done){
     var q = factory.queue('test_queue_3');
-    
+
     async.series([
       function (cb) {
         var tid1 = q.pop ('c1', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
@@ -133,11 +134,11 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       done();
     });
   });
-  
+
 
   it ('push & pop on 2 buckets ok', function (done) {
     var q = factory.queue('test_queue_4');
-    
+
     async.series([
       (cb) => q.push ({elem:1, pl:'twetrwte'}, cb),
       (cb) => q.push ({elem:2, pl:'twetrwte'}, cb),
@@ -165,7 +166,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:5, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:6, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:7, pl:'twetrwte'}); cb (err); })},
-      
+
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
       (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7}); cb(); }),
     ], function(err, results) {
@@ -177,7 +178,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
 
   it ('push & pop with delay ok', function (done) {
     var q = factory.queue('test_queue_5');
-    
+
     async.series([
       (cb) => q.push ({elem:1, pl:'twetrwte'}, {delay: 4}, cb),
       (cb) => q.push ({elem:2, pl:'twetrwte'}, {delay: 2}, cb),
@@ -206,7 +207,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:2, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:3, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:4, pl:'twetrwte'}); cb (err); })},
-      
+
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
       (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7}); cb(); }),
     ], function(err, results) {
@@ -218,7 +219,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
 
   it ('insert & rejections over various buckets go as expected', function (done) {
     var q = factory.queue('test_queue_6');
-    
+
     async.series([
       (cb) => q.push ({elem:1, pl:'twetrwte'}, cb),
       (cb) => q.push ({elem:2, pl:'twetrwte'}, cb),
@@ -237,19 +238,19 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
 
       (cb) => {
         q.pop ('c1', {reserve: true}, (err, ret) => {
-          ret.payload.should.eql ({elem:1, pl:'twetrwte'}); 
+          ret.payload.should.eql ({elem:1, pl:'twetrwte'});
           q.ko (ret._id, (new Date().getTime() + 5000 ), (err, res) => {
             should (res).equal (true);
             cb (err);
           });
         });
       },
-      
+
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:2, pl:'twetrwte'}); cb (err); })},
 
       (cb) => {
         q.pop ('c1', {reserve: true}, (err, ret) => {
-          ret.payload.should.eql ({elem:3, pl:'twetrwte'}); 
+          ret.payload.should.eql ({elem:3, pl:'twetrwte'});
           q.ko (ret._id, (new Date().getTime() + 3000 ), (err, res) => {
             should (res).equal (true);
             cb (err);
