@@ -1,5 +1,4 @@
-var mitt = require ('mitt');
-
+var mitt =   require ('mitt');
 var Signal = require ('../Signal');
 
 var debug = require('debug')('keuss:Signal:local');

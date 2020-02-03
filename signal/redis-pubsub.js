@@ -1,39 +1,64 @@
-var mitt = require ('mitt');
+var mitt =  require ('mitt');
+var async = require ('async');
 
 var RedisConn = require ('../utils/RedisConn');
 var Signal =    require ('../Signal');
 
 var debug = require('debug')('keuss:Signal:RedisPubsub');
 
+
 class RPSSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
     this._factory = factory;
-    
+
     this._channel = 'keuss:signal:' + queue.ns () + ':' + queue.name ();
     this._opts = opts || {};
-    var self = this;
-    
-    this._factory._emitter.on (this._channel, function (message) {
-      var mature = parseInt (message);
-      
-      debug ('got pubsub event on ch [%s], message is %s, calling master.emitInsertion(%d)', self._channel, message, mature);
-      self._master.signalInsertion (new Date (mature));
+
+    this._factory._emitter.on (this._channel, message => {
+      var msg = message.split (' ');
+
+      if (msg.length == 1) {
+        var mature = parseInt (message);
+        debug ('got insertion event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+        this._master.signalInsertion (new Date (mature));
+      }
+      else {
+        var cmd = msg[0];
+        switch (cmd) {
+          case 'p': {
+            // pause/resume
+            var paused = (msg[1] == 'true' ? true : false);
+            debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+            this._master.signalPaused (paused);
+          }
+          break;
+
+          default: {
+            debug ('unknown event [%s] on channel [%s]', message, this._channel);
+          }
+        }
+      }
     });
 
     this._rediscl_pub = this._factory._rediscl_pub;
     this._rediscl_sub = this._factory._rediscl_sub;
-    
+
     this._rediscl_sub.subscribe (this._channel);
 
     debug ('created redis-pubsub signaller for topic %s with opts %o', this._topic_name, opts);
   }
-    
+
   type () {return RPSSignalFactory.Type ()}
-  
-  emitInsertion (mature, cb) { 
-    debug ('emit redis pubsub on channel [%s] mature %d)', this._channel, mature);
-    this._rediscl_pub.publish (this._channel, mature.getTime());
+
+  emitInsertion (mature, cb) {
+    debug ('emit insertion on channel [%s] value [%d])', this._channel, mature);
+    this._rediscl_pub.publish (this._channel, mature.getTime() + '');
+  }
+
+  emitPaused (paused, cb) {
+    debug ('emit paused on channel [%s], value [%b]', this._channel, paused);
+    this._rediscl_pub.publish (this._channel, `p ${paused}`);
   }
 }
 
@@ -44,10 +69,9 @@ class RPSSignalFactory {
     this._rediscl_pub = RedisConn.conn (this._opts);
     this._rediscl_sub = RedisConn.conn (this._opts);
 
-    var self = this;
-    this._rediscl_sub.on ('message', function (channel, message) {
+    this._rediscl_sub.on ('message', (channel, message) => {
       // convey to local through mitt
-      self._emitter.emit (channel, message);
+      this._emitter.emit (channel, message);
     });
 
     debug ('created redis-pubsub factory with opts %o', opts);
@@ -62,12 +86,15 @@ class RPSSignalFactory {
   }
 
   close (cb) {
-    this._rediscl.quit (cb);
+    async.parallel ([
+      cb => this._rediscl_pub.quit (cb),
+      cb => this._rediscl_sub.quit (cb)
+    ], cb);
   }
 }
 
 
-function creator (opts, cb) {    
+function creator (opts, cb) {
   return cb (null, new RPSSignalFactory (opts));
 }
 

@@ -21,7 +21,9 @@ var factory = null;
     {label: 'redis', stats: require('../stats/redis')},
   ].forEach (stats_item => {
     [
-      {label: 'local', signal: require ('../signal/local')},
+      {label: 'local',        signal: require ('../signal/local')},
+      {label: 'redis-pubsub', signal: require ('../signal/redis-pubsub')},
+      {label: 'mongo-capped', signal: require ('../signal/mongo-capped')},
     ].forEach (signal_item => {
       describe (`pause/resume tests with backend ${backend_item.label}, stats ${stats_item.label}, signal ${signal_item.label}`, () => {
         var MQ = backend_item.backend;

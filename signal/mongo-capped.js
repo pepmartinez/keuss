@@ -5,30 +5,54 @@ var Signal = require ('../Signal');
 
 var debug = require('debug')('keuss:Signal:MongoCapped');
 
+
 class MCSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
     this._factory = factory;
-    
+
     this._topic_name = 'keuss:signal:' + queue.ns () + ':' + queue.name ();
     this._opts = opts || {};
-    var self = this;
-    
-    this._factory._channel.subscribe (this._topic_name, function (message) {
-      var mature = parseInt (message);
-      
-      debug ('got mongo-capped pubsub event on topic [%s], message is %s, calling master.emitInsertion(%d)', self._topic_name, message, mature);
-      self._master.signalInsertion (new Date (mature));
+
+    this._factory._channel.subscribe (this._topic_name, message => {
+      var msg = message.split (' ');
+
+      if (msg.length == 1) {
+        var mature = parseInt (message);
+        debug ('got insertion event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+        this._master.signalInsertion (new Date (mature));
+      }
+      else {
+        var cmd = msg[0];
+        switch (cmd) {
+          case 'p': {
+            // pause/resume
+            var paused = (msg[1] == 'true' ? true : false);
+            debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+            this._master.signalPaused (paused);
+          }
+          break;
+
+          default: {
+            debug ('unknown event [%s] on channel [%s]', message, this._channel);
+          }
+        }
+      }
     });
 
     debug ('created mongo-capped signaller for topic %s with opts %o', this._topic_name, opts);
   }
-    
+
   type () {return MCSignalFactory.Type ()}
-  
-  emitInsertion (mature, cb) { 
-    debug ('emit mongo-capped pubsub on topic [%s] mature %o)', this._topic_name, mature);
-    this._factory._channel.publish (this._topic_name, mature.getTime());
+
+  emitInsertion (mature, cb) {
+    debug ('emit insertion on topic [%s] value [%d])', this._topic_name, mature);
+    this._factory._channel.publish (this._topic_name, mature.getTime() + '');
+  }
+
+  emitPaused (paused, cb) {
+    debug ('emit paused on topic [%s], value [%b]', this._topic_name, paused);
+    this._factory._channel.publish (this._topic_name, `p ${paused}`);
   }
 }
 
@@ -41,9 +65,9 @@ class MCSignalFactory {
 
     this._opts = {};
     _.merge (this._opts, defaults, opts || {});
-    
+
     this._mubsub = mubsub (this._opts.url, this._opts.mongo_opts);
-    this._channel =  this._mubsub.channel (this._opts.channel, this._opts.channel_opts); 
+    this._channel =  this._mubsub.channel (this._opts.channel, this._opts.channel_opts);
 
     debug ('created mongo-capped factory with opts %o', opts);
   }
