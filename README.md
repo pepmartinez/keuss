@@ -26,6 +26,7 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
       - [Queue type](#queue-type)
       - [Queue occupation](#queue-occupation)
       - [Total Queue occupation](#total-queue-occupation)
+      - [Pause/Resume](#pauseresume)
       - [Time of schedule of next message](#time-of-schedule-of-next-message)
       - [Add element to queue](#add-element-to-queue)
       - [Get element from queue](#get-element-from-queue)
@@ -105,10 +106,17 @@ bucket-mongo-safe | x | x | - | - | +++++
 * *redis-pubsub*: uses the pubsub subsystem provided by redis
 * *mongo-capped*: uses pubsub on top of a mongodb capped collection, using [mubsub](https://www.npmjs.com/package/mubsub)
 
-So far, the only events published by keuss is *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago
+So far, the only events published by keuss are:
+* *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago
+* queue paused/resumed
 
 #### Stats
-**Stats** provides counters and metrics on queues, shared among keuss clients. So far, only 'elements inserted' and 'elements got' are maintained. Three options are provided:
+**Stats** provides counters and metrics on queues, shared among keuss clients. The supported stts are:
+* elements put
+* elements got
+* paused status
+
+Three options are provided to store the stats:
 * *mem*: very simple in-process, memory based
 * *redis*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms
 * *mongo*: backed by mongodb usnig one object per queue inside a singel collection. Modifications are buffered in memory and flushed every 100ms
@@ -250,11 +258,11 @@ q.stats (function (err, res) {
   ...
 })
 ```
-* res contains usage stats (elements insterted, elements extracted)
+* res contains usage stats (elements insterted, elements extracted, paused status)
 
 #### Queue name
 ```javascript
-var qnane = q.name ()
+var qname = q.name ()
 ```
 
 #### Queue type
@@ -278,6 +286,29 @@ q.totalSize (function (err, res){
 })
 ```
 res contains the number of elements in the queue (that is, including scheduled elements with a schedule time in the future)
+
+#### Pause/Resume
+```javascript
+// pauses the queue
+q.pause (true, function (err){
+  ...
+})
+
+// resumes the queue
+q.pause (false, function (err){
+  ...
+})
+
+// gets paused status of queue
+q.pause (function (err, is_paused){
+  ...
+})
+```
+Pauses/Resumes all consumers on this queue (calls to pop()). Producers are not afected (calls to push())
+
+The pause/resume condition is propagated via the signallers, so this affects all consumers, not only those local to the process, if a redis-pubsub or mongo-capped signaller is used
+
+Also, the paused condition is stored as stats, so any new call to pop() will honor it
 
 #### Time of schedule of next message
 ```javascript
