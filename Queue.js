@@ -90,6 +90,7 @@ class Queue {
 
   stats    (cb) {this._stats.values (cb);}
   topology (cb) {this._stats.topology (cb);}
+  paused   (cb) {this._stats.paused (cb);}
 
   // placeholder methods
   name () {return this._name;}
@@ -490,16 +491,15 @@ class Queue {
   //////////////////////////////////
   status (cb) {
   //////////////////////////////////
-    var self = this;
-
     async.parallel ({
-      type:          function (cb) {cb (null, self.type())},
-      stats:         function (cb) {self.stats (cb)},
-      topology:      function (cb) {self.topology (cb)},
-      next_mature_t: function (cb) {self.next_t (cb)},
-      size:          function (cb) {self.size (cb)},
-      totalSize:     function (cb) {self.totalSize (cb)},
-      schedSize:     function (cb) {self.schedSize (cb)}
+      type:          cb => cb (null, this.type()),
+      stats:         cb => this.stats (cb),
+      topology:      cb => this.topology (cb),
+      paused:        cb => this.paused (cb),
+      next_mature_t: cb => this.next_t (cb),
+      size:          cb => this.size (cb),
+      totalSize:     cb => this.totalSize (cb),
+      schedSize:     cb => this.schedSize (cb)
     }, cb);
   }
 
