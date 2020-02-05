@@ -358,8 +358,10 @@ class Queue {
     if (this._local_paused == undefined) {
       debug ('%s: local_paused undefined, read it from stats', this._name);
 
-      this._stats.paused (v => {
+      this._stats.paused ((err, v) => {
         this._local_paused = v;
+
+        debug ('%s: local_paused undefined, read paused status from stats:', this._name, v);
 
         if (!this._local_paused) {
           // attempt a read
