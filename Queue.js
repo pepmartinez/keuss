@@ -308,7 +308,7 @@ class Queue {
 
     if (this._drained) return setImmediate (() => {
       debug ('%s: pop while drained, return error', this._name);
-      callback ('drain');
+      if (callback) callback ('drain');
     });
 
     if (!callback) {
