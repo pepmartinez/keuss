@@ -290,17 +290,13 @@ res contains the number of elements in the queue (that is, including scheduled e
 #### Pause/Resume
 ```javascript
 // pauses the queue
-q.pause (true, function (err){
-  ...
-})
+q.pause (true)
 
 // resumes the queue
-q.pause (false, function (err){
-  ...
-})
+q.pause (false)
 
 // gets paused status of queue
-q.pause (function (err, is_paused){
+q.paused (function (err, is_paused){
   ...
 })
 ```
