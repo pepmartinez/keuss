@@ -82,6 +82,9 @@ class Queue {
   // queue size of non-mature elements only
   schedSize (callback) {callback (null, 0);}
 
+  // queue size of reserved elements only
+  resvSize (callback) {callback (null, null);}
+
   // Date of next
   next_t (callback) {callback (null, null);}
 
