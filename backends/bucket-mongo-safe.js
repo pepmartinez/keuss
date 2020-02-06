@@ -527,7 +527,7 @@ class BucketMongoSafeQueue extends Queue {
 
     this._factory = factory;
     this._col = factory._db.collection (name);
-    this._ensureIndexes (function (err) {});
+    this._ensureIndexes (err => {});
 
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
@@ -631,8 +631,9 @@ class BucketMongoSafeQueue extends Queue {
   totalSize (callback) {
     this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, cursor) {
+    ], (err, cursor) => {
       if (err) return callback (err);
+
       cursor.toArray ((err, res) => {
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
@@ -648,8 +649,9 @@ class BucketMongoSafeQueue extends Queue {
     this._col.aggregate ([
       {$match: {mature: {$lte: Queue.now ()}}},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, cursor) {
+    ], (err, cursor) => {
       if (err) return callback (err);
+
       cursor.toArray ((err, res) => {
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
@@ -665,8 +667,9 @@ class BucketMongoSafeQueue extends Queue {
     this._col.aggregate ([
       {$match: {mature: {$gt: Queue.now ()}}},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, cursor) {
+    ], (err, cursor) => {
       if (err) return callback (err);
+
       cursor.toArray ((err, res) => {
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
@@ -679,7 +682,7 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-    this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
+    this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
       if (err) return callback (err);
       callback (null, result && result.mature);
     });
@@ -691,7 +694,7 @@ class BucketMongoSafeQueue extends Queue {
     debug ('drain_read called');
 
     this._read_bucket._cancel_flush_state_changes ();
-    this._read_bucket._flush_state_changes ((err) => {
+    this._read_bucket._flush_state_changes (err => {
       debug ('drain_read completed');
       cb (err);
     });
@@ -721,44 +724,40 @@ class BucketMongoSafeQueue extends Queue {
   // empty local buffers
   drain (callback) {
     async.series ([
-      (cb) => {this._in_drain = true; cb ();},
-      (cb) => async.parallel ([
-        (cb) => this._drain_read (cb),
-        (cb) => this._drain_insert (cb),
+      cb => {this._in_drain = true; cb ();},
+      cb => async.parallel ([
+        cb => this._drain_read (cb),
+        cb => this._drain_insert (cb),
       ], cb),
-      (cb) => {debug ('drain stages completed'), cb ()},
-      (cb) => {this._in_drain = false; this._drained = true; cb ()},
-      (cb) => {this.cancel (); cb ()},
-      (cb) => {debug ('drain completed'), cb ()}
+      cb => {debug ('drain stages completed'), cb ()},
+      cb => {this._in_drain = false; this._drained = true; cb ()},
+      cb => {this.cancel (); cb ()},
+      cb => {debug ('drain completed'), cb ()}
     ], callback);
   }
 
 
   /////////////////////////////////////////
   _ensureIndexes (cb) {
-    this._col.createIndex ({mature : 1}, function (err) {
-      return cb (err);
-    });
+    this._col.createIndex ({mature : 1}, err => cb (err));
   }
 
 
   /////////////////////////////////////////
   _set_periodic_flush () {
   /////////////////////////////////////////
-    var self = this;
-
     if (this._flush_timer) return;
 
-    this._flush_timer = setTimeout (function () {
-      self._flush_timer = null;
+    this._flush_timer = setTimeout (() => {
+      this._flush_timer = null;
 
       debug ('flush_timer went off');
 
-      if (self._insert_bucket.b.length) {
-        self._flush_bucket (function (err, res) {
+      if (this._insert_bucket.b.length) {
+        this._flush_bucket ((err, res) => {
           if (err) {
             // keep retrying
-            self._set_periodic_flush ();
+            this._set_periodic_flush ();
           }
         });
       }
@@ -799,10 +798,8 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
     debug ('need to read a bucket');
 
-    this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
+    this._col.findOneAndDelete ({}, {sort: {_id : 1}}, (err, result) => {
+      if (err) return callback (err);
 
       var val = result && result.value;
 
@@ -870,10 +867,10 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
     if (err) return cb (err);
     var F = new Factory (_opts, cl);
-    F.async_init ((err) => cb (null, F));
+    F.async_init (err => cb (null, F));
   });
 }
 

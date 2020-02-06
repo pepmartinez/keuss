@@ -1,5 +1,4 @@
-var async = require ('async');
-var _ =     require ('lodash');
+var _ = require ('lodash');
 
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
@@ -36,14 +35,9 @@ class SimpleMongoQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
-    var self = this;
-    this._col.insertOne (entry, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.insertOne (entry, {}, (err, result) => {
+      if (err) return callback (err);
       // TODO result.insertedCount must be 1
-
       callback (null, result.insertedId);
     });
   }
@@ -53,12 +47,8 @@ class SimpleMongoQueue extends Queue {
   // get element from queue
   get (callback) {
   /////////////////////////////////////////
-    var self = this;
-    this._col.findOneAndDelete ({mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndDelete ({mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -67,8 +57,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {
-    var self = this;
-
     var delay = this._opts.reserve_delay || 120;
 
     var query = {
@@ -85,11 +73,8 @@ class SimpleMongoQueue extends Queue {
       returnOriginal: true
     };
 
-    this._col.findOneAndUpdate (query, update, opts, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndUpdate (query, update, opts, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -98,8 +83,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////
   // commit previous reserve, by p.id
   commit (id, callback) {
-    var self = this;
-
     try {
       var query =  {
         _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
@@ -110,11 +93,8 @@ class SimpleMongoQueue extends Queue {
       return callback ('id [' + id + '] can not be used as rollback id: ' + e);
     }
 
-    this._col.deleteOne (query, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.deleteOne (query, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.deletedCount == 1));
     });
   }
@@ -127,8 +107,6 @@ class SimpleMongoQueue extends Queue {
       callback = next_t;
       next_t = null;
     }
-
-    var self = this;
 
     try {
       var query =  {
@@ -145,11 +123,8 @@ class SimpleMongoQueue extends Queue {
       $unset: {reserved: ''}
     };
 
-    this._col.updateOne (query, update, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.updateOne (query, update, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -174,7 +149,6 @@ class SimpleMongoQueue extends Queue {
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -188,7 +162,6 @@ class SimpleMongoQueue extends Queue {
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -197,12 +170,8 @@ class SimpleMongoQueue extends Queue {
   // get element from queue
   next_t (callback) {
   /////////////////////////////////////////
-    var self = this;
-    this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.mature);
     });
   }
@@ -215,9 +184,7 @@ class SimpleMongoQueue extends Queue {
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
   //////////////////////////////////////////////////////////////////
-    this._col.createIndex ({mature : 1}, function (err) {
-      return cb (err);
-    })
+    this._col.createIndex ({mature : 1}, err => cb (err));
   }
 };
 
@@ -263,10 +230,10 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
     if (err) return cb (err);
     var F = new Factory (_opts, cl);
-    F.async_init ((err) => cb (null, F));
+    F.async_init (err => cb (null, F));
   });
 }
 

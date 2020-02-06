@@ -37,7 +37,7 @@ class Queue {
 
     // save opts minus stats & signaller
     var __opts = _.omit (this._opts, ['signaller', 'stats']);
-    this._stats.opts (__opts, function () {});
+    this._stats.opts (__opts, () => {});
 
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
@@ -117,7 +117,7 @@ class Queue {
   /////////////////////////////////////////
     let r = [];
 
-    this._consumers_by_tid.forEach (function (value, key) {
+    this._consumers_by_tid.forEach ((value, key) => {
       r.push ({
         tid: value.tid,
         since: value.since,
@@ -170,7 +170,7 @@ class Queue {
       this._next_mature_t = mature.getTime ();
     }
 
-    this._nextDelta ((delta_ms) => {
+    this._nextDelta (delta_ms => {
       // run a wakeup on all consumers with the wakeup timer set
       debug ('%s: signalInsertion: waking up all consumers with wakeup already set', this._name);
 
@@ -183,11 +183,9 @@ class Queue {
 
           if (delta_ms > 0) {
             consumer.wakeup_timeout = setTimeout (() => {
-                consumer.wakeup_timeout = null;
-                this._onetime_pop (consumer);
-              },
-              delta_ms
-            );
+              consumer.wakeup_timeout = null;
+              this._onetime_pop (consumer);
+            }, delta_ms);
           }
           else {
             setImmediate (() => this._onetime_pop (consumer));
@@ -463,9 +461,8 @@ class Queue {
     }
     else {
       // cancel all pending stuff
-      var self = this;
-      this._consumers_by_tid.forEach (function (consumer_data, tid) {
-        debug ('%s: cancelling tid %s (cid %s)', self._name, tid, consumer_data.cid);
+      this._consumers_by_tid.forEach ((consumer_data, tid) => {
+        debug ('%s: cancelling tid %s (cid %s)', this._name, tid, consumer_data.cid);
 
         if (consumer_data.callback) {
           // call callback with error-cancelled
@@ -512,22 +509,21 @@ class Queue {
 
 
   _onetime_pop (consumer) {
-    var self = this;
-    var getOrReserve_cb = function (err, result) {
-      debug ('%s - tid %s: called getOrReserve_cb : err %o, result %o', self._name, consumer.tid, err, result);
+    var getOrReserve_cb = (err, result) => {
+      debug ('%s - tid %s: called getOrReserve_cb : err %o, result %o', this._name, consumer.tid, err, result);
 
       if (!consumer.callback) {
         // consumer was cancelled mid-flight
         // do not reinsert if it's using reserve
         if (!(consumer.reserve)) {
-          return self._reinsert (result);
+          return this._reinsert (result);
         }
       }
 
       // TODO eat up errors?
       if (err) {
         // get/reserve in error
-        debug ('%s - tid %s: getOrReserve_cb in error: err %o', self._name, consumer.tid, err);
+        debug ('%s - tid %s: getOrReserve_cb in error: err %o', this._name, consumer.tid, err);
 
         // clean timeout timer
         if (consumer.cleanup_timeout) {
@@ -536,7 +532,7 @@ class Queue {
         }
 
         // remove consumer from map
-        self._consumers_by_tid.delete (consumer.tid);
+        this._consumers_by_tid.delete (consumer.tid);
 
         // call final callback
         if (consumer.callback) consumer.callback (err);
@@ -545,39 +541,34 @@ class Queue {
 
       if (!result) {
         // queue is empty or non-mature: put us to sleep, to-rearm-in-future
-
-        debug ('%s - tid %s: getOrReserve_cb no result, setting wakeup', self._name, consumer.tid);
+        debug ('%s - tid %s: getOrReserve_cb no result, setting wakeup', this._name, consumer.tid);
 
         // clear this._next_mature_t if it's in the past
-        if (self._next_mature_t && (self._next_mature_t < new Date().getTime ())) {
-         debug ('%s - tid %s: getOrReserve_cb no result, and self._next_mature_t is in the past, clearing it', self._name, consumer.tid);
-
-          self._next_mature_t = null;
+        if (this._next_mature_t && (this._next_mature_t < new Date().getTime ())) {
+          debug ('%s - tid %s: getOrReserve_cb no result, and this._next_mature_t is in the past, clearing it', this._name, consumer.tid);
+          this._next_mature_t = null;
         }
 
         // obtain time to sleep (capped)
-        self._nextDelta (function (delta_ms) {
+        this._nextDelta (delta_ms => {
           // TODO cancel previous wakeup_timeout if not null?
-          debug ('%s - tid %s: getOrReserve_cb : set wakeup in %d ms', self._name, consumer.tid, delta_ms);
+          debug ('%s - tid %s: getOrReserve_cb : set wakeup in %d ms', this._name, consumer.tid, delta_ms);
 
-          consumer.wakeup_timeout = setTimeout (
-            function () {
-              debug ('%s - tid %s: wakey wakey... calling onetime_pop', self._name, consumer.tid);
-              consumer.wakeup_timeout = null;
-              self._onetime_pop (consumer);
-            },
-            delta_ms
-          );
+          consumer.wakeup_timeout = setTimeout (() => {
+            debug ('%s - tid %s: wakey wakey... calling onetime_pop', this._name, consumer.tid);
+            consumer.wakeup_timeout = null;
+            this._onetime_pop (consumer);
+          }, delta_ms);
         });
 
         return;
       }
 
       // got an element
-      self._next_mature_t = null;
-      self._stats.incr ('get');
+      this._next_mature_t = null;
+      this._stats.incr ('get');
 
-      debug ('%s - tid %s: getOrReserve_cb : got result %j', self._name, consumer.tid, result);
+      debug ('%s - tid %s: getOrReserve_cb : got result %j', this._name, consumer.tid, result);
 
       // clean timeout timer
       if (consumer.cleanup_timeout) {
@@ -586,7 +577,7 @@ class Queue {
       }
 
       // remove consumer from map
-      self._consumers_by_tid.delete (consumer.tid);
+      this._consumers_by_tid.delete (consumer.tid);
 
       // call final callback
       if (consumer.callback) consumer.callback (null, result);
@@ -613,27 +604,26 @@ class Queue {
     if (_.isNull (this._next_mature_t)) {
       // there's no precalculated value, get it from backend
       debug ('%s: _nextDelta: null _next_mature_t, getting it from backend',this._name);
-      var self = this;
 
-      this.next_t (function (err, res) {
+      this.next_t ((err, res) => {
         if (err) {
-          debug ('%s: _nextDelta error from backend, serving default', self._name);
-          return cb (self._pollInterval);
+          debug ('%s: _nextDelta error from backend, serving default', this._name);
+          return cb (this._pollInterval);
         }
 
         if (res) {
           // got a res, use it
-          self._next_mature_t = res;
+          this._next_mature_t = res;
           var delta = res - Queue.now ().getTime();
-          if (delta > self._pollInterval) delta = self._pollInterval;
-          debug ('%s: _nextDelta: _next_mature_t from backend is %d, calc delta is %d', self._name, res, delta);
+          if (delta > this._pollInterval) delta = this._pollInterval;
+          debug ('%s: _nextDelta: _next_mature_t from backend is %d, calc delta is %d', this._name, res, delta);
           return cb (delta);
         }
         else {
           // no res, set _next_mature_t to 0, serve default
-          debug ('%s: _nextDelta: no _next_mature_t from backend, use default', self._name);
-          self._next_mature_t = 0;
-          return cb (self._pollInterval);
+          debug ('%s: _nextDelta: no _next_mature_t from backend, use default', this._name);
+          this._next_mature_t = 0;
+          return cb (this._pollInterval);
         }
       });
     }

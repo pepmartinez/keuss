@@ -1,5 +1,5 @@
 var async = require ('async');
-var _ = require ('lodash');
+var _ =     require ('lodash');
 
 var LocalSignal = require ('./signal/local');
 var MemStats =    require ('./stats/mem');
@@ -12,7 +12,7 @@ class QFactory {
     this._opts = opts || {};
 
     this._name = opts.name || 'N';
-    
+
     if (!this._opts.stats)      this._opts.stats = {};
     if (!this._opts.stats.opts) this._opts.stats.opts = {};
 
@@ -27,10 +27,9 @@ class QFactory {
     var stats_provider = this._opts.stats.provider || MemStats;
 
     async.parallel ([
-      (cb) => signal_provider (this._opts.signaller.opts, cb),
-      (cb) => stats_provider (this._opts.stats.opts, cb)
-    ],
-    (err, res) => {
+      cb => signal_provider (this._opts.signaller.opts, cb),
+      cb => stats_provider (this._opts.stats.opts, cb)
+    ], (err, res) => {
       debug ('%s: async init completed, err is %o', this._name, err);
 
       if (err) return cb (err);
@@ -43,7 +42,7 @@ class QFactory {
   signaller_factory () {
     return this._signaller_factory;
   }
-  
+
   stats_factory () {
     return this._stats_factory;
   }
@@ -55,11 +54,11 @@ class QFactory {
   close (cb) {
     debug ('%s: closing', this._name);
     async.parallel ([
-      (cb) => this._stats_factory.close (cb),
-      (cb) => this._signaller_factory.close (cb)
+      cb => this._stats_factory.close (cb),
+      cb => this._signaller_factory.close (cb)
     ], cb);
   }
-  
+
   name () {
     return this._name;
   }
@@ -71,7 +70,7 @@ class QFactory {
   capabilities () {
     return {};
   }
-  
+
   list (opts, cb) {
     // use stats factory
     this._stats_factory.queues (this.name (), opts, cb);
@@ -92,7 +91,7 @@ class QFactory {
 
       cb (null, ret);
     });
-  } 
+  }
 }
 
 module.exports = QFactory;

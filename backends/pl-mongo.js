@@ -20,7 +20,7 @@ class PipelinedMongoQueue extends Queue {
     // set topology
     this._stats.topology ({
       pipeline: pipeline.name()
-    }, function(){});
+    }, () => {});
   }
 
   /////////////////////////////////////////
@@ -41,16 +41,11 @@ class PipelinedMongoQueue extends Queue {
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-    var self = this;
     entry._q = this._name;
 
-    this._col.insertOne (entry, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.insertOne (entry, {}, (err, result) => {
+      if (err) return callback (err);
       // TODO result.insertedCount must be 1
-
       callback (null, result.insertedId);
     });
   }
@@ -59,12 +54,8 @@ class PipelinedMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-    var self = this;
-    this._col.findOneAndDelete ({_q: this._name, mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndDelete ({_q: this._name, mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -73,8 +64,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {
-    var self = this;
-
     var delay = this._opts.reserve_delay || 120;
 
     var query = {
@@ -92,11 +81,8 @@ class PipelinedMongoQueue extends Queue {
       returnOriginal: true
     };
 
-    this._col.findOneAndUpdate (query, update, opts, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndUpdate (query, update, opts, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -105,7 +91,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // commit previous reserve, by p.id
   commit (id, callback) {
-    var self = this;
     var query;
 
     try {
@@ -119,11 +104,8 @@ class PipelinedMongoQueue extends Queue {
       return callback ('id [' + id + '] can not be used as rollback id: ' + e);
     }
 
-    this._col.deleteOne (query, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.deleteOne (query, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.deletedCount == 1));
     });
   }
@@ -137,7 +119,6 @@ class PipelinedMongoQueue extends Queue {
       next_t = null;
     }
 
-    var self = this;
     var query;
 
     try {
@@ -156,11 +137,8 @@ class PipelinedMongoQueue extends Queue {
       $unset: {reserved: ''}
     };
 
-    this._col.updateOne (query, update, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.updateOne (query, update, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -169,8 +147,6 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // passes element to the next queue in pipeline
   pl_step (id, next_queue, opts, callback) {
-    var self = this;
-
     var query =  {
       _id: id,
       _q: this._name,
@@ -188,11 +164,8 @@ class PipelinedMongoQueue extends Queue {
 
     if (opts.payload) update.$set.payload = opts.payload;
 
-    this._col.updateOne (query, update, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.updateOne (query, update, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -216,7 +189,6 @@ class PipelinedMongoQueue extends Queue {
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -230,7 +202,6 @@ class PipelinedMongoQueue extends Queue {
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -238,12 +209,8 @@ class PipelinedMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-    var self = this;
-    this._col.find ({_q: this._name}).limit(1).sort ({mature:1}).project ({mature:1}).next (function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.find ({_q: this._name}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.mature);
     });
   }
@@ -256,7 +223,7 @@ class Pipeline {
     this._name = name;
     this._factory = factory;
     this._col = factory._db.collection (this._name);
-    this.ensureIndexes (function (err) {});
+    this.ensureIndexes (err => {});
   }
 
   name () {
@@ -278,9 +245,7 @@ class Pipeline {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-    this._col.createIndex ({_q : 1, mature : 1}, function (err) {
-      return cb (err);
-    });
+    this._col.createIndex ({_q : 1, mature : 1}, err => cb (err));
   }
 }
 
@@ -338,10 +303,10 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
     if (err) return cb (err);
     var F = new Factory (_opts, cl);
-    F.async_init ((err) => cb (null, F));
+    F.async_init (err => cb (null, F));
   });
 }
 

@@ -153,7 +153,7 @@ class RedisStats {
     if (!cb) {
       // get
       cb = tplg;
-      this._rediscl.hget (this._id, 'topology', function (err, res){
+      this._rediscl.hget (this._id, 'topology', (err, res) => {
         if (err) return cb(err);
         if (!res) return cb(null, {});
         try {
@@ -175,21 +175,18 @@ class RedisStats {
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
-    var self = this;
 
     var tasks = [
-      function (cb) {self._rediscl.hdel(self._id, 'opts', cb);},
-      function (cb) {self._rediscl.hdel(self._id, 'topology', cb);}
+      cb => this._rediscl.hdel (this._id, 'opts', cb),
+      cb => this._rediscl.hdel (this._id, 'topology', cb)
     ];
 
     this.values ((err, vals) => {
       _.forEach (vals, (v, k) => {
-        tasks.push (function (cb) {
-          self._rediscl.hdel(self._id, 'counter_' + k, cb);
-        });
+        tasks.push (cb => this._rediscl.hdel (this._id, 'counter_' + k, cb));
       });
 
-      async.series (tasks, function (err) {
+      async.series (tasks, err => {
         if (cb) cb(err);
       });
     });
@@ -232,19 +229,15 @@ class RedisStatsFactory {
       opts = {};
     }
 
-    var self = this;
-
-    this._rediscl.keys('keuss:stats:' + ns + ':?*', function (err, queues) {
+    this._rediscl.keys('keuss:stats:' + ns + ':?*', (err, queues) => {
       if (err) return cb(err);
 
       if (opts.full) {
         var tasks = {};
-        queues.forEach(function (q) {
-          tasks[q.substring(13 + ns.length)] = function (cb) {
-            self._rediscl.hgetall (q, function (err, v) {
-              if (err) {
-                return cb(err);
-              }
+        queues.forEach(q => {
+          tasks[q.substring(13 + ns.length)] = cb => {
+            this._rediscl.hgetall (q, (err, v) => {
+              if (err) return cb(err);
 
               var ret = {counters: {}};
               for (let k in v) {
@@ -279,7 +272,7 @@ class RedisStatsFactory {
       }
       else {
         var ret = [];
-        queues.forEach(function (q) {
+        queues.forEach(q => {
           var qname = q.substring(13 + ns.length);
           ret.push(qname);
         });

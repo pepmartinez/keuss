@@ -7,22 +7,14 @@ var debug = require('debug')('keuss:PipelineLink');
 class PipelineLink {
   constructor (src_q, dst_q, opts) {
     // check both queues are pipelined
-    if (! src_q.pipeline){
-      throw Error ('source queue is not pipelined');
-    }
-    if (! dst_q.pipeline){
-      throw Error ('destination queue is not pipelined');
-    }
+    if (! src_q.pipeline) throw Error ('source queue is not pipelined');
+    if (! dst_q.pipeline) throw Error ('destination queue is not pipelined');
 
     // check both queues are of the same type
-    if (src_q.type () != dst_q.type ()) {
-      throw Error ('queues are of different type');
-    }
+    if (src_q.type () != dst_q.type ()) throw Error ('queues are of different type');
 
     // check both queues are on same pipeline
-    if (src_q.pipeline ().name () != dst_q.pipeline ().name ()) {
-      throw Error ('queues are on different pipelines');
-    }
+    if (src_q.pipeline ().name () != dst_q.pipeline ().name ()) throw Error ('queues are on different pipelines');
 
     this._name = src_q.name () + '->' + dst_q.name ();
     this._opts = opts || {};
@@ -32,22 +24,23 @@ class PipelineLink {
     debug ('created PipelineLink %s', this._name);
   }
 
-  src () {return this._src}
-  dst () {return this._dst}
-  
-  name () {return this._name}
-  
+  src () {return this._src;}
+  dst () {return this._dst;}
+
+  name () {return this._name;}
+
+  /////////////////////////////////////////
   start (ondata) {
     this._process (ondata);
   }
 
+  /////////////////////////////////////////
   stop () {
     this._src.cancel ();
   }
 
+  /////////////////////////////////////////
   _mature (opts) {
-    var mature = null;
-
     if (opts.mature) {
       if (_.isInteger (opts.mature)) {
         opts.mature = new Date (opts.mature * 1000);
@@ -58,41 +51,39 @@ class PipelineLink {
     }
   }
 
+  /////////////////////////////////////////
   _process (ondata) {
-    var self = this;
+    debug ('pll %s: attempting reserve', this._name);
 
-    debug ('pll %s: attempting reserve', self._name);
-
-    this.src().pop('c1', { reserve: true }, function (err, res) {
-      debug ('pll %s: reserved element: %o', self._name, res);
+    this.src().pop('c1', { reserve: true }, (err, res) => {
+      debug ('pll %s: reserved element: %o', this._name, res);
 
       if (err) {
         if (err == 'cancel') return; // end the process loop
+         debug ('pll %s: error in reserve:', this._name, err);
+        return this._process (ondata);
+      }
 
-         debug ('pll %s: error in reserve:', self._name, err);
-        return self._process (ondata);
-      }
-      
       if (!res) {
-        debug ('pll %s: reserve produced nothing', self._name);
-        return self._process (ondata);
+        debug ('pll %s: reserve produced nothing', this._name);
+        return this._process (ondata);
       }
-      
+
       // do something
-      ondata (res, function (err, res0) {
-        debug ('pll %s: processed: %s', self._name, res._id);
+      ondata (res, (err, res0) => {
+        debug ('pll %s: processed: %s', this._name, res._id);
 
         if (err) {
           // error: drop or retry?
           if (err.drop === true) {
-            debug ('pll %s: marked to be dropped: %s', self._name, res._id);
-            return self._process (ondata);
+            debug ('pll %s: marked to be dropped: %s', this._name, res._id);
+            return this._process (ondata);
           }
           else {
             // rollback. TODO set some limit, drop afterwards?
-            self.src().ko (res._id, self._rollback_next_t (res), function (err) {
-              debug ('pll %s: rolled back: %s', self._name, res._id);
-              self._process (ondata);
+            this.src().ko (res._id, this._rollback_next_t (res), err => {
+              debug ('pll %s: rolled back: %s', this._name, res._id);
+              this._process (ondata);
             });
 
             return;
@@ -100,34 +91,31 @@ class PipelineLink {
         }
 
         var opts = {};
-        _.merge (opts, self._opts, (res0 && res0.opts) || {});
-        self._mature (opts);
+        _.merge (opts, this._opts, (res0 && res0.opts) || {});
+        this._mature (opts);
         opts.payload = (res0 && res0.payload) || res.payload;
 
-        self._next (res._id, opts, function (err, res0) {
-          if (err) {
-            debug ('error in next:', err);
-          }
- 
-          debug ('pll %s: passed to next: %s', self._name, res._id);
-          self._process (ondata);
+        this._next (res._id, opts, (err, res0) => {
+          if (err) debug ('error in next:', err);
+          debug ('pll %s: passed to next: %s', this._name, res._id);
+          this._process (ondata);
         });
       });
     });
   }
 
+  /////////////////////////////////////////
   _next (id, opts, callback) {
-    var self = this;
+    this.src().pl_step (id, this.dst(), opts, (err, res) => {
+      this.src()._stats.incr ('put');
+      this.dst()._stats.incr ('get');
+      this.dst()._signaller.signalInsertion ((opts && opts.mature) || Queue.now());
 
-    this.src().pl_step (id, this.dst(), opts, function (err, res) {
-      self.src()._stats.incr ('put');
-      self.dst()._stats.incr ('get');
-      self.dst()._signaller.signalInsertion ((opts && opts.mature) || Queue.now());
-      
       callback (err, res);
     });
   }
 
+  /////////////////////////////////////////
   _rollback_next_t (item) {
     var delta = (item.tries * (this._opts.retry_factor_t || 2)) + (this._opts.retry_base_t || 1);
     return new Date().getTime () + (delta * 1000);

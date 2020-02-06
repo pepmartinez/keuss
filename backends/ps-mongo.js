@@ -36,14 +36,9 @@ class PersistentMongoQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
   /////////////////////////////////////////
-    var self = this;
-    this._col.insertOne (entry, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.insertOne (entry, {}, (err, result) => {
+      if (err) return callback (err);
       // TODO result.insertedCount must be 1
-
       callback (null, result.insertedId);
     });
   }
@@ -66,11 +61,8 @@ class PersistentMongoQueue extends Queue {
       sort: {mature : 1}
     };
 
-    this._col.findOneAndUpdate (q, updt, opts, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndUpdate (q, updt, opts, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -79,8 +71,6 @@ class PersistentMongoQueue extends Queue {
   //////////////////////////////////
   // reserve element: call cb (err, pl) where pl has an id
   reserve (callback) {
-    var self = this;
-
     var delay = this._opts.reserve_delay || 120;
 
     var query = {
@@ -98,11 +88,8 @@ class PersistentMongoQueue extends Queue {
       returnOriginal: true
     };
 
-    this._col.findOneAndUpdate (query, update, opts, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.findOneAndUpdate (query, update, opts, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.value);
     });
   }
@@ -130,11 +117,8 @@ class PersistentMongoQueue extends Queue {
 
     var opts = {};
 
-    this._col.updateOne (query, updt, opts, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.updateOne (query, updt, opts, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -147,8 +131,6 @@ class PersistentMongoQueue extends Queue {
       callback = next_t;
       next_t = null;
     }
-
-    var self = this;
 
     try {
       var query =  {
@@ -165,11 +147,8 @@ class PersistentMongoQueue extends Queue {
       $unset: {reserved: ''}
     };
 
-    this._col.updateOne (query, update, {}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    this._col.updateOne (query, update, {}, (err, result) => {
+      if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
   }
@@ -228,11 +207,8 @@ class PersistentMongoQueue extends Queue {
     .limit(1)
     .sort ({mature:1})
     .project ({mature:1})
-    .next (function (err, result) {
-      if (err) {
-        return callback (err);
-      }
-
+    .next ((err, result) => {
+      if (err) return callback (err);
       callback (null, result && result.mature);
     });
   }
@@ -245,15 +221,12 @@ class PersistentMongoQueue extends Queue {
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
   //////////////////////////////////////////////////////////////////
-    this._col.createIndex ({mature : 1}, (err) => {
+    this._col.createIndex ({mature : 1}, err => {
       if (err) return cb (err);
-
-      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl || 3600}, (err) => {
-        cb (err);
-      });
-    })
+      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl || 3600}, err => cb (err));
+    });
   }
-};
+}
 
 
 class Factory extends QFactory {
@@ -298,10 +271,10 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
     if (err) return cb (err);
     var F = new Factory (_opts, cl);
-    F.async_init ((err) => cb (null, F));
+    F.async_init (err => cb (null, F));
   });
 }
 

@@ -73,7 +73,7 @@ class BucketMongoQueue extends Queue {
         this._set_periodic_flush ();
       }
 
-      setImmediate (function () {callback (null, id);});
+      setImmediate (() => callback (null, id));
     }
   }
 
@@ -86,7 +86,7 @@ class BucketMongoQueue extends Queue {
         debug ('in_drain_read: read_buffer empty, calling _drain_read_cb');
         this._drain_read_cb ();
         this._drain_read_cb = undefined;
-        return setImmediate (function () {callback (null,  null);});
+        return setImmediate (() => callback (null,  null));
       }
       else {
         debug ('in_drain_read: %d pending in read_buffer', this._read_bucket.b.length);
@@ -172,15 +172,15 @@ class BucketMongoQueue extends Queue {
   // empty local buffers
   drain (callback) {
     async.series ([
-      (cb) => {this._in_drain = true; cb ();},
-      (cb) => async.parallel ([
-        (cb) => this._drain_read (cb),
-        (cb) => this._drain_insert (cb),
+      cb => {this._in_drain = true; cb ();},
+      cb => async.parallel ([
+        cb => this._drain_read (cb),
+        cb => this._drain_insert (cb),
       ], cb),
-      (cb) => {debug ('drain stages completed'), cb ()},
-      (cb) => {this._in_drain = false; this._drained = true; cb ()},
-      (cb) => {this.cancel (); cb ()},
-      (cb) => {debug ('drain completed'), cb ()}
+      cb => {debug ('drain stages completed'), cb ()},
+      cb => {this._in_drain = false; this._drained = true; cb ()},
+      cb => {this.cancel (); cb ()},
+      cb => {debug ('drain completed'), cb ()}
     ], callback);
   }
 
@@ -191,8 +191,9 @@ class BucketMongoQueue extends Queue {
   //////////////////////////////////
     this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], function (err, cursor) {
+    ], (err, cursor) => {
       if (err) return callback (err);
+
       cursor.toArray ((err, res) => {
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
@@ -213,20 +214,18 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
   _set_periodic_flush () {
   /////////////////////////////////////////
-    var self = this;
-
     if (this._flush_timer) return;
 
-    this._flush_timer = setTimeout (function () {
-      self._flush_timer = null;
+    this._flush_timer = setTimeout (() => {
+      this._flush_timer = null;
 
       debug ('flush_timer went off');
 
-      if (self._insert_bucket.b.length) {
-        self._flush_bucket (function (err, res) {
+      if (this._insert_bucket.b.length) {
+        this._flush_bucket ((err, res) => {
           if (err) {
             // keep retrying
-            self._set_periodic_flush ();
+            this._set_periodic_flush ();
           }
         });
       }
@@ -267,10 +266,8 @@ class BucketMongoQueue extends Queue {
   /////////////////////////////////////////
     debug ('need to read a bucket');
 
-    this._col.findOneAndDelete ({}, {sort: {_id : 1}}, function (err, result) {
-      if (err) {
-        return callback (err);
-      }
+    this._col.findOneAndDelete ({}, {sort: {_id : 1}}, (err, result) => {
+      if (err) return callback (err);
 
       var val = result && result.value;
 
@@ -338,10 +335,10 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, function (err, cl) {
+  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
     if (err) return cb (err);
     var F = new Factory (_opts, cl);
-    F.async_init ((err) => cb (null, F));
+    F.async_init (err => cb (null, F));
   });
 }
 
