@@ -198,7 +198,22 @@ class PipelinedMongoQueue extends Queue {
   schedSize (callback) {
     var q = {
       _q: this._name,
-      mature : {$gt : Queue.now ()}
+      mature : {$gt : Queue.now ()},
+      reserved: {$exists: false}
+    };
+
+    var opts = {};
+    this._col.countDocuments (q, opts, callback);
+  }
+
+
+  //////////////////////////////////
+  // queue size of reserved elements only
+  resvSize (callback) {
+    var q = {
+      _q: this._name,
+      mature : {$gt : Queue.now ()},
+      reserved: {$exists: true}
     };
 
     var opts = {};

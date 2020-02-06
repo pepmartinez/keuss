@@ -11,7 +11,6 @@ class PersistentMongoQueue extends Queue {
 
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
-  //////////////////////////////////////////////
     super (name, factory, opts);
 
     this._factory = factory;
@@ -22,20 +21,17 @@ class PersistentMongoQueue extends Queue {
 
   /////////////////////////////////////////
   static Type () {
-  /////////////////////////////////////////
     return 'mongo:persistent';
   }
 
   /////////////////////////////////////////
   type () {
-  /////////////////////////////////////////
     return 'mongo:persistent';
   }
 
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
       // TODO result.insertedCount must be 1
@@ -47,7 +43,6 @@ class PersistentMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     var q = {
       mature: {$lte: Queue.nowPlusSecs (0)},
       processed: {$exists: false}
@@ -157,13 +152,11 @@ class PersistentMongoQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-  //////////////////////////////////
     var q = {
       processed: {$exists: false}
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -171,14 +164,12 @@ class PersistentMongoQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-  //////////////////////////////////
     var q = {
       processed: {$exists: false},
       mature : {$lte : Queue.now ()}
     };
 
     var opts = {};
-
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -186,14 +177,27 @@ class PersistentMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-  //////////////////////////////////
     var q = {
+      mature : {$gt : Queue.now ()},
       processed: {$exists: false},
-      mature : {$gt : Queue.now ()}
+      reserved: {$exists: false}
     };
 
     var opts = {};
+    this._col.countDocuments (q, opts, callback);
+  }
 
+
+  //////////////////////////////////
+  // queue size of reserved elements only
+  resvSize (callback) {
+    var q = {
+      mature : {$gt : Queue.now ()},
+      processed: {$exists: false},
+      reserved: {$exists: true}
+    };
+
+    var opts = {};
     this._col.countDocuments (q, opts, callback);
   }
 
@@ -201,7 +205,6 @@ class PersistentMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-  /////////////////////////////////////////
     this._col
     .find ({processed: {$exists: false}})
     .limit(1)
@@ -220,7 +223,6 @@ class PersistentMongoQueue extends Queue {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-  //////////////////////////////////////////////////////////////////
     this._col.createIndex ({mature : 1}, err => {
       if (err) return cb (err);
       this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl || 3600}, err => cb (err));

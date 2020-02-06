@@ -10,7 +10,6 @@ class SimpleMongoQueue extends Queue {
 
   //////////////////////////////////////////////
   constructor (name, factory, opts) {
-  //////////////////////////////////////////////
     super (name, factory, opts);
 
     this._factory = factory;
@@ -21,20 +20,17 @@ class SimpleMongoQueue extends Queue {
 
   /////////////////////////////////////////
   static Type () {
-  /////////////////////////////////////////
     return 'mongo:simple';
   }
 
   /////////////////////////////////////////
   type () {
-  /////////////////////////////////////////
     return 'mongo:simple';
   }
 
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-  /////////////////////////////////////////
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
       // TODO result.insertedCount must be 1
@@ -46,7 +42,6 @@ class SimpleMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-  /////////////////////////////////////////
     this._col.findOneAndDelete ({mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, (err, result) => {
       if (err) return callback (err);
       callback (null, result && result.value);
@@ -133,7 +128,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-  //////////////////////////////////
     var q = {};
     var opts = {};
     this._col.countDocuments (q, opts, callback);
@@ -143,7 +137,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-  //////////////////////////////////
     var q = {
       mature : {$lte : Queue.now ()}
     };
@@ -156,9 +149,22 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-  //////////////////////////////////
     var q = {
-      mature : {$gt : Queue.now ()}
+      mature : {$gt : Queue.now ()},
+      reserved: {$exists: false}
+    };
+
+    var opts = {};
+    this._col.countDocuments (q, opts, callback);
+  }
+
+
+  //////////////////////////////////
+  // queue size of reserved elements only
+  resvSize (callback) {
+    var q = {
+      mature : {$gt : Queue.now ()},
+      reserved: {$exists: true}
     };
 
     var opts = {};
@@ -169,7 +175,6 @@ class SimpleMongoQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-  /////////////////////////////////////////
     this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
       if (err) return callback (err);
       callback (null, result && result.mature);
@@ -183,7 +188,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-  //////////////////////////////////////////////////////////////////
     this._col.createIndex ({mature : 1}, err => cb (err));
   }
 };

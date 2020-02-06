@@ -1,5 +1,7 @@
-var async = require('async');
-var should = require('should');
+var async =  require ('async');
+var should = require ('should');
+var _ =      require ('lodash');
+
 var MongoClient = require ('mongodb').MongoClient;
 
 var factory = null;
@@ -34,28 +36,22 @@ var factory = null;
       })
     ], done));
 
-    it('queue is created empty and ok', function (done) {
+    it('queue is created empty and ok', done => {
       var q = factory.queue('test_queue');
       should.equal(q.nextMatureDate(), null);
 
       async.series([
-        function (cb) {
-          q.stats(cb)
-        },
-        function (cb) {
-          q.size(cb)
-        },
-        function (cb) {
-          q.totalSize(cb)
-        },
-        function (cb) {
-          q.next_t(cb)
-        },
-      ], function (err, results) {
+        cb => q.stats(cb),
+        cb => q.size(cb),
+        cb => q.totalSize(cb),
+        cb => q.schedSize(cb),
+        cb => q.next_t(cb),
+      ], (err, results) => {
+        if (err) return done (err);
         results.should.eql([{
           get: 0,
           put: 0
-        }, 0, 0, null])
+        }, 0, 0, 0, null]);
         done();
       });
     });
@@ -143,7 +139,6 @@ var factory = null;
         done();
       });
     });
-
 
     it('sequential push & pops with delays, go as expected', function (done) {
       var q = factory.queue('test_queue');
@@ -255,7 +250,6 @@ var factory = null;
         done();
       });
     });
-
 
     it('timed-out pops work as expected', function (done) {
       var q = factory.queue('test_queue');
@@ -384,7 +378,6 @@ var factory = null;
         done();
       });
     });
-
 
     it('pop cancellation works as expected', function (done) {
       var q = factory.queue('test_queue');
@@ -860,7 +853,6 @@ var factory = null;
       if (MQ_item.label == 'Redis OrderedQueue') return done ();
 
       var q = factory.queue('test_queue');
-      var id = null;
 
       async.series([
         function (cb) {
@@ -875,9 +867,64 @@ var factory = null;
       });
     });
 
+    it('should show coherent values of size, schedSize, resvSize on push, pop, reserve, commit, rollback', done => {
+      function _get_all_sizes (q, cb) {
+        async.parallel ([
+          cb => q.totalSize (cb),
+          cb => q.size (cb),
+          cb => q.schedSize (cb),
+          cb => q.resvSize (cb)
+        ], cb);
+      };
+
+      if (MQ_item.label == 'Redis OrderedQueue') return done ();
+
+      var q = factory.queue('test_queue');
+      var state = {};
+
+      async.series([
+        cb => _get_all_sizes (q, cb),
+        cb => q.push ({a:1, b:2}, {delay: 2}, cb),
+        cb => q.push ({a:2, b:2}, cb),
+        cb => q.push ({a:3, b:2}, cb),
+        cb => _get_all_sizes (q, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          cb (null, res._id);
+        }),
+        cb => _get_all_sizes (q, cb),
+        cb => q.ko (state.reserved_id, cb),
+        cb => _get_all_sizes (q, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          cb (null, res._id);
+        }),
+        cb => _get_all_sizes (q, cb),
+        cb => q.ok (state.reserved_id, cb),
+        cb => _get_all_sizes (q, cb),
+        cb => q.pop ('me', cb),
+        cb => q.pop ('me', cb),
+        cb => _get_all_sizes (q, cb),
+      ], (err, res) => {
+        if (err) return done (err);
+        var figs = res.filter (i => _.isArray (i));
+        figs.should.eql ([ 
+          [ 0, 0, 0, 0 ],
+          [ 3, 2, 1, 0 ],
+          [ 3, 1, 1, 1 ],
+          [ 3, 2, 1, 0 ],
+          [ 3, 1, 1, 1 ],
+          [ 2, 1, 1, 0 ],
+          [ 0, 0, 0, 0 ] ]);
+
+        done ();
+      });
+    });
+
     it('should manage rollback on unknown id as expected', function (done) {
       var q = factory.queue('test_queue');
-      var id = null;
 
       async.series([
         function (cb) {
