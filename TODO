@@ -3,6 +3,5 @@
 * expiration / deadletter (tied to at-least-one)?
 * queue traversal/query
 * allow update obj on pl-mongo (api dep on being mongodb)
-* priorities
+* priorities?
 * add factory archetypes (all-mongo, all-mongo-bucket...)
-* distinguish sched from reserved

@@ -274,7 +274,10 @@ class BucketSet {
     };
 
     var update = {
-      $set: {mature: Queue.nowPlusSecs (this._reserve_delay), reserved: new Date ()},
+      $set: {
+        mature: Queue.nowPlusSecs (this._reserve_delay),
+        reserved: new Date ()
+      },
       $inc: {tries: 1}
     };
 
@@ -665,7 +668,30 @@ class BucketMongoSafeQueue extends Queue {
   // queue size of non-mature elements only
   schedSize (callback) {
     this._col.aggregate ([
-      {$match: {mature: {$gt: Queue.now ()}}},
+      {$match: {
+        mature: {$gt: Queue.now ()},
+        reserved: {$exists: false}
+      }},
+      {$group:{_id:'t', v: {$sum: '$n'}}}
+    ], (err, cursor) => {
+      if (err) return callback (err);
+
+      cursor.toArray ((err, res) => {
+        if (err) return callback (err);
+        if (res.length == 0) return callback (null, 0);
+        callback (null, res[0].v);
+      });
+    });
+  }
+
+  //////////////////////////////////
+  // queue size of non-mature elements only
+  resvSize (callback) {
+    this._col.aggregate ([
+      {$match: {
+        mature: {$gt: Queue.now ()},
+        reserved: {$exists: true}
+      }},
       {$group:{_id:'t', v: {$sum: '$n'}}}
     ], (err, cursor) => {
       if (err) return callback (err);

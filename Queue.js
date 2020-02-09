@@ -499,7 +499,8 @@ class Queue {
       next_mature_t: cb => this.next_t (cb),
       size:          cb => this.size (cb),
       totalSize:     cb => this.totalSize (cb),
-      schedSize:     cb => this.schedSize (cb)
+      schedSize:     cb => this.schedSize (cb),
+      resvSize:      cb => this.resvSize (cb)
     }, cb);
   }
 
