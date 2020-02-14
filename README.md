@@ -45,15 +45,13 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
 
 
 ## About
-Keuss is an attempt or experiment to provide a serverless, persistent and high-available queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend needs. As of now, it has evolved into a rather capable and complete queue middleware
+Keuss is an attempt or experiment to provide a serverless, persistent and high-available queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend needs. As of now, it has evolved into a rather capable and complete queue middleware.
 
-The underlying idea is that the key to provide persistency, HA and load balance is to to rely on a storage subsystem
-that provides that,, and build the rest on top. Instead of reinventing the wheel by
-building such as storage I simply tried to adapt what's already out there
+The underlying idea is that the key to provide persistency, HA and load balance is to rely on a storage subsystem that provides that, and build the rest on top. Instead of reinventing the wheel by building such as storage I simply tried to adapt what's already out there.
 
-Modelling a queue with mongodb, for example, proved easy enough. It resulted simple, cheap and provides great persistency and HA and decent support for load balancing. Although using Redis provided similar results, in both cases the load balancing part was somewhat incomplete: the whole thing lacked a *bus* to signal all clients about, for example, when an insertion in a particular queue takes place. Without this layer a certain amount of polling is needed, so it's obviously a Nice Thing To Have
+Modelling a queue with mongodb, for example, proved easy enough. It resulted simple, cheap and provides great persistency, HA and decent support for load balancing. Although using Redis provided similar results, in both cases the load balancing part was somewhat incomplete: the whole thing lacked a *bus* to signal all clients about, for example, when an insertion in a particular queue takes place. Without this layer a certain amount of polling is needed, so it's obviously a Nice Thing To Have.
 
-Keuss ended up being a somewhat *serverless* queue system, where the *server* or common parts are bare storage systems such as redis or mongodb. There is no need for any extra *keuss server* in between clients and storage (although an actual keuss-server does exist, serving a different purpose on top of plain keuss). Thus, all keuss actually lays at the *client* side
+Keuss ended up being a somewhat *serverless* queue system, where the *server* or common parts are bare storage systems such as redis or mongodb. There is no need for any extra *keuss server* in between clients and storage (although an actual keuss-server does exist, serving a different purpose on top of plain keuss). Thus, all keuss actually lays at the *client* side.
 
 ### Concepts
 
@@ -71,22 +69,22 @@ a **Queue** is more of an interface, a definition of what it can do. Keuss queue
 *element* here translates to any js object. Internally, it's usually managed as json
 
 #### Pipeline
-A **pipeline** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the 'commit element in incoming queue, insert element in the next queue' to be atomic. This removes chances for race conditions, or message losses
+A **pipeline** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the 'commit element in incoming queue, insert element in the next queue' to be atomic. This removes chances for race conditions, or message losses.
 
-The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors
+The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors.
 
 #### Storage
 **Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 7 backends, with various levels of features and performance:
 
-* *mongo*, a mongodb-based backend that provides te full set of queue features, still with decent performance
-* *redis-oq*, backed using an ordered queue on top of redis (made in turn with a sorted set, a hash and some lua). Provides all queue features including reserve-commit-rollback. Noticeable faster than mongodb
+* *mongo*, a mongodb-based backend that provides the full set of queue features, still with decent performance.
+* *redis-oq*, backed using an ordered queue on top of redis (made in turn with a sorted set, a hash and some lua). Provides all queue features including reserve-commit-rollback. Noticeable faster than mongodb.
 * *redis-list*, backed using a redis list. Does not offer reserve-commit-rollback nor the ability to schedule, but is much faster than redis-oq
-* *pl-mongo*, a version of the mongo backend that provides pipelining capabilities (the queues it produces are also pipelines).
-* *ps-mongo*, a verion of *mongo* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index
-* *bucket-mongo*, a first attepmt on storing more than one element on each mongodb record in irder to break past mongodb I/O limitations. It is very simple, lacking schedule and reserve support. However, it has staggering throughput on a reasonable durability
-* *bucket-mongo-safe*, an evolution of mongo-safe, provides both scheduling and reserve support with a performance only a bit below bucket-mongo
+* *pl-mongo*, a version of the *mongo* backend that provides pipelining capabilities (the queues it produces are also pipelines).
+* *ps-mongo*, a version of the *mongo* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index.
+* *bucket-mongo*, a first attepmt on storing more than one element on each mongodb record in order to break past mongodb I/O limitations. It is very simple, lacking schedule and reserve support. However, it has staggering throughput on a reasonable durability.
+* *bucket-mongo-safe*, an evolution of bucket-mongo, provides both scheduling and reserve support with a performance only a bit below bucket-mongo
 
-As mentioned before, persistence and HA depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases
+As mentioned before, persistence and HA depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases.
 
 The following table shows the capabilities of each backend:
 
@@ -111,22 +109,22 @@ So far, the only events published by keuss are:
 * queue paused/resumed
 
 #### Stats
-**Stats** provides counters and metrics on queues, shared among keuss clients. The supported stts are:
+**Stats** provides counters and metrics on queues, shared among keuss clients. The supported stats are:
 * elements put
 * elements got
 * paused status
 
 Three options are provided to store the stats:
-* *mem*: very simple in-process, memory based
-* *redis*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms
-* *mongo*: backed by mongodb usnig one object per queue inside a singel collection. Modifications are buffered in memory and flushed every 100ms
+* *mem*: very simple in-process, memory based.
+* *redis*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms.
+* *mongo*: backed by mongodb using one object per queue inside a single collection. Modifications are buffered in memory and flushed every 100ms.
 
 ### How all fits together
-* *Queues*, or rather clients to individual queues, are created using a *backend* as factory
-* *Backends* need to be intialized before being used. Exact initialization details depend on each backend
-* When creating a *queue*, a *signaller* and a *stats* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *local* and *mem*, respectively, are used
-* *Queues* are created on-demand, and are never destroyed as far as keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty
-* *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue
+* *Queues*, or rather clients to individual queues, are created using a *backend* as factory.
+* *Backends* need to be initialized before being used. Exact initialization details depend on each backend.
+* When creating a *queue*, a *signaller* and a *stats* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *local* and *mem*, respectively, are used.
+* *Queues* are created on-demand, and are never destroyed as far as keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
+* *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue.
 
 More info on pipelines [here](doc/pipelines.md)
 
@@ -187,10 +185,10 @@ Where:
 ```javascript
 factory.close (function (err {...}));
 ```
-Frees up resources on the factory. Queues created with the factory will become unusable afterwards. See 'Shutdown process' below for more info
+Frees up resources on the factory. Queues created with the factory will become unusable afterwards. See 'Shutdown process' below for more info.
 
 ### Signaller
-Signaller factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result fo the *new* operation is indeed the factory; the result of the require is therefore a *metafactory*
+Signaller factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result for the *new* operation is indeed the factory; the result of the require is therefore a *metafactory*.
 
 ```javascript
 var signal_redis_pubsub = require ('keuss/signal/redis-pubsub');
@@ -248,7 +246,7 @@ MQ (f_opts, function (err, factory) {
   // queues created by factory here will use a redis-backed stats, hosted at redis at localhost, db 6
 })
 ```
-Stats objects, as of now, store the numer of elements inserted and the number of elements extracted; they are created behind the scenes and tied to queue instances, and the stats-related interface is in fact part fo the queues' interface
+Stats objects, as of now, store the numer of elements inserted and the number of elements extracted; they are created behind the scenes and tied to queue instances, and the stats-related interface is in fact part of the queues' interface
 
 ### Queue API
 
@@ -269,7 +267,7 @@ var qname = q.name ()
 ```javascript
 var qtype = q.type ()
 ```
-returns a string with the type of the queue (the type of backend who was used to create it)
+returns a string with the type of the queue (the type of backend which was used to create it)
 
 #### Queue occupation
 ```javascript
@@ -340,7 +338,7 @@ Obtains an element from the queue. Callback is called with the element obtained 
 *cid* is an string that identifies the consumer entity; it is used only for debugging purposes
 
 Possible opts:
-* **timeout**: milliseconds to wat for an elligible element to appear in the queue to be returned. If not defined it will wait forever
+* **timeout**: milliseconds to wait for an elligible element to appear in the queue to be returned. If not defined it will wait forever
 * **reserve**: if true the element is only reserved, not completely returned. This means either *ok* or *ko* operations are needed upon the obtained element once processed, otherwise the element will be rolled back (and made available again) at some point in the future (this is only available on backends capable of reserve/commit)
 
 #### Cancel a pending Pop
@@ -353,7 +351,7 @@ q.cancel (tr);
 ```
 Cancels a pending pop operation, identified by the value returned by pop()
 
-If no tr is passed, or it is null, all pending pop operations on the queue are cancelled. Cancelled pop operations will get 'cancel' (a string) as error in teh callback
+If no tr is passed, or it is null, all pending pop operations on the queue are cancelled. Cancelled pop operations will get 'cancel' (a string) as error in the callback
 
 #### Commit a reserved element
 ```javascript
@@ -379,13 +377,12 @@ q.drain (function (err) {
 ```
 drains a queue. This is a needed operation when a backend does read-ahead upon a pop(), or buffers push() operations for later; in this case, you may want to be sure that all extra elemens read are actually popped, and all pending pushes are committed.
 
-'drain' will immediately inhibit push(): any call to push() will immediately result in a 'drain' (a string) error. The callback will be called when all pending pushes are committed, and all read-ahead on a pop() has been actually popped
+'drain' will immediately inhibit push(): any call to push() will immediately result in a 'drain' (a string) error. The callback will be called when all pending pushes are committed, and all read-ahead on a pop() has been actually popped.
 
-Also, drain() will also call cancel() on the queue immediately before finishing, in case of success
+Also, drain() will also call cancel() on the queue immediately before finishing, in case of success.
 
 ### Redis connections
-Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will
-create it from the opts object passed:
+Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will create it from the opts object passed:
 * if opts is a function, it is executed. It is expected to return a redis connection
 * if it's an object and contains a 'Redis' field, this field is used to create a new ioredis Redis object, as in *return new Redis (opts.Redis)*
 * if it's an object and contains a 'Cluster' field, this field is used to create a new ioredis Redis.Cluster object, as in *return new Redis.Cluster (opts.Cluster)*
@@ -442,48 +439,48 @@ Examples:
   ```
 
 ### Shutdown process
-It is a good practice to call close(cb) on the factories to release all resources once you're done, or at shutdown if you want your shutdowns clean and graceful; also, you should loop over your queues and perform a drain() on them before calling close() on their factories: this will ensure any un-consumed data is popped, and any unwritten data is written. Also, it'll ensure all your (local) waiting consumers will end (on 'cancel' error)
+It is a good practice to call close(cb) on the factories to release all resources once you're done, or at shutdown if you want your shutdowns clean and graceful; also, you should loop over your queues and perform a drain() on them before calling close() on their factories: this will ensure any un-consumed data is popped, and any unwritten data is written. Also, it'll ensure all your (local) waiting consumers will end (on 'cancel' error).
 
-Factories do not keep track of the created Queues, so this can't be done internally as part of the close(); this may change in the future
+Factories do not keep track of the created Queues, so this can't be done internally as part of the close(); this may change in the future.
 
 ### Working with no signallers
 Even when using signallers, get operations on queue never block or wait forever; waiting get operations rearm themselves
 every 15000 millisec (or whatever specified in the *pollInterval*). This feature provides the ability to work with more than one process
-without signallers, geting a maximum latency of *pollInterval* millisecs, but also provides a safe backup in the event of signalling loss
+without signallers, getting a maximum latency of *pollInterval* millisecs, but also provides a safe backup in the event of signalling loss.
 
 ## Bucket-based backends
-Up to version 1.4.X all backends worked in the same way, one element at a time: pushing and popping elements fired one or more operations pero element on the underlying storage. This means teh bottleneck would end up being the storage's I/O; redis and mongo both allow quite high I/O rates, enough to work at thousands of operations per second. Still, the limit was there
+Up to version 1.4.X all backends worked in the same way, one element at a time: pushing and popping elements fired one or more operations per element on the underlying storage. This means the bottleneck would end up being the storage's I/O; redis and mongo both allow quite high I/O rates, enough to work at thousands of operations per second. Still, the limit was there.
 
-Starting with v1.5.2 keuss includes 2 backends that do not share this limitation: they work by packing many elements inside a single 'storage unit'. Sure enough, this adds some complexity and extra risks, but the throughput improvement is staggering: on mongodb it goes from 3-4 Ktps to 35-40Ktps, and the bottleneck shifted from mongod to the client's cpu, busy serializing and deserializing payloads
+Starting with v1.5.2 keuss includes 2 backends that do not share this limitation: they work by packing many elements inside a single 'storage unit'. Sure enough, this adds some complexity and extra risks, but the throughput improvement is staggering: on mongodb it goes from 3-4 Ktps to 35-40Ktps, and the bottleneck shifted from mongod to the client's cpu, busy serializing and deserializing payloads.
 
-Two bucked-based backends were added, both based on mongodb: bucket-mongo and bucket-mongo-safe. Both are usable, but there is little gain on using fhe first over the second: bucket-mongo was used as a prototyping area, and although perfectly usable, it turned out bucket-mongo-safe is better in almost every aspect: it provides better guarantees and more features, at about the same performance
+Two bucked-based backends were added, both based on mongodb: bucket-mongo and bucket-mongo-safe. Both are usable, but there is little gain on using fhe first over the second: bucket-mongo was used as a prototyping area, and although perfectly usable, it turned out bucket-mongo-safe is better in almost every aspect: it provides better guarantees and more features, at about the same performance.
 
 ### bucket-mongo-safe
 In addition to the general options, the factory accepts the following extra options:
 * bucket_max_size: maximum number of elements in a bucket, defaults to 1024
-* bucket_max_wait: milliseconds to wait before flushing a push bucket: pushes are buffered in a push bucket, which are flushed when they're full (bucket_max_size elements). IF this amont of millisecs go by and the push bucket is not yet full, it is flushed as is. Defaults to 500
-* reserve_delay: number of seconds a bucket keeps its 'reserved' status when read from mongodb. Defaults to 30
-* state_flush_period: changes in state on each active/read bucket are flushed to mongodb every those milliseconds. Defaults to 500;
+* bucket_max_wait: milliseconds to wait before flushing a push bucket: pushes are buffered in a push bucket, which are flushed when they're full (bucket_max_size elements). If this amount of millisecs go by and the push bucket is not yet full, it is flushed as is. Defaults to 500.
+* reserve_delay: number of seconds a bucket keeps its 'reserved' status when read from mongodb. Defaults to 30.
+* state_flush_period: changes in state on each active/read bucket are flushed to mongodb every those milliseconds. Defaults to 500.
 * reject_delta_base, reject_delta_factor: if no call to ko provide a next_t, the backend will set one using a simple grade-1 polynom, in the form of reject_delta_factor * tries + reject_delta_base, in millisecs. They default to 10000 and ((reserve_delay * 1000) || 30000) respectively
 * reject_timeout_grace: number of seconds to wait since a bucket is reserver/read until it is considered timed out; after this, what is left of the bucket is rejected/retried. Defaults to (reserve_delay * 0.8)
-* state_flush_period: flush intermediate state chenges in each active read bucked every this amount of millisecs
+* state_flush_period: flush intermediate state changes in each active read bucked every this amount of millisecs
 
 bucket-mongo-safe works by packing many payloads in a single mongodb object:
 * at push() time, objects are buffered in memory and pushed (inserted) only when bucket_max_size has been reached or when a bucket has been getting filled for longer than bucket_max_wait millisecs.
 * Then, at pop/reserve time full objects are read into mem, and then individual payloads returned from there. Both commits and pops are just marked in memory and then flushed every state_flush_period millisecs, or when the bucked is exhausted
-* Therefore, buckets remain unmodified since they are created in terms of the payloads theu contain: a pop() or commit/ok would only mark payloads inside buckets as read/not-anymore-available, but buckets are never splitted nor merged
+* Therefore, buckets remain unmodified since they are created in terms of the payloads they contain: a pop() or commit/ok would only mark payloads inside buckets as read/not-anymore-available, but buckets are never splitted nor merged
 
-Thus, it is important to call drain() on queues of this backend: this call ensures all pending write buckes are interted in mongodb, and also ensures all in-memory buckets left are completely read (served through pop/reserve)
+Thus, it is important to call drain() on queues of this backend: this call ensures all pending write buckets are interted in mongodb, and also ensures all in-memory buckets left are completely read (served through pop/reserve)
 
-Also, there is little difference in performance and I/O between pop and reserve/commit; performance is no loner a reason to prefer one over the other
+Also, there is little difference in performance and I/O between pop and reserve/commit; performance is no longer a reason to prefer one over the other.
 
 #### Note on scheduling
-Scheduling on bucket-mongo-safe is perfectly possible, but with a twist: the effective mature_t of a message will be the oldest in the whole bucket it resides in. This applies to both insert and rollback/ko. In practice this is usually not a big deal, since anyway the mature_t is a 'not before' time, and that's all Keuss (or any other queuing middleware) would guarantee
+Scheduling on bucket-mongo-safe is perfectly possible, but with a twist: the effective mature_t of a message will be the oldest in the whole bucket it resides in. This applies to both insert and rollback/ko. In practice this is usually not a big deal, since anyway the mature_t is a 'not before' time, and that's all Keuss (or any other queuing middleware) would guarantee.
 
 ### bucket-mongo
-This is a simpler version of buckets-on-mongodb, and to all purposes bucket-mongo-safe should be preferred; it does not provide reserve, nor schedule. It is however a tad faster and lighter on I/O
+This is a simpler version of buckets-on-mongodb, and to all purposes bucket-mongo-safe should be preferred; it does not provide reserve, nor schedule. It is however a tad faster and lighter on I/O.
 
 It is provided only for historical and educational purposes
 
 ## Examples
-A set of funcioning examples can be found inside the *examples* directory
+A set of funcioning examples can be found inside the *examples* directory.
