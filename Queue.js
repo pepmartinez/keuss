@@ -394,18 +394,27 @@ class Queue {
 
   //////////////////////////////////
   // high level commit
-  ok (id, cb) {
-    this.commit (id, cb);
+  ok (obj, cb) {
+    // allow commit with either _id of full object
+    if (obj._id) {
+      this.commit (obj._id, cb);
+    }
+    else {
+      this.commit (obj, cb);
+    }
   }
 
 
   //////////////////////////////////
   // high level rollback
-  ko (id, next_t, cb) {
+  ko (obj, next_t, cb) {
     if (_.isFunction (next_t)) {
       cb = next_t;
       next_t = null;
     }
+
+    // allow rollback with either _id of full object
+    let id = (obj._id ? obj._id : obj);
 
     this.rollback (id, next_t, (err, res) => {
       if (err) {
