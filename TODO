@@ -2,6 +2,13 @@
 * bridges?
 * expiration / deadletter (tied to at-least-one)?
 * queue traversal/query
-* allow update obj on pl-mongo (api dep on being mongodb)
 * priorities?
 * add factory archetypes (all-mongo, all-mongo-bucket...)
+* pipelines
+  + allow mongo-like update on payload
+  + allow geenral graphs
+  + add prokection ability (as in generating extra payloads)
+  + add some commonplace transforms (etl-like)
+  + create a server for that, allow processor code defined externally
++ more and better examples
+ 
