@@ -423,26 +423,7 @@ class Queue {
       (obj.tries > this._factory.max_ko ())
     ) {
       debug ('%s: too many retries (%d), moving to deadletter', obj._id, obj.tries);
-
-      // commit and move to deadletter
-      // ALSO NOT IN deadletter queue (to void loop)
-      this.commit (obj._id, err => {
-        if (err) {
-          debug ('while committing %s prior to moving to deadletter: %j', obj._id, err);
-          return cb (err);
-        }
-
-        this._factory.deadletter_queue ().push (obj.payload, (err, res) => {
-          if (err) {
-            debug ('while moving %s to deadletter: %j', obj._id, err);
-            return cb (err);
-          }
-          else {
-            debug ('moved %s to deadletter with _id %s', obj._id, res);
-            return cb (null, false);
-          }
-        });
-      });
+      this._move_to_deadletter (obj, cb);
     }
     else {
       this.rollback (id, next_t, (err, res) => {
@@ -706,6 +687,31 @@ class Queue {
   ////////////////////////////////////////
   _signal_insertion (t) {
     this._signaller.signalInsertion (t);
+  }
+
+
+  /////////////////////////////////////////////
+  _move_to_deadletter (obj, cb) {
+    // commit and move to deadletter
+    // ALSO NOT IN deadletter queue (to void loop)
+    // commit element in origin queue, push in deadletter afterwards
+    this.commit (obj._id, err => {
+      if (err) {
+        debug ('while committing %s prior to moving to deadletter: %j', obj._id, err);
+        return cb (err);
+      }
+
+      this._factory.deadletter_queue ().push (obj.payload, (err, res) => {
+        if (err) {
+          debug ('while moving %s to deadletter: %j', obj._id, err);
+          return cb (err);
+        }
+        else {
+          debug ('moved %s to deadletter with _id %s', obj._id, res);
+          return cb (null, false);
+        }
+      });
+    });
   }
 }
 

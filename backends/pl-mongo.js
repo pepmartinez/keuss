@@ -229,6 +229,20 @@ class PipelinedMongoQueue extends Queue {
       callback (null, result && result.mature);
     });
   }
+
+
+  //////////////////////////////////////////////
+  // redefnition
+  _move_to_deadletter (obj, cb) {
+    this.pl_step (obj._id, this._factory.deadletter_queue (), {}, (err, res) => {
+      if (err) return cb (err);
+      this._stats.incr ('get');
+      this._factory.deadletter_queue ()._stats.incr ('put');
+      this._factory.deadletter_queue ()._signaller.signalInsertion (Queue.now());
+
+      cb (null, false);
+    });
+  }
 }
 
 
