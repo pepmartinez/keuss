@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "keywords": [
     "queue",
     "persistent",
@@ -34,12 +34,14 @@
     "uuid": "~3.3.2",
     "mubsub": "~1.4.0",
     "debug": "~4.1.1",
-    "async-lock": "~1.1.4"
+    "async-lock": "~1.1.4",
+    "minimist": "~1.2.5"
   },
   "devDependencies": {
     "mocha": "~5.2.0",
     "chance": "~1.0.18",
-    "should": "~13.2.1"
+    "should": "~13.2.1",
+    "minimist": "~1.2.5"
   },
   "scripts": {
     "test": "mocha --reporter spec --check-leaks --no-timeouts --exit test/",

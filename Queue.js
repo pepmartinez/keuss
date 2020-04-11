@@ -283,7 +283,7 @@ class Queue {
       mature  : mature,
       payload  : payload,
       tries: opts.tries || 0
-    }
+    };
 
     debug ('%s: about to insert %o', this._name, msg);
 
@@ -394,33 +394,53 @@ class Queue {
 
   //////////////////////////////////
   // high level commit
-  ok (id, cb) {
-    this.commit (id, cb);
+  ok (obj, cb) {
+    // allow commit with either _id of full object
+    if (obj._id) {
+      this.commit (obj._id, cb);
+    }
+    else {
+      this.commit (obj, cb);
+    }
   }
 
 
   //////////////////////////////////
   // high level rollback
-  ko (id, next_t, cb) {
+  ko (obj, next_t, cb) {
     if (_.isFunction (next_t)) {
       cb = next_t;
       next_t = null;
     }
 
-    this.rollback (id, next_t, (err, res) => {
-      if (err) {
-        debug ('%s: ko : error when rolling back tid %s: %o', this._name, id, err);
-        return cb (err);
-      }
+    // allow rollback with either _id of full object
+    let id = (obj._id ? obj._id : obj);
 
-      if (res) {
-        var t = new Date (next_t || null);
-        debug ('%s: ko : tid %s rolled back, new mature is %s', this._name, id, t);
-        this._signal_insertion (t);
-      }
+    if (
+      (obj.tries) &&
+      (this._factory.deadletter_queue ()) &&
+      (this._factory.max_ko ()) &&
+      (obj.tries > this._factory.max_ko ())
+    ) {
+      debug ('%s: too many retries (%d), moving to deadletter', obj._id, obj.tries);
+      this._move_to_deadletter (obj, cb);
+    }
+    else {
+      this.rollback (id, next_t, (err, res) => {
+        if (err) {
+          debug ('%s: ko : error when rolling back tid %s: %o', this._name, id, err);
+          return cb (err);
+        }
 
-      cb (null, res);
-    });
+        if (res) {
+          var t = new Date (next_t || null);
+          debug ('%s: ko : tid %s rolled back, new mature is %s', this._name, id, t);
+          this._signal_insertion (t);
+        }
+
+        cb (null, res);
+      });
+    }
   }
 
 
@@ -462,7 +482,7 @@ class Queue {
     else {
       // cancel all pending stuff
       this._consumers_by_tid.forEach ((consumer_data, tid) => {
-        debug ('%s: cancelling tid %s (cid %s)', this._name, tid, consumer_data.cid);
+        debug ('%s: cancelling tid %s (cid %s): start', this._name, tid, consumer_data.cid);
 
         if (consumer_data.callback) {
           // call callback with error-cancelled
@@ -470,17 +490,23 @@ class Queue {
 
           // mark cancelled by deleting callback
           consumer_data.callback = null;
+
+          debug ('%s: cancelling tid %s (cid %s): callback called and removed', this._name, tid, consumer_data.cid);
         }
 
         if (consumer_data.cleanup_timeout) {
           clearTimeout (consumer_data.cleanup_timeout);
           consumer_data.cleanup_timeout = null;
+          debug ('%s: cancelling tid %s (cid %s): cleanup timeout removed', this._name, tid, consumer_data.cid);
         }
 
         if (consumer_data.wakeup_timeout) {
           clearTimeout (consumer_data.wakeup_timeout);
           consumer_data.wakeup_timeout = null;
+          debug ('%s: cancelling tid %s (cid %s): wakeup timeout removed', this._name, tid, consumer_data.cid);
         }
+
+        debug ('%s: cancelling tid %s (cid %s): end', this._name, tid, consumer_data.cid);
       });
 
       this._consumers_by_tid.clear();
@@ -661,6 +687,31 @@ class Queue {
   ////////////////////////////////////////
   _signal_insertion (t) {
     this._signaller.signalInsertion (t);
+  }
+
+
+  /////////////////////////////////////////////
+  _move_to_deadletter (obj, cb) {
+    // commit and move to deadletter
+    // ALSO NOT IN deadletter queue (to void loop)
+    // commit element in origin queue, push in deadletter afterwards
+    this.commit (obj._id, err => {
+      if (err) {
+        debug ('while committing %s prior to moving to deadletter: %j', obj._id, err);
+        return cb (err);
+      }
+
+      this._factory.deadletter_queue ().push (obj.payload, (err, res) => {
+        if (err) {
+          debug ('while moving %s to deadletter: %j', obj._id, err);
+          return cb (err);
+        }
+        else {
+          debug ('moved %s to deadletter with _id %s', obj._id, res);
+          return cb (null, false);
+        }
+      });
+    });
   }
 }
 

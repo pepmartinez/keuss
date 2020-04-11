@@ -910,7 +910,7 @@ var factory = null;
       ], (err, res) => {
         if (err) return done (err);
         var figs = res.filter (i => _.isArray (i));
-        figs.should.eql ([ 
+        figs.should.eql ([
           [ 0, 0, 0, 0 ],
           [ 3, 2, 1, 0 ],
           [ 3, 1, 1, 1 ],
@@ -938,5 +938,40 @@ var factory = null;
         done(err);
       });
     });
+
+
+    it('should rollback ok using full object', done => {
+      var q = factory.queue('test_queue');
+      var state = {};
+
+      async.series([
+        cb => q.push ({a:1, b:2}, {delay: 2}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_obj = res;
+          res.payload.should.eql ({a:1, b:2});
+          res.tries.should.equal (0);
+          cb (null, res);
+        }),
+        cb => q.ko (state.reserved_obj, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_obj = res;
+          res.payload.should.eql ({a:1, b:2});
+          res.tries.should.equal (1);
+          cb (null, res);
+        }),
+        cb => q.ko (state.reserved_obj, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_obj = res;
+          res.payload.should.eql ({a:1, b:2});
+          res.tries.should.equal (2);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_obj, cb),
+      ], done);
+    });
+
   });
 });

@@ -1,4 +1,8 @@
 # Changelog
+* v1.5.8
+  * added deadletter support
+* v1.5.7
+  * added resvSize support
 * v1.5.4:
   * added pause support
   * deps updated

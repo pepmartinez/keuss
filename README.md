@@ -11,6 +11,7 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
       - [Storage](#storage)
       - [Signaller](#signaller)
       - [Stats](#stats)
+    - [Dead Letter](#dead-letter)
     - [How all fits together](#how-all-fits-together)
   - [Install](#install)
   - [Usage](#usage)
@@ -26,6 +27,8 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
       - [Queue type](#queue-type)
       - [Queue occupation](#queue-occupation)
       - [Total Queue occupation](#total-queue-occupation)
+      - [Size of Scheduled](#size-of-scheduled)
+      - [Size of Reserved](#size-of-reserved)
       - [Pause/Resume](#pauseresume)
       - [Time of schedule of next message](#time-of-schedule-of-next-message)
       - [Add element to queue](#add-element-to-queue)
@@ -119,6 +122,28 @@ Three options are provided to store the stats:
 * *redis*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms.
 * *mongo*: backed by mongodb using one object per queue inside a single collection. Modifications are buffered in memory and flushed every 100ms.
 
+### Dead Letter
+The concept of *deadletter* is very common on queue middlewares: in the case reserve/commit/rollback is used to consume, a maximum number of fails (reserve-rollback) can be set on each element; if an element sees more rollbacks than allowed, the element is moved to an special queue (dead letter queue) for later, offline inspection
+
+By default, keuss uses no deadletter queue; it can be activated vy passing an object `deadletter` at factory creation time, inside the options:
+```javascript
+var factory_opts = {
+  url: 'mongodb://localhost/qeus',
+  deadletter: {
+    max_ko: 3
+  }
+};
+
+// initialize factory
+MQ(factory_opts, (err, factory) => {
+  ...
+```
+This object must not be empty, and can contain the following keys:
+* `max_ko`: maximum number of rollbacks pero element allowed. The next rollback will cause the element to be moved to the deadletter queue. Defaults to 0, which means `infinite`
+* `queue`: queue name of the deadletter queue, defaults to `__deadletter__`
+
+All storage backends support deadletter. In `ps-mongo` the move-to-deadletter (as it is the case with other move-to-queue operations) is atomic; in the rest, the element is first committed in the original queue and then pushed inside deadletter
+
 ### How all fits together
 * *Queues*, or rather clients to individual queues, are created using a *backend* as factory.
 * *Backends* need to be initialized before being used. Exact initialization details depend on each backend.
@@ -142,27 +167,30 @@ Backends, which work as queue factories, have the following operations
 ```javascript
 var QM = require ('keuss/backends/<backend>');
 
-MQ (opts, function (err, factory) {
+MQ (opts, (err, factory) => {
   // factory contains the actual factory, initialized
 })
 ```
 
 where 'opts' is an object containing initialization options. Options common to all backends are:
-* name: Name for the factory, defaults to 'N'
-* stats:
-  * provider: stats backend to use, as result of `require ('keuss/stats/<provider>')`. Defaults to `require ('keuss/stats/mem')`
-  * opts: options for the provider
-* signaller:
-  * provider: signaller provider to use, as result of `require ('keuss/signal/<provider>')`. Defaults to `require ('keuss/signal/local')`
-  * opts: options for the provider
+* `name`: Name for the factory, defaults to 'N'
+* `stats`:
+  * `provider`: stats backend to use, as result of `require ('keuss/stats/<provider>')`. Defaults to `require ('keuss/stats/mem')`
+  * `opts`: options for the provider
+* `signaller`:
+  * `provider`: signaller provider to use, as result of `require ('keuss/signal/<provider>')`. Defaults to `require ('keuss/signal/local')`
+  * `opts`: options for the provider
+* `deadletter`: deadletter options, described above
+  * `max_ko`: max rollbacks per element
+  * `queue`: deadletter queue name
 
 the following backend-dependent values:
 * backends *mongo*, *pl-mongo* and *ps-mongo*
-   * url: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`
+   * `url`: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`
 * backends *redis-list* and *redis-oq*
-  * redis: data to create a redis connection to the Redis acting as backend, see below
+  * `redis`: data to create a redis connection to the Redis acting as backend, see below
 * backend *ps-mongo*
-  * ttl: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs
+  * `ttl`: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs
 
 #### Queue creation
 ```javascript
@@ -171,19 +199,19 @@ var q = factory.queue (<name>, <options>);
 ```
 Where:
 
-* name: string to be used as queue name. Queues with the same name are in fact the same queue if they're backed in the same factory type using the same initialization data (mongodb url or redis conn-data)
-* options: the options passed at backend initialization are used as default values:
+* `name`: string to be used as queue name. Queues with the same name are in fact the same queue if they're backed in the same factory type using the same initialization data (mongodb url or redis conn-data)
+* `options`: the options passed at backend initialization are used as default values:
   * pollInterval: rearm or poll period in millisecs for get operations, defaults to 15000 (see *Working with no signallers* below)
-  * signaller: signaller to use for the queue
-    * provider: signaller factory
-    * opts: options for the signaller factory (see below)
-  * stats: stats store to use for this queue
-    * provider: stats factory
-    * opts: options for the stats factory (see below)
+  * `signaller`: signaller to use for the queue
+    * `provider`: signaller factory
+    * `opts`: options for the signaller factory (see below)
+  * `stats`: stats store to use for this queue
+    * `provider`: stats factory
+    * `opts`: options for the stats factory (see below)
 
 #### Factory close
 ```javascript
-factory.close (function (err {...}));
+factory.close (err => {...});
 ```
 Frees up resources on the factory. Queues created with the factory will become unusable afterwards. See 'Shutdown process' below for more info.
 
@@ -211,7 +239,7 @@ var f_opts = {
   .
 }
 
-MQ (f_opts, function (err, factory) {
+MQ (f_opts, (err, factory) => {
   // queues created by factory here will use a redis pubsub signaller, hosted at redis at localhost, db 6
 })
 ```
@@ -242,7 +270,7 @@ var f_opts = {
   .
 }
 
-MQ (f_opts, function (err, factory) {
+MQ (f_opts, (err, factory) => {
   // queues created by factory here will use a redis-backed stats, hosted at redis at localhost, db 6
 })
 ```
@@ -252,7 +280,7 @@ Stats objects, as of now, store the numer of elements inserted and the number of
 
 #### Get Stats
 ```javascript
-q.stats (function (err, res) {
+q.stats ((err, res) => {
   ...
 })
 ```
@@ -271,19 +299,35 @@ returns a string with the type of the queue (the type of backend which was used 
 
 #### Queue occupation
 ```javascript
-q.size (function (err, res){
+q.size ((err, res) => {
   ...
 })
 ```
-res contains the number of elements in the queue that are already elligible (that is, excluding scheduled elements with a schedule time in the future)
+returns the number of elements in the queue that are already elligible (that is, excluding scheduled elements with a schedule time in the future)
 
 #### Total Queue occupation
 ```javascript
-q.totalSize (function (err, res){
+q.totalSize ((err, res) => {
   ...
 })
 ```
-res contains the number of elements in the queue (that is, including scheduled elements with a schedule time in the future)
+returns the number of elements in the queue (that is, including scheduled elements with a schedule time in the future)
+
+#### Size of Scheduled
+```javascript
+q.schedSize ((err, res) => {
+  ...
+})
+```
+returns the number of scheduled elements in the queue (that is, those with a schedule time in the future). Returns 0 id the queue does not support scheduling
+
+#### Size of Reserved
+```javascript
+q.resvSize ((err, res) => {
+  ...
+})
+```
+returns the number of reserved elements in the queue. REturns `null` if the queue does not support reserve
 
 #### Pause/Resume
 ```javascript
@@ -294,7 +338,7 @@ q.pause (true)
 q.pause (false)
 
 // gets paused status of queue
-q.paused (function (err, is_paused){
+q.paused ((err, is_paused) => {
   ...
 })
 ```
@@ -306,7 +350,7 @@ Also, the paused condition is stored as stats, so any new call to pop() will hon
 
 #### Time of schedule of next message
 ```javascript
-q.next_t (function (err, res){
+q.next_t ((err, res) => {
   ...
 })
 ```
@@ -314,7 +358,7 @@ Returns a Date, or null if queue is empty. Queues with no support for schedule/d
 
 #### Add element to queue
 ```javascript
-q.push (payload, [opts,] function (err, res) {
+q.push (payload, [opts,] (err, res) => {
   ...
 })
 ```
@@ -329,7 +373,7 @@ Possible opts:
 
 #### Get element from queue
 ```javascript
-var tr = q.pop (cid, [opts,] function (err, res) {
+var tr = q.pop (cid, [opts,] (err, res) => {
   ...
 })
 ```
@@ -343,7 +387,7 @@ Possible opts:
 
 #### Cancel a pending Pop
 ```javascript
-var tr = q.pop (cid, opts, function (err, res) {...});
+var tr = q.pop (cid, opts, (err, res) => {...});
 .
 .
 .
@@ -355,23 +399,54 @@ If no tr is passed, or it is null, all pending pop operations on the queue are c
 
 #### Commit a reserved element
 ```javascript
-q.ok (id, function (err, res) {
+q.ok (id, (err, res) => {
   ...
 })
 ```
-commits a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively erases the element from the queue
+commits a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively erases the element from the queue.
+
+Alternatively, you can pass the entire `res` object from the `pop()` operation:
+```javascript
+var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
+  // do something with res
+  ...
+
+  // commit it
+  q.ok (res, (err, res) => {
+    ...
+  });
+});
+```
 
 #### Rolls back a reserved element
 ```javascript
-q.ko (id, next_t, function (err, res) {
+q.ko (id, next_t, (err, res) => {
   ...
 })
 ```
-rolls back a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively makes the element available again at the queue, marking to be mature at next_t (next_t being a millsec-unixtime). If no next_t is specified or a null is passed, 'now' is assumed.
+rolls back a reserved element by its id (the id would be at res._id on the res param of pop() operation). This effectively makes the element available again at the queue, marking to be mature at next_t (next_t being a millsec-unixtime). If no next_t is specified or a null is passed, `now()` is assumed.
+
+As with `ok()`, you can use the entire `res` instead:
+```javascript
+var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
+  // do something with res
+  ...
+
+  // commit or rollback it
+  if (succeed) q.ok (res, (err, res) => {
+    ...
+  })
+  else q.ko (res, (err, res) => {
+    ...
+  })
+});
+```
+
+NOTE: you must pass the entire `res` for the deadletter feature to work; even if activated at the factory, `ko()` will not honor deadletter if you only pass the `res._id` as `id`
 
 #### Drain queue
 ```javascript
-q.drain (function (err) {
+q.drain (err => {
   ...
 })
 ```
@@ -394,7 +469,7 @@ Examples:
   var MQ = require ('keuss/backends/redis-list');
   var factory_opts = {};
 
-  MQ (factory_opts, function (err, factory) {
+  MQ (factory_opts, (err, factory) => {
     ...
   });
   ```
@@ -413,7 +488,7 @@ Examples:
     }
   };
 
-  MQ (factory_opts, function (err, factory) {
+  MQ (factory_opts, (err, factory) => {
     ...
   });
   ```
@@ -433,7 +508,7 @@ Examples:
     }
   };
 
-  MQ (factory_opts, function (err, factory) {
+  MQ (factory_opts, (err, factory) => {
     ...
   });
   ```
