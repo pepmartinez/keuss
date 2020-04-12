@@ -9,7 +9,7 @@ module.exports = (context) => {
   app.use (bodyParser.text ({type: () => true}));
 
   // main server entry point: anything here is queued for async delivery
-  app.all ('*', (req, res) => {
+  app.all ('/wh', (req, res) => {
     const url = req.headers['x-dest-url'];
     let delay = 0;
 
@@ -45,6 +45,19 @@ module.exports = (context) => {
       return res.status (201).send ({res: 'ok', id: id});
     });
   });
+
+
+  // test respnses for various http response codes
+  app.all ('/test/200', (req, res) => res.status (200).send ('a 200'));
+  app.all ('/test/400', (req, res) => res.status (400).send ('a 400'));
+  app.all ('/test/404', (req, res) => res.status (404).send ('a 404'));
+  app.all ('/test/500', (req, res) => res.status (500).send ('a 500'));
+
+  // do not respond
+  app.all ('/test/noresponse', (req, res) => {});
+
+  // close socket
+  app.all ('/test/drop', (req, res) => req.socket.destroy());
 
   // express error manager
   app.use (function (err, req, res, next) {
