@@ -1,0 +1,23 @@
+{
+  "name": "keuss-examples-webhooks",
+  "version": "0.0.0",
+  "homepage": "https://github.com/pepmartinez/keuss",
+  "bugs": {
+    "url": "https://github.com/pepmartinez/keuss/issues",
+    "email": "pep.martinez@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pepmartinez/keuss.git"
+  },
+  "author": {
+    "name": "Jose Luis Martinez Juan",
+    "email": "pep.martinez@gmail.com"
+  },
+  "license": "GPL-3.0",
+  "dependencies": {
+    "express": "~4.17.1",
+    "body-parser": "~1.19.0",
+    "superagent": "~5.2.2"
+  }
+}
