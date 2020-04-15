@@ -558,4 +558,6 @@ This is a simpler version of buckets-on-mongodb, and to all purposes bucket-mong
 It is provided only for historical and educational purposes
 
 ## Examples
-A set of funcioning examples can be found inside the *examples* directory.
+A set of funcioning examples can be found inside the *examples* directory:
+* [webhooks](examples/webhooks/README.md): A small but functionally complete webhook dispatcher sporting retries, reserve-commit, persistence and deadletter
+* [snippets](examples/snippets): A set of assorted code snippets for various tasks
