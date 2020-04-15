@@ -2,7 +2,7 @@ const request = require ('superagent');
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
-// calculate delay to apply on a rollback. Ues a 2nd-deg polynom based on tries
+// calculate delay to apply on a rollback. Uses a 2nd-deg polynom based on tries
 function _get_delay (elem) {
   const r = elem.tries || 0;
   return (r*r*3 + r*3 + 3) * 1000;

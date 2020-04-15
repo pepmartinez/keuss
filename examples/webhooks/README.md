@@ -32,5 +32,5 @@ curl -X POST --data-bin @wh-payload.json -v -H 'x-dest-url: http://localhost:667
 ```
 
 You would need to first create a file `wh-payload.json` with the webhook payload or content. Also, it will be issued with an initial delay of 1 second.
-The provided sample in the file is a sample content valid for posting a message to Microsoft Teams. You can find the sample and a concrete explanation of how to build your own cards here:
+The provided sample in the `wh-payload.json` file is a sample content for posting a message to a Microsoft Teams channel using webhooks connector. You can find the sample and more  concrete explanation of how to build your own cards for Microsoft Teams here:
 https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-reference#thumbnail-card
