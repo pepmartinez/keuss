@@ -28,7 +28,9 @@ A set of testing urls is also provided for a self-contained testing:
 Then, you can issue a POST webhook which would be retried 14 times and then moved to deadletter like this:
 
 ```bash
-curl -X POST --data-bin @wh-payload -v -H 'x-dest-url: http://localhost:6677/test/500' -H 'content-type: text/plain' -H 'x-delay: 1' http://localhost:6677/wh
+curl -X POST --data-bin @wh-payload.json -v -H 'x-dest-url: http://localhost:6677/test/500' -H 'content-type: text/plain' -H 'x-delay: 1' http://localhost:6677/wh
 ```
 
-You would need to first create a file `wh-payload` with the webhook payload or content. Also, it will be issued with an initial delay of 1 second
+You would need to first create a file `wh-payload.json` with the webhook payload or content. Also, it will be issued with an initial delay of 1 second.
+The provided sample in the file is a sample content valid for posting a message to Microsoft Teams. You can find the sample and a concrete explanation of how to build your own cards here:
+https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-reference#thumbnail-card
