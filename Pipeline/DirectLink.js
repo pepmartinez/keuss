@@ -55,8 +55,8 @@ class DirectLink {
   _process (ondata) {
     debug ('pll %s: attempting reserve', this._name);
 
-    this.src().pop('c1', { reserve: true }, (err, res) => {
-      debug ('pll %s: reserved element: %o', this._name, res);
+    this.src().pop('c1', { reserve: true }, (err, elem) => {
+      debug ('pll %s: reserved element: %o', this._name, elem);
 
       if (err) {
         if (err == 'cancel') return; // end the process loop
@@ -64,25 +64,25 @@ class DirectLink {
         return this._process (ondata);
       }
 
-      if (!res) {
+      if (!elem) {
         debug ('pll %s: reserve produced nothing', this._name);
         return this._process (ondata);
       }
 
       // do something
-      ondata (res, (err, res0) => {
-        debug ('pll %s: processed: %s', this._name, res._id);
+      ondata (elem, (err, res) => {
+        debug ('pll %s: processed: %s', this._name, elem._id);
 
         if (err) {
           // error: drop or retry?
           if (err.drop === true) {
-            debug ('pll %s: marked to be dropped: %s', this._name, res._id);
+            debug ('pll %s: marked to be dropped: %s', this._name, elem._id);
             return this._process (ondata);
           }
           else {
             // rollback
-            this.src().ko (res._id, this._rollback_next_t (res), err => {
-              debug ('pll %s: rolled back: %s', this._name, res._id);
+            this.src().ko (elem._id, this._rollback_next_t (elem), err => {
+              debug ('pll %s: rolled back: %s', this._name, elem._id);
               this._process (ondata);
             });
 
@@ -91,13 +91,13 @@ class DirectLink {
         }
 
         var opts = {};
-        _.merge (opts, this._opts, (res0 && res0.opts) || {});
+        _.merge (opts, this._opts, (res && res.opts) || {});
         this._mature (opts);
-        opts.payload = (res0 && res0.payload) || res.payload;
+        opts.payload = (res && res.payload) || elem.payload;
 
-        this._next (res._id, opts, (err, res0) => {
+        this._next (elem._id, opts, (err, res) => {
           if (err) debug ('error in next:', err);
-          debug ('pll %s: passed to next: %s', this._name, res._id);
+          debug ('pll %s: passed to next: %s', this._name, elem._id);
           this._process (ondata);
         });
       });
