@@ -1,14 +1,14 @@
 // mongodb: create a consumer and a producer
 var MQ = require ('../backends/pl-mongo');
-var PLL = require ('../PipelineLink');
+var PLL = require ('../Pipeline/DirectLink');
 var async = require ('async');
 
 
 var factory_opts = {
   url: 'mongodb://localhost/qeus'
 };
-    
-// initialize factory 
+
+// initialize factory
 MQ (factory_opts, function (err, factory) {
   if (err) {
     return console.error (err);
@@ -30,7 +30,7 @@ MQ (factory_opts, function (err, factory) {
 
     if (!pl.processed_1) {
       pl.processed_1=1
-    } 
+    }
     else {
       pl.processed_1++
     }
@@ -44,21 +44,21 @@ MQ (factory_opts, function (err, factory) {
 
     if (!pl.processed_2) {
       pl.processed_2=1
-    } 
+    }
     else {
       pl.processed_2++
     }
-  
+
     console.log ('%s: tick', pll2.name ());
     done();
   });
-  
+
   pll3.start (function (elem, done) {
     var pl = elem.payload;
 
     if (!pl.processed_3) {
       pl.processed_3=1
-    } 
+    }
     else {
       pl.processed_3++
     }

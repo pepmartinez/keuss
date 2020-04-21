@@ -2,14 +2,14 @@
 var async =   require ('async');
 var should =  require ('should');
 
-var PLL = require ('../PipelineLink');
+var PDL = require ('../Pipeline/DirectLink');
 
 var factory = null;
 
 [
   {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')}
 ].forEach (function (MQ_item) {
-  describe ('PipelineLink operations over ' + MQ_item.label, function () {
+  describe ('Pipeline/DirectLink operations over ' + MQ_item.label, function () {
     var MQ = MQ_item.mq;
 
     before (function (done) {
@@ -35,8 +35,8 @@ var factory = null;
       var q3 = factory.queue ('test_1_pl_3', q_opts);
 
       // tie them up, q1 -> q2 -> q3
-      var pll1 = new PLL (q1, q2);
-      var pll2 = new PLL (q2, q3);
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
 
       pll1.start (function (elem, done0) {
         var pl = elem.payload;
@@ -82,8 +82,8 @@ var factory = null;
       var stage2_retries = 0;
 
       // tie them up, q1 -> q2 -> q3
-      var pll1 = new PLL (q1, q2);
-      var pll2 = new PLL (q2, q3);
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
 
       pll1.start (function (elem, done0) {
         var pl = elem.payload;

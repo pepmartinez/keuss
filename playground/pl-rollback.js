@@ -1,14 +1,14 @@
 // mongodb: create a consumer and a producer
-var MQ = require ('../backends/pl-mongo');
-var PLL = require ('../PipelineLink');
+var MQ =    require ('../backends/pl-mongo');
+var DL =    require ('../Pipeline/DirectLink');
 var async = require ('async');
 
 
 var factory_opts = {
-  url: 'mongodb://localhost/qeus'
+  url: 'mongodb://localhost/qeus-pl'
 };
-    
-// initialize factory 
+
+// initialize factory
 MQ (factory_opts, function (err, factory) {
   if (err) {
     return console.error (err);
@@ -20,19 +20,23 @@ MQ (factory_opts, function (err, factory) {
   var q2 = factory.queue ('test_pl_r_2', q_opts);
 
   // tie them up, q1 -> q2
-  var pll = new PLL (q1, q2);
+  var pll = new DL (q1, q2);
 
-  pll.start (function (elem, done) {
-    if (elem.tries < 3)
-      done ({e: 'error, retry'})
-    else 
+  pll.start ((elem, done) => {
+    if (elem.tries < 3) {
+      console.log ('%d: nope', elem.payload.a)
+      done ({e: 'error, retry'});
+    }
+    else {
+      console.log ('%d: alles klar', elem.payload.a);
       done();
+    }
   });
 
   // insert elements
-//  async.timesLimit (111, 3, function (n, next) {
-//    q1.push ({a:n, b:'see it fail...'}, {}, next);
-//  });
+  async.timesLimit (111, 3, (n, next) => {
+    setTimeout (() => q1.push ({a:n, b:'see it fail...'}, {}, next), 1111);
+  });
 
-  q1.push ({a:5, b:'see it fail...'}, {}, function () {});
+//  q1.push ({a:5, b:'see it fail...'}, {}, function () {});
 });

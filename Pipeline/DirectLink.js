@@ -1,10 +1,10 @@
-var Queue = require ('./Queue');
+var Queue = require ('../Queue');
 var _ =     require ('lodash');
 
-var debug = require('debug')('keuss:PipelineLink');
+var debug = require('debug')('keuss:Pipeline:DirectLink');
 
 
-class PipelineLink {
+class DirectLink {
   constructor (src_q, dst_q, opts) {
     // check both queues are pipelined
     if (! src_q.pipeline) throw Error ('source queue is not pipelined');
@@ -21,7 +21,7 @@ class PipelineLink {
     this._src = src_q;
     this._dst = dst_q;
 
-    debug ('created PipelineLink %s', this._name);
+    debug ('created Pipeline/DirectLink %s', this._name);
   }
 
   src () {return this._src;}
@@ -80,7 +80,7 @@ class PipelineLink {
             return this._process (ondata);
           }
           else {
-            // rollback. TODO set some limit, drop afterwards?
+            // rollback
             this.src().ko (res._id, this._rollback_next_t (res), err => {
               debug ('pll %s: rolled back: %s', this._name, res._id);
               this._process (ondata);
@@ -122,4 +122,4 @@ class PipelineLink {
   }
 }
 
-module.exports = PipelineLink;
+module.exports = DirectLink;
