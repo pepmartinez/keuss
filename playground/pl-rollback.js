@@ -23,20 +23,32 @@ MQ (factory_opts, function (err, factory) {
   var pll = new DL (q1, q2);
 
   pll.start ((elem, done) => {
-    if (elem.tries < 3) {
-      console.log ('%d: nope', elem.payload.a)
+    if (elem.tries < 1) {
+      console.log ('%d: nope, try %d', elem.payload.a, elem.tries)
       done ({e: 'error, retry'});
     }
     else {
-      console.log ('%d: alles klar', elem.payload.a);
-      done();
+      console.log ('%d: alles klar, try %d', elem.payload.a, elem.tries);
+
+      const update = {
+        $set: {
+          alfa: 666*elem.tries,
+          stage: `stage-${elem.tries}`
+        },
+        $inc: {
+          'counters.alpha': 2,
+          'counters.beta': 1,
+        }
+      };
+
+      done (null, {update});
     }
   });
 
   // insert elements
-  async.timesLimit (111, 3, (n, next) => {
-    setTimeout (() => q1.push ({a:n, b:'see it fail...'}, {}, next), 1111);
-  });
+//  async.timesLimit (111, 3, (n, next) => {
+//    setTimeout (() => q1.push ({a:n, b:'see it fail...'}, {}, next), 1111);
+//  });
 
-//  q1.push ({a:5, b:'see it fail...'}, {}, function () {});
+  q1.push ({a:5, b:'see it fail...'}, {}, function () {});
 });

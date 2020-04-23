@@ -28,7 +28,7 @@ var factory = null;
       cb => factory.close (cb)
     ], done));
 
-    it ('3-elem pipeline flows begin to end', function (done){
+    it ('3-elem pipeline flows begin to end, no payload changes', done => {
       var q_opts = {};
       var q1 = factory.queue ('test_1_pl_1', q_opts);
       var q2 = factory.queue ('test_1_pl_2', q_opts);
@@ -38,24 +38,58 @@ var factory = null;
       var pll1 = new PDL (q1, q2);
       var pll2 = new PDL (q2, q3);
 
-      pll1.start (function (elem, done0) {
-        var pl = elem.payload;
-        pl.pll1 = 'done';
+      pll1.start ((elem, done0) => {
         done0();
       });
 
-      pll2.start (function (elem, done0) {
-        var pl = elem.payload;
-        pl.pll2 = 'done';
+      pll2.start ((elem, done0) => {
         done0();
       });
 
       var pop_opts = {};
 
-      q3.pop ('c', pop_opts, function (err, res) {
-        if (err) {
-          return done (err);
-        }
+      q3.pop ('c', pop_opts, (err, res) => {
+        if (err) return done (err);
+
+        pll1.stop();
+        pll2.stop();
+
+        res.payload.should.eql ({ a: 5, b: 'see it run...'});
+        res.tries.should.equal (0);
+        res._q.should.equal ('test_1_pl_3');
+
+        done ();
+      });
+
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
+    });
+
+    it ('3-elem pipeline flows begin to end, full payload overwrite', done => {
+      var q_opts = {};
+      var q1 = factory.queue ('test_1_pl_1', q_opts);
+      var q2 = factory.queue ('test_1_pl_2', q_opts);
+      var q3 = factory.queue ('test_1_pl_3', q_opts);
+
+      // tie them up, q1 -> q2 -> q3
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
+
+      pll1.start ((elem, done0) => {
+        var pl = elem.payload;
+        pl.pll1 = 'done';
+        done0(null, {payload: pl});
+      });
+
+      pll2.start ((elem, done0) => {
+        var pl = elem.payload;
+        pl.pll2 = 'done';
+        done0(null, {payload: pl});
+      });
+
+      var pop_opts = {};
+
+      q3.pop ('c', pop_opts, (err, res) => {
+        if (err) return done (err);
 
         pll1.stop();
         pll2.stop();
@@ -67,7 +101,44 @@ var factory = null;
         done ();
       });
 
-      q1.push ({a:5, b:'see it run...'}, {}, function () {});
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
+    });
+
+
+    it ('3-elem pipeline flows begin to end, payload update', done => {
+      var q_opts = {};
+      var q1 = factory.queue ('test_1_pl_1', q_opts);
+      var q2 = factory.queue ('test_1_pl_2', q_opts);
+      var q3 = factory.queue ('test_1_pl_3', q_opts);
+
+      // tie them up, q1 -> q2 -> q3
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
+
+      pll1.start ((elem, done0) => {
+        done0(null, {update: {$set: {pll1: 'done'}}});
+      });
+
+      pll2.start ((elem, done0) => {
+        done0(null, {update: {$set: {pll2: 'done'}}});
+      });
+
+      var pop_opts = {};
+
+      q3.pop ('c', pop_opts, (err, res) => {
+        if (err) return done (err);
+
+        pll1.stop();
+        pll2.stop();
+
+        res.payload.should.eql ({ a: 5, b: 'see it run...', pll1: 'done', pll2: 'done' });
+        res.tries.should.equal (0);
+        res._q.should.equal ('test_1_pl_3');
+
+        done ();
+      });
+
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
     });
 
 
@@ -85,37 +156,31 @@ var factory = null;
       var pll1 = new PDL (q1, q2);
       var pll2 = new PDL (q2, q3);
 
-      pll1.start (function (elem, done0) {
-        var pl = elem.payload;
-        pl.pll1++;
-
+      pll1.start ((elem, done0) => {
+        const pl = elem.payload;
         if ((pl.a == 3) && (elem.tries < 3)) {
           stage1_retries++;
           done0 ({e: 'error, retry'});
         }
         else
-          done0();
+          done0(null, {update: {$inc: {pll1: 1}}});
       });
 
-      pll2.start (function (elem, done0) {
-        var pl = elem.payload;
-        pl.pll2++;
-
+      pll2.start ((elem, done0) => {
+        const pl = elem.payload;
         if ((pl.a == 1) && (elem.tries < 3)) {
           stage2_retries++;
           done0 ({e: 'error, retry'});
         }
         else
-           done0();
+          done0(null, {update: {$inc: {pll2: 1}}});
       });
 
       var pop_opts = {};
 
-      async.timesLimit (5, 1, function (n, next) {
-        q3.pop ('c', pop_opts, function (err, res) {
-          next (err, res);
-        });
-      }, function (err, res) {
+      async.timesLimit (5, 1, (n, next) => {
+        q3.pop ('c', pop_opts, (err, res) => next (err, res));
+      }, (err, res) => {
         stage1_retries.should.equal (3);
         stage2_retries.should.equal (3);
 
@@ -145,10 +210,8 @@ var factory = null;
         done ();
       });
 
-      async.timesLimit (5, 1, function (n, next) {
-        q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, function () {
-          setTimeout (next, 200);
-        });
+      async.timesLimit (5, 1, (n, next) => {
+        q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, () => setTimeout (next, 200));
       });
     });
 
