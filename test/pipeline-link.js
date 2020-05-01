@@ -22,7 +22,6 @@ var factory = null;
       });
     });
 
-
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb)
@@ -213,6 +212,150 @@ var factory = null;
       async.timesLimit (5, 1, (n, next) =>
         q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, () => setTimeout (next, 200))
       );
+    });
+
+    it ('3-elem pipeline flows begin to end, sink at the end using res==false', done => {
+      var q_opts = {};
+      var q1 = factory.queue ('test_1_pl_1', q_opts);
+      var q2 = factory.queue ('test_1_pl_2', q_opts);
+      var q3 = factory.queue ('test_1_pl_3', q_opts);
+
+      // tie them up, q1 -> q2 -> q3
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
+
+      pll1.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_1'
+        });
+
+        done0();
+      });
+
+      pll2.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_2'
+        });
+
+        done0(null, false);
+
+        setTimeout (() => {
+          pll1.stop();
+          pll2.stop();
+
+          async.series ([
+            cb => q1.totalSize(cb),
+            cb => q2.totalSize(cb),
+            cb => q3.totalSize(cb)
+          ], (err, res) => {
+            if (err) return done (err);
+            res.should.eql ([0,0,0]);
+            done ();
+          });
+        }, 500);
+      });
+
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
+    });
+
+    it ('3-elem pipeline flows begin to end, sink at the end using res.drop == true', done => {
+      var q_opts = {};
+      var q1 = factory.queue ('test_1_pl_1', q_opts);
+      var q2 = factory.queue ('test_1_pl_2', q_opts);
+      var q3 = factory.queue ('test_1_pl_3', q_opts);
+
+      // tie them up, q1 -> q2 -> q3
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
+
+      pll1.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_1'
+        });
+
+        done0();
+      });
+
+      pll2.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_2'
+        });
+
+        done0(null, {drop: true});
+
+        setTimeout (() => {
+          pll1.stop();
+          pll2.stop();
+
+          async.series ([
+            cb => q1.totalSize(cb),
+            cb => q2.totalSize(cb),
+            cb => q3.totalSize(cb)
+          ], (err, res) => {
+            if (err) return done (err);
+            res.should.eql ([0,0,0]);
+            done ();
+          });
+        }, 500);
+      });
+
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
+    });
+
+    it ('3-elem pipeline flows begin to end, sink at the end using err.drop == true', done => {
+      var q_opts = {};
+      var q1 = factory.queue ('test_1_pl_1', q_opts);
+      var q2 = factory.queue ('test_1_pl_2', q_opts);
+      var q3 = factory.queue ('test_1_pl_3', q_opts);
+
+      // tie them up, q1 -> q2 -> q3
+      var pll1 = new PDL (q1, q2);
+      var pll2 = new PDL (q2, q3);
+
+      pll1.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_1'
+        });
+
+        done0();
+      });
+
+      pll2.start ((elem, done0) => {
+        elem.should.match ({
+          payload: { a: 5, b: 'see it run...' },
+          tries: 0,
+          _q: 'test_1_pl_2'
+        });
+
+        done0({drop: true});
+
+        setTimeout (() => {
+          pll1.stop();
+          pll2.stop();
+
+          async.series ([
+            cb => q1.totalSize(cb),
+            cb => q2.totalSize(cb),
+            cb => q3.totalSize(cb)
+          ], (err, res) => {
+            if (err) return done (err);
+            res.should.eql ([0,0,0]);
+            done ();
+          });
+        }, 500);
+      });
+
+      q1.push ({a:5, b:'see it run...'}, {}, () => {});
     });
 
 
