@@ -22,7 +22,8 @@ MQ (factory_opts, function (err, factory) {
   // tie them up, q1 -> q2
   var pll = new DL (q1, q2);
 
-  pll.start ((elem, done) => {
+  pll.start (function (elem, done)  {
+    console.log (this.name())
     if (elem.tries < 1) {
       console.log ('%d: nope, try %d', elem.payload.a, elem.tries)
       done ({e: 'error, retry'});

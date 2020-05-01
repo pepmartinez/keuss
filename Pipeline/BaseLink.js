@@ -24,7 +24,8 @@ class BaseLink {
 
   /////////////////////////////////////////
   start (ondata) {
-    this._process (ondata);
+    this._ondata = ondata.bind (this);
+    this._process (this._ondata);
   }
 
   /////////////////////////////////////////
