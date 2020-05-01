@@ -12,10 +12,10 @@ var factory = null;
   describe ('Pipeline/DirectLink operations over ' + MQ_item.label, function () {
     var MQ = MQ_item.mq;
 
-    before (function (done) {
+    before (done => {
       var opts = {};
 
-      MQ (opts, function (err, fct) {
+      MQ (opts, (err, fct) => {
         if (err) return done (err);
         factory = fct;
         done();
@@ -142,7 +142,7 @@ var factory = null;
     });
 
 
-    it ('3-elem pipeline flows begin to end with retries and various elements', function (done){
+    it ('3-elem pipeline flows begin to end with retries and various elements', done => {
       var q_opts = {};
       var q1 = factory.queue ('test_2_pl_1', q_opts);
       var q2 = factory.queue ('test_2_pl_2', q_opts);
@@ -210,9 +210,9 @@ var factory = null;
         done ();
       });
 
-      async.timesLimit (5, 1, (n, next) => {
-        q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, () => setTimeout (next, 200));
-      });
+      async.timesLimit (5, 1, (n, next) =>
+        q1.push ({a:n, b:'see it run...', pll1: 0, pll2: 0}, {}, () => setTimeout (next, 200))
+      );
     });
 
 
