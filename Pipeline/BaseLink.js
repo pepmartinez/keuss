@@ -102,6 +102,7 @@ class BaseLink {
           this._mature (opts);
           opts.payload = (res && res.payload);
           opts.update =  (res && res.update);
+          opts.dst =     (res && res.dst);
 
           this._next (elem._id, opts, (err, res) => {
             if (err) debug ('error in next:', err);
@@ -123,8 +124,8 @@ class BaseLink {
 
   /////////////////////////////////////////
   // TO BE IMPLEMENTED ON SUBCLASSES
-  _next (id, opts, callback) {
-    callback ();
+  _next (id, opts, cb) {
+    cb ();
   }
 }
 
