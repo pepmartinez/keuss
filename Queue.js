@@ -424,6 +424,7 @@ class Queue {
     ) {
       debug ('%s: too many retries (%d), moving to deadletter', obj._id, obj.tries);
       this._move_to_deadletter (obj, cb);
+      // TODO add from-what-queue to deadletter elements
     }
     else {
       this.rollback (id, next_t, (err, res) => {

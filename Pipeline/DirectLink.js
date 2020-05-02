@@ -28,13 +28,13 @@ class DirectLink extends BaseLink{
 
 
   /////////////////////////////////////////
-  _next (id, opts, callback) {
+  _next (id, opts, cb) {
     this.src().pl_step (id, this.dst(), opts, (err, res) => {
       this.src()._stats.incr ('put');
       this.dst()._stats.incr ('get');
       this.dst()._signaller.signalInsertion ((opts && opts.mature) || Queue.now());
 
-      callback (err, res);
+      cb (err, res);
     });
   }
 }
