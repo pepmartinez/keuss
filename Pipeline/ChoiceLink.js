@@ -44,7 +44,7 @@ class ChoiceLink extends BaseLink{
       else if (_.isString (opts.dst)) dst = this.dst_by_name (opts.dst);
     }
 
-    if (!dst) return cb ({e: 'ill-specified dst queue'});
+    if (!dst) return cb ({e: `ill-specified dst queue [${opts.dst}]`});
 
     this.src().pl_step (id, dst, opts, (err, res) => {
       this.src()._stats.incr ('put');
