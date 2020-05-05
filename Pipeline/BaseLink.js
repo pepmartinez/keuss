@@ -71,14 +71,14 @@ class BaseLink {
           // error: drop or retry?
           if (err.drop === true) {
             // drop: commit and forget
-            this.src().ok (elem._id, err => {
+            this.src().ok (elem, err => {
               debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
               this._process (ondata);
             });
           }
           else {
             // retry: rollback
-            this.src().ko (elem._id, this._rollback_next_t (elem), err => {
+            this.src().ko (elem, this._rollback_next_t (elem), err => {
               debug ('%s: in error, rolled back: %s', this._name, elem._id);
               this._process (ondata);
             });
