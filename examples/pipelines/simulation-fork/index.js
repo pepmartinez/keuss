@@ -1,12 +1,12 @@
 // mongodb: create a consumer and a producer
 const Chance = require ('chance');
 
-const MQ =     require ('../backends/pl-mongo');
-const signal = require ('../signal/mongo-capped');
-const stats =  require ('../stats/mongo');
-const DCT =    require ('../Pipeline/DirectLink');
-const SNK =    require ('../Pipeline/Sink');
-const CHC =    require ('../Pipeline/ChoiceLink');
+const MQ =     require ('../../../backends/pl-mongo');
+const signal = require ('../../../signal/mongo-capped');
+const stats =  require ('../../../stats/mongo');
+const DCT =    require ('../../../Pipeline/DirectLink');
+const SNK =    require ('../../../Pipeline/Sink');
+const CHC =    require ('../../../Pipeline/ChoiceLink');
 
 
 const chance = new Chance();
