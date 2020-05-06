@@ -1,5 +1,6 @@
 var mitt =  require ('mitt');
 var async = require ('async');
+var _ =     require('lodash');
 
 var RedisConn = require ('../utils/RedisConn');
 var Signal =    require ('../Signal');
@@ -16,27 +17,30 @@ class RPSSignal extends Signal {
     this._opts = opts || {};
 
     this._factory._emitter.on (this._channel, message => {
+      // if message is an int already, take it as insertion issue
+      if (_.isNumber (message)) return this._insertionEvent (message);
+
+      if (! _.isString (message)) {
+        debug ('received non-int, non-string message. Ignoring it...', message);
+        return;
+      }
+
       var msg = message.split (' ');
 
-      if (msg.length == 1) {
-        var mature = parseInt (message);
-        debug ('got insertion event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
-        this._master.signalInsertion (new Date (mature));
-      }
-      else {
-        var cmd = msg[0];
-        switch (cmd) {
-          case 'p': {
-            // pause/resume
-            var paused = (msg[1] == 'true' ? true : false);
-            debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
-            this._master.signalPaused (paused);
-          }
-          break;
+      if (msg.length == 1) return this._insertionEvent (parseInt (message));
 
-          default: {
-            debug ('unknown event [%s] on channel [%s]', message, this._channel);
-          }
+      var cmd = msg[0];
+      switch (cmd) {
+        case 'p': {
+          // pause/resume
+          var paused = (msg[1] == 'true' ? true : false);
+          debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+          this._master.signalPaused (paused);
+        }
+        break;
+
+        default: {
+          debug ('unknown event [%s] on channel [%s]', message, this._channel);
         }
       }
     });
@@ -53,12 +57,17 @@ class RPSSignal extends Signal {
 
   emitInsertion (mature, cb) {
     debug ('emit insertion on channel [%s] value [%d])', this._channel, mature);
-    this._rediscl_pub.publish (this._channel, mature.getTime() + '');
+    this._rediscl_pub.publish (this._channel, mature.getTime());
   }
 
   emitPaused (paused, cb) {
     debug ('emit paused on channel [%s], value [%b]', this._channel, paused);
     this._rediscl_pub.publish (this._channel, `p ${paused}`);
+  }
+
+  _insertionEvent (mature) {
+    debug ('got insertion event on ch [%s], mature is %s, calling master.emitInsertion()', this._channel, mature);
+    this._master.signalInsertion (new Date (mature));
   }
 }
 
