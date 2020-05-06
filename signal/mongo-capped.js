@@ -15,27 +15,29 @@ class MCSignal extends Signal {
     this._opts = opts || {};
 
     this._factory._channel.subscribe (this._topic_name, message => {
-      var msg = message.split (' ');
+      // if message is an int already, take it as insertion issue
+      if (_.isNumber (message)) return this._insertionEvent (message);
 
-      if (msg.length == 1) {
-        var mature = parseInt (message);
-        debug ('got insertion event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
-        this._master.signalInsertion (new Date (mature));
+      if (! _.isString (message)) {
+        debug ('received non-int, non-string message. Ignoring it...', message);
+        return;
       }
-      else {
-        var cmd = msg[0];
-        switch (cmd) {
-          case 'p': {
-            // pause/resume
-            var paused = (msg[1] == 'true' ? true : false);
-            debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
-            this._master.signalPaused (paused);
-          }
-          break;
 
-          default: {
-            debug ('unknown event [%s] on channel [%s]', message, this._channel);
-          }
+      var msg = message.split (' ');
+      if (msg.length == 1) return this._insertionEvent (parseInt (message));
+
+      var cmd = msg[0];
+      switch (cmd) {
+        case 'p': {
+          // pause/resume
+          var paused = (msg[1] == 'true' ? true : false);
+          debug ('got pause event on ch [%s], message is %s, calling master.emitInsertion()', this._channel, message);
+          this._master.signalPaused (paused);
+        }
+        break;
+
+        default: {
+          debug ('unknown event [%s] on channel [%s]', message, this._channel);
         }
       }
     });
@@ -47,12 +49,17 @@ class MCSignal extends Signal {
 
   emitInsertion (mature, cb) {
     debug ('emit insertion on topic [%s] value [%d])', this._topic_name, mature);
-    this._factory._channel.publish (this._topic_name, mature.getTime() + '');
+    this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 
   emitPaused (paused, cb) {
     debug ('emit paused on topic [%s], value [%b]', this._topic_name, paused);
     this._factory._channel.publish (this._topic_name, `p ${paused}`);
+  }
+
+  _insertionEvent (mature) {
+    debug ('got insertion event on ch [%s], mature is %s, calling master.emitInsertion()', this._channel, mature);
+    this._master.signalInsertion (new Date (mature));
   }
 }
 
