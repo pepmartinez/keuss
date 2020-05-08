@@ -40,7 +40,7 @@ function sink_process (elem, done) {
       }, 1000);
     }
 
-  }, get_a_delay (10, 200));
+  }, get_a_delay (10, 20));
 }
 
 
@@ -83,11 +83,11 @@ MQ (factory_opts, (err, factory) => {
   const sk2 = new SNK (q4);
   const sk3 = new SNK (q5);
 
-  sk1.start (sink_process);
-  sk2.start (sink_process);
-  sk3.start (sink_process);
+  sk1.on_data (sink_process);
+  sk2.on_data (sink_process);
+  sk3.on_data (sink_process);
 
-  cl1.start (function (elem, done) {
+  cl1.on_data (function (elem, done) {
     setTimeout (() => {
       if (chance.bool ({likelihood: 90})) {
         return done ({e: 'cl1 induced a failure'});
@@ -101,10 +101,10 @@ MQ (factory_opts, (err, factory) => {
           $set: {stamp_1: 'passed', choice: idx}
         }
       });
-    }, get_a_delay (10, 300));
+    }, get_a_delay (10, 100));
   });
 
-  dl1.start (function (elem, done) {
+  dl1.on_data (function (elem, done) {
     setTimeout (() => {
       console.log ('%s: passing elem %o', this.name(), elem.payload);
       done (null, {
@@ -112,9 +112,14 @@ MQ (factory_opts, (err, factory) => {
           $set: {stamp_0: 'passed'}
         }
       });
-    }, get_a_delay (50, 110));
+    }, get_a_delay (10, 100));
   });
 
+  sk1.start ();
+  sk2.start ();
+  sk3.start ();
+  cl1.start ();
+  dl1.start ();
 
   loop (
     num_elems,

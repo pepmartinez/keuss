@@ -23,8 +23,13 @@ class BaseLink {
   name () {return this._name;}
 
   /////////////////////////////////////////
-  start (ondata) {
+  on_data (ondata) {
     this._ondata = ondata.bind (this);
+  }
+
+  /////////////////////////////////////////
+  start (ondata) {
+    if (ondata) this.on_data (ondata);
     this._process (this._ondata);
   }
 
