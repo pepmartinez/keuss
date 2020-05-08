@@ -151,7 +151,7 @@ All storage backends support deadletter. In `ps-mongo` the move-to-deadletter (a
 * *Queues* are created on-demand, and are never destroyed as far as keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
 * *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue.
 
-More info on pipelines [here](doc/pipelines.md)
+More info on pipelines [here](Pipeline/README.md)
 
 ## Install
 ```bash

@@ -7,14 +7,16 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 
-- [About](#about)
-- [Real, simple example](#real-simple-example)
-- [Pipeline-aware Queues](#pipeline-aware-queues)
-- [Processors](#processors)
-  - [PipelineLink](#pipelinelink)
-    - [creation:](#creation)
-    - [methods](#methods)
-    - [Processor function](#processor-function)
+- [Keuss Pipelines](#keuss-pipelines)
+- [Contents](#contents)
+  - [About](#about)
+  - [Real, simple example](#real-simple-example)
+  - [Pipeline-aware Queues](#pipeline-aware-queues)
+  - [Processors](#processors)
+    - [PipelineLink](#pipelinelink)
+      - [creation:](#creation)
+      - [methods](#methods)
+      - [Processor function](#processor-function)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -57,18 +59,16 @@ The *process()* part is user-provided, passed as a function on the initializatio
 
 ## Real, simple example
 
-
 ```javascript
 var MQ = require ('keuss/backends/pl-mongo');
 var PLL = require ('keuss/PipelineLink');
 var async = require ('async');
 
-
 var factory_opts = {
   url: 'mongodb://localhost/qeus'
 };
-    
-// initialize factory 
+
+// initialize factory
 MQ (factory_opts, function (err, factory) {
   if (err) {
     return console.error (err);
@@ -101,7 +101,6 @@ MQ (factory_opts, function (err, factory) {
     });
   });
 });
-
 ```
 
 just run this example and you'll se 111 elements being inserted at q1, being processed at the pll processor, and then popped from q2
@@ -154,14 +153,14 @@ var pl = new PipelineLink (src_q, dst_q, opts)
 #### methods
 * returns src queue
   ```javascript
-  src () 
+  src ()
   ```
 
 * returns dst queue
   ```javascript
   dst ()
   ```
-  
+
 * returns name. A PipelineLink's name is calculated from the names of the src and dst queues
   ```javascript
   name ()
@@ -193,6 +192,6 @@ The *item* is received exactly as it comes as result of a (successful) reserve()
 where:
 * if error.drop is exactly true, the item is committed in the src queue and therefore dropped from the pipeline
 * else, if error is non-null the item is rolled back in the src queue, using PL's *retry_factor_t* and *retry_base_t* to calculate the retry delay
-* else (if no error) the item is passed along the pipeline (by calling pl_step()). The *mature* mark is calculated using the *mature* or *delay* options of the PL. 
+* else (if no error) the item is passed along the pipeline (by calling pl_step()). The *mature* mark is calculated using the *mature* or *delay* options of the PL.
   If res contains *opts.mature* or *opts.delay* they are used instead.
   The payload is overwritten with that of the item, so if yo modify item.payload those changes get reflected. If you pass a res.payload, this is used instead
