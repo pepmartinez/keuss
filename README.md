@@ -105,7 +105,7 @@ bucket-mongo-safe | x | x | - | - | +++++
 **Signaller** provides a bus interconnecting all keuss clients, so events can be shared. Keuss provides 3 signallers:
 * *local* : provides in-proccess messaging, useful only for simple cases or testing
 * *redis-pubsub*: uses the pubsub subsystem provided by redis
-* *mongo-capped*: uses pubsub on top of a mongodb capped collection, using [mubsub](https://www.npmjs.com/package/mubsub)
+* *mongo-capped*: uses pubsub on top of a mongodb capped collection, using [@nodebb/mubsub](https://www.npmjs.com/package/@nodebb/mubsub)
 
 So far, the only events published by keuss are:
 * *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago

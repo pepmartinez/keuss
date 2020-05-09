@@ -1,4 +1,4 @@
-var mubsub = require('mubsub');
+var mubsub = require('@nodebb/mubsub');
 var _ =      require('lodash');
 
 var Signal = require ('../Signal');
