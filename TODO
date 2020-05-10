@@ -5,9 +5,6 @@
 * priorities?
 * add factory archetypes (all-mongo, all-mongo-bucket...)
 * pipelines
-  + allow mongo-like update on payload
-  + allow general graphs
-  + add projection ability (as in generating extra payloads)
   + add some commonplace transforms (etl-like)
   + create a server for that, allow processor code defined externally
 + more and better examples
