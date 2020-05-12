@@ -1,5 +1,4 @@
-var async = require ('async');
-var _ =     require ('lodash');
+var _ = require ('lodash');
 
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
@@ -147,13 +146,13 @@ class PipelinedMongoQueue extends Queue {
   //////////////////////////////////
   // passes element to the next queue in pipeline
   pl_step (id, next_queue, opts, callback) {
-    var query =  {
+    var q =  {
       _id: id,
       _q: this._name,
       reserved: {$exists: true}
     };
 
-    var update = {
+    var upd = {
       $set:   {
         mature: opts.mature || Queue.now (),
         tries:  opts.tries || 0,
@@ -162,9 +161,14 @@ class PipelinedMongoQueue extends Queue {
       $unset: {reserved: ''}
     };
 
-    if (opts.payload) update.$set.payload = opts.payload;
+    if (opts.payload) {
+      upd.$set.payload = opts.payload;
+    }
+    else if (opts.update) {
+      this._embed_update_for_payload (upd, opts.update);
+    }
 
-    this._col.updateOne (query, update, {}, (err, result) => {
+    this._col.updateOne (q, upd, {}, (err, result) => {
       if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
@@ -227,6 +231,22 @@ class PipelinedMongoQueue extends Queue {
     this._col.find ({_q: this._name}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
       if (err) return callback (err);
       callback (null, result && result.mature);
+    });
+  }
+
+
+  //////////////////////////////////////////////
+  _embed_update_for_payload (dst, src) {
+    _.each (src, (v, k) => {
+      if (k.startsWith ('$')) {
+        _.each (v, (fv, fk) => {
+          if (!dst[k]) dst[k] = {};
+          dst[k]['payload.' + fk] = fv;
+        });
+      }
+      else {
+        dst['payload.' + k] = v;
+      }
     });
   }
 

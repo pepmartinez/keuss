@@ -1,0 +1,22 @@
+var debug = require('debug')('keuss:Pipeline:Sink');
+
+const BaseLink = require ('./BaseLink');
+
+class Sink extends BaseLink{
+  constructor (src_q, opts) {
+    super (src_q, opts);
+
+    this._name = src_q.name () + '->(sink)';
+    debug ('created Pipeline/Sink %s', this._name);
+  }
+
+  /////////////////////////////////////////
+  _next (id, opts, callback) {
+    this.src().ok (id, (err, res) => {
+      debug ('element %s dropped in sink', this._name);
+      callback (err, res);
+    });
+  }
+}
+
+module.exports = Sink;

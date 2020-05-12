@@ -1,13 +1,13 @@
 var MQ = require ('../backends/pl-mongo');
-var PLL = require ('../PipelineLink');
+var PLL = require ('../Pipeline/DirectLink');
 var async = require ('async');
 
 
 var factory_opts = {
   url: 'mongodb://localhost/qeus'
 };
-    
-// initialize factory 
+
+// initialize factory
 MQ (factory_opts, function (err, factory) {
   if (err) {
     return console.error (err);
