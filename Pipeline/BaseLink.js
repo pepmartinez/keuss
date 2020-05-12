@@ -1,7 +1,9 @@
-var Queue = require ('../Queue');
-var _ =     require ('lodash');
+const _ =            require ('lodash');
+const EventEmitter = require ('events');
 
-var debug = require('debug')('keuss:Pipeline:BaseLink');
+const Queue = require ('../Queue');
+
+const debug = require('debug')('keuss:Pipeline:BaseLink');
 
 
 // base class for all pipeline links
@@ -10,8 +12,10 @@ var debug = require('debug')('keuss:Pipeline:BaseLink');
 //  * choice (1-to-onechoice)
 //  * fanout (1-to-all)
 //  * sink   (1-to-none)
-class BaseLink {
+class BaseLink  extends EventEmitter {
   constructor (src_q, opts) {
+    super ();
+
     // check queues are pipelined
     if (! src_q.pipeline) throw Error ('source queue is not pipelined');
 
@@ -59,7 +63,8 @@ class BaseLink {
 
       if (err) {
         if (err == 'cancel') return; // end the process loop
-         debug ('%s: error in reserve:', this._name, err);
+        debug ('%s: error in reserve:', this._name, err);
+        this.emit ('error', {on: 'src-queue-pop', err});
         return this._process (ondata);
       }
 
@@ -77,6 +82,7 @@ class BaseLink {
           if (err.drop === true) {
             // drop: commit and forget
             this.src().ok (elem, err => {
+              if (err) this.emit ('error', {on: 'src-queue-commit-on-error', elem, err});
               debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
               this._process (ondata);
             });
@@ -84,6 +90,7 @@ class BaseLink {
           else {
             // retry: rollback
             this.src().ko (elem, this._rollback_next_t (elem), err => {
+              if (err) this.emit ('error', {on: 'src-queue-rollback-on-error', elem, err});
               debug ('%s: in error, rolled back: %s', this._name, elem._id);
               this._process (ondata);
             });
@@ -105,12 +112,19 @@ class BaseLink {
           var opts = {};
           _.merge (opts, this._opts, (res && res.opts) || {});
           this._mature (opts);
-          opts.payload = (res && res.payload);
-          opts.update =  (res && res.update);
-          opts.dst =     (res && res.dst);
+
+          if (res) {
+            if (res.payload) opts.payload = res.payload;
+            if (res.update)  opts.update =  res.update;
+            if (!_.isNil (res.dst)) opts.dst = res.dst;
+          }
 
           this._next (elem._id, opts, (err, res) => {
-            if (err) debug ('error in next:', err);
+            if (err) {
+              debug ('error in next:', err);
+              this.emit ('error', {on: 'next-queue-on-error', elem, opts, err});
+            }
+
             debug ('%s: passed to next: %s', this._name, elem._id);
             this._process (ondata);
           });

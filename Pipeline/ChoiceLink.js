@@ -33,6 +33,8 @@ class ChoiceLink extends BaseLink{
 
   dst_by_idx  (idx)  {return this._dst_q_array[idx];}
   dst_by_name (name) {return this._dst_q_idx[name];}
+  dst_dimension ()   {return this._dst_q_array.length;}
+  dst_names ()       {return _.map (this._dst_q_idx, (v, k) => k);}
 
 
   /////////////////////////////////////////
@@ -44,7 +46,10 @@ class ChoiceLink extends BaseLink{
       else if (_.isString (opts.dst)) dst = this.dst_by_name (opts.dst);
     }
 
-    if (!dst) return cb ({e: `ill-specified dst queue [${opts.dst}]`});
+    if (!dst) {
+      debug ( `ill-specified dst queue [${opts.dst}]`);
+      return cb ({e: `ill-specified dst queue [${opts.dst}]`});
+    }
 
     this.src().pl_step (id, dst, opts, (err, res) => {
       this.src()._stats.incr ('put');

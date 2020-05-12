@@ -36,11 +36,11 @@ True atomic [ETL-like](https://en.wikipedia.org/wiki/Extract,_transform,_load) q
 
 
 # About
-Pipelines is a Keuss extension for building [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) processing graphs with ease while guaranteeing atomicity in the processing: whatever happens at the processing of an element, the element is guaranteed to be in either the source or in the destination queue; never in both, never in none.
+Pipelines is a Keuss extension for building [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) processing graphs with ease while guaranteeing atomicity in the processing: whatever happens at the processing of an element, the element is guaranteed to be in either the source or i the destination queue; never in both, never in none.
 
-Keuss pipelines are build upon Keuss Queues with *pipeline* capacity, which means Pipelines inherit all their advantages in terms of HA, durability and performance. So far, Keuss offers only one Queue backend with pipeline capacity, `pl-mongo`
+Keuss pipelines are build upon Keuss Queues with *pipeline* capacity, which means Pipeliens inherit all their advantges in terms of HA, durability and performance. So far, Keuss offers only one Queue backend with pipeline capacity, `pl-mongo`
 
-Queues are linked together with processing units named *Processors*, which glue together a source queue with zero or more destination queues. Each processor encapsulates a loop that could be described -in its simplest form- as follows:
+Queues are linked together with processing units named *Processors*, which glue together a source queue with zero or more destination queues. Each processor encapsulates a loop that could be described -in its simplet form- as follows:
 
 
 ```
@@ -150,7 +150,7 @@ pl_step (id, next_queue, opts, callback)
       }
     });
     ```
-    the '`update` parameter of the second argument to `done()` is passed internally to `pl_step()` as `opts.update`: this would cause the message's `payload.passed` to be set to `true` even if there's no explicit mention of `payload`
+    the '`update` param of the second arg to `done()` is pased itnernally to `pl_step()` as `opts.update`: this would cause the message's `payload.passed` to be set to `true` even if there's no explicit mention of `payload`
 
 The whole `pl_step()` operation is guaranteed to be atomic; this includes applying of `opts.payload` or `opts.update` if present
 
@@ -174,8 +174,8 @@ Although not intended to be instantiated, this serves as common initialization t
     `delay-in-seconds = item.tries * retry_factor_t + retry_base_t`
 
     They default to `2` and `1` respectively
-  * `mature`: Date instance or unix timestamp (in milliseconds, as integer) expressing the not-before timestamp for the item, to be used when calling `pl_step()` in the src queue
-  * `delay`: delay in seconds to calculate `mature`, if `mature` is not specified
+  * `mature`: Date instance or unix timestamp (in milliseconds, as integer) expressing the not-before timestamp for the item, to be used when calling pl_step in the src queue
+  * `delay`: delay in seconds to calculate mature, if mature is not specified
 
 ### Methods
 * `src()`: returns src queue
@@ -204,20 +204,20 @@ where:
 
 * if `err` is not nil
   * if `err.drop` is exactly `true` the item is committed in the src queue and therefore dropped from the pipeline
-  * else the item is rolled back in the src queue, using the processor's `retry_factor_t` and `retry_base_t` to calculate the retry delay. If the queue was created with deadletter support, the item may be moved to the deadletter queue; in such case, the movement into deadletter is also atomic
-* else (if `err` is nil)
+  * else the item is rolled back in the src queue, using the processor's `retry_factor_t` and `retry_base_t` to calculate the retry delay. If the queue was created with deadletter support, the item would be moved to the deadletter queue if it has reached its maximum number of rollbacks; in such case, the movement into deadletter is also atomic
+* else (if `err` is nill)
   *  if (`res.drop` is exactly `true` the item is committed in the src queue and therefore dropped from the pipeline
-  *  else the item is passed to the next queue in the pipeline (by means of `pl_next()`)
-    * if `res.mature` or `res.delay` exist (or they were specified at the processor's creation) they are used to calculate the delay/mature of the element in the destination queue
+  * else the item is passed to the text queue in the pipeline (by means of `pl_next()`)
+    * if `res.mature` or `res.delay` exist (or they were specified at the processor's creation) they are used to calculate the delay/mature fo the element in the destination queue
     * if `res.payload` exists it is used to replace the item's payload entirely
     * else if `res.update` exists it is used as mongodb-update operations on the item's payload
 
   All those operations happen in an atomic way
 
 #### Semantic `this` in process function
-The function is bound to the processor, so the function can access and use processor's primitives. For example, it can insert copies of the item, or new items, in any of the source or destination queues
+The function is bound to the processor, so the funcion can access and use processor's primitives. For example, it can insert copies of the item, or new items, in any of the source or destination queues
 
-In order to use this functionality the process function can not be declared as an 'arrow' function, since those can not be bound. Use the classic `function xxxx (item, cb) {...}` if you intend to access the underlying Processor
+In order to use this functionality the process function can not be declared as an 'arrow' function, since thos can not be bound. Use the classic `function xxxx (item, cb) {...}` if you intend to access the underlying Processor
 
 
 ## DirectLink
@@ -267,10 +267,14 @@ In addition to `BaseLink`:
 In addition to those of `BaseLink`
 * `dst_by_idx(idx)`: returns destination queue from the array, selected by array index (integer)
 * `dst_by_name(name)`: returns destination queue from the array, selected by queue name (string)
+* `dst_dimension ()`: returns number of possible destination queues
+* `dst_names ()`: returns an array with the names of all dst queues
 
 ### Process Function
-ChoiceLink expects an `res.dst` in the callback invocation, which must fulfill one of those conditions:
-* be an integer and resolve to a valid element when applied as index to the array of destination queues
+==== BASE ====
+ChoiceLink expects an `res.dst` in the callback invocation, which must fullfill one of those conditions:
+* be an integer and resolv to a valid element when applied as index to the array of destination queues
+==== BASE ====
 * be a string and correspond to the name of one of the destination queues
 
 The element will be moved atomically to the specified destination queue upon successful processing (i.e.: no `err`in the callback invocation)

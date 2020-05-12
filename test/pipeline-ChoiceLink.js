@@ -1,11 +1,13 @@
-var async =  require ('async');
-var should = require ('should');
-var Chance = require ('chance');
+const async =  require ('async');
+const should = require ('should');
+const Chance = require ('chance');
 
-var CHC = require ('../Pipeline/ChoiceLink');
-var SNK  = require ('../Pipeline/Sink');
+const MongoClient = require('mongodb').MongoClient;
 
-var chance = new Chance();
+const CHC = require ('../Pipeline/ChoiceLink');
+const SNK = require ('../Pipeline/Sink');
+
+const chance = new Chance();
 var factory = null;
 
 
@@ -21,11 +23,12 @@ function loop (n, fn, cb) {
   {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')}
 ].forEach (function (MQ_item) {
   describe ('Pipeline/ChoiceLink operations over ' + MQ_item.label, function () {
-    var MQ = MQ_item.mq;
+    const MQ = MQ_item.mq;
 
     before (done => {
-      var opts = {
-        url: 'mongodb://localhost/__test_pipeline_choicelink__'
+      const opts = {
+        url: 'mongodb://localhost/__test_pipeline_choicelink__',
+        opts:  { useUnifiedTopology: true }
       };
 
       MQ (opts, (err, fct) => {
@@ -37,12 +40,11 @@ function loop (n, fn, cb) {
 
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
-      cb => factory.close (cb)
+      cb => factory.close (cb),
     ], done));
 
-
     it ('3-elem choice pipeline distributes ok', done => {
-      var score = {
+      const score = {
         total: 17,
         next_idx: 0,
         received: {
@@ -50,18 +52,21 @@ function loop (n, fn, cb) {
         }
       };
 
-      var q_opts = {};
+      const q_opts = {pipeline: 'pl1'};
 
-      var q1 = factory.queue ('pl_many_q_1', q_opts);
-      var q2 = factory.queue ('pl_many_q_2', q_opts);
-      var q3 = factory.queue ('pl_many_q_3', q_opts);
-      var q4 = factory.queue ('pl_many_q_4', q_opts);
+      const q1 = factory.queue ('pl_many_q_1', q_opts);
+      const q2 = factory.queue ('pl_many_q_2', q_opts);
+      const q3 = factory.queue ('pl_many_q_3', q_opts);
+      const q4 = factory.queue ('pl_many_q_4', q_opts);
 
       // tie them up:
-      var cl1 = new CHC (q1, [q2, q3, q4]);
-      var sk1 = new SNK (q2);
-      var sk2 = new SNK (q3);
-      var sk3 = new SNK (q4);
+      const cl1 = new CHC (q1, [q2, q3, q4]);
+      const sk1 = new SNK (q2);
+      const sk2 = new SNK (q3);
+      const sk3 = new SNK (q4);
+
+      cl1.dst_dimension().should.equal(3);
+      cl1.dst_names().should.eql (['pl_many_q_2', 'pl_many_q_3', 'pl_many_q_4']);
 
       function sink_process (elem, done0) {
         score.received.total++;
@@ -112,6 +117,104 @@ function loop (n, fn, cb) {
         }
       );
     });
+
+
+    it ('manages non-index correctly', done => {
+      const q_opts = {pipeline: 'pl2'};
+
+      const q1 = factory.queue ('pl_many_q_1', q_opts);
+      const q2 = factory.queue ('pl_many_q_2', q_opts);
+      const q3 = factory.queue ('pl_many_q_3', q_opts);
+      const q4 = factory.queue ('pl_many_q_4', q_opts);
+
+      // tie them up:
+      const cl1 = new CHC (q1, [q2, q3, q4]);
+      const sk1 = new SNK (q2);
+      const sk2 = new SNK (q3);
+      const sk3 = new SNK (q4);
+
+      function sink_process (elem, done0) {
+        done0();
+      }
+
+      sk1.start (sink_process);
+      sk2.start (sink_process);
+      sk3.start (sink_process);
+
+      cl1.on ('error', err => {
+        err.should.match ({
+          on: 'next-queue-on-error',
+          elem: {
+            payload: { a: 666, b: 'see it fail...' },
+            tries: 0,
+            _q: 'pl_many_q_1'
+          },
+          opts: { dst: 6 },
+          err: { e: 'ill-specified dst queue [6]' }
+        });
+
+        const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
+        client.connect(err => {
+          client.db().collection ('pl2').deleteMany ({}, () => done ());
+        });
+      });
+
+      cl1.start (function (elem, done) {
+        done (null, {dst: 6});
+      });
+
+      q1.push ({a:666, b:'see it fail...'}, () => {});
+    });
+
+
+
+    it ('manages non-name correctly', done => {
+      const q_opts = {pipeline: 'pl3'};
+
+      const q1 = factory.queue ('pl_many_q_1', q_opts);
+      const q2 = factory.queue ('pl_many_q_2', q_opts);
+      const q3 = factory.queue ('pl_many_q_3', q_opts);
+      const q4 = factory.queue ('pl_many_q_4', q_opts);
+
+      // tie them up:
+      const cl1 = new CHC (q1, [q2, q3, q4]);
+      const sk1 = new SNK (q2);
+      const sk2 = new SNK (q3);
+      const sk3 = new SNK (q4);
+
+      function sink_process (elem, done0) {
+        done0();
+      }
+
+      sk1.start (sink_process);
+      sk2.start (sink_process);
+      sk3.start (sink_process);
+
+      cl1.on ('error', err => {
+        err.should.match ({
+          on: 'next-queue-on-error',
+          elem: {
+            payload: { a: 666, b: 'see it fail...' },
+            tries: 0,
+            _q: 'pl_many_q_1'
+          },
+          opts: { dst: 'nowhere' },
+          err: { e: 'ill-specified dst queue [nowhere]' }
+        });
+
+        const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
+        client.connect(err => {
+          client.db().collection ('pl3').deleteMany ({}, () => done ());
+        });
+      });
+
+      cl1.start (function (elem, done) {
+        done (null, {dst: 'nowhere'});
+      });
+
+      q1.push ({a:666, b:'see it fail...'}, () => {});
+    });
+
 
   });
 });
