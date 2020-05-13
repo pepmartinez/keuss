@@ -1,4 +1,11 @@
 # Changelog
+* v1.5.11
+  * corrected small pipeline-related issues
+* v1.5.10
+  * pipelines overhaul
+  * mubsub change to @nodebb/mubsub
+* v1.5.9:
+  * added some complete, meaningful examples
 * v1.5.8
   * added deadletter support
 * v1.5.7

@@ -143,7 +143,7 @@ function loop (n, fn, cb) {
 
       cl1.on ('error', err => {
         err.should.match ({
-          on: 'next-queue-on-error',
+          on: 'next-queue',
           elem: {
             payload: { a: 666, b: 'see it fail...' },
             tries: 0,
@@ -192,7 +192,7 @@ function loop (n, fn, cb) {
 
       cl1.on ('error', err => {
         err.should.match ({
-          on: 'next-queue-on-error',
+          on: 'next-queue',
           elem: {
             payload: { a: 666, b: 'see it fail...' },
             tries: 0,
