@@ -103,6 +103,7 @@ class BaseLink  extends EventEmitter {
         if ((res === false) || (res && res.drop)) {
           // drop: commit and forget
           this.src().ok (elem._id, err => {
+            if (err) this.emit ('error', {on: 'src-queue-commit-on-drop', elem, err});
             debug ('%s: processed, marked to be dropped: %s', this._name, elem._id);
             this._process (ondata);
           });
@@ -122,7 +123,7 @@ class BaseLink  extends EventEmitter {
           this._next (elem._id, opts, (err, res) => {
             if (err) {
               debug ('error in next:', err);
-              this.emit ('error', {on: 'next-queue-on-error', elem, opts, err});
+              this.emit ('error', {on: 'next-queue', elem, opts, err});
             }
 
             debug ('%s: passed to next: %s', this._name, elem._id);
