@@ -17,7 +17,7 @@ class BaseLink  extends EventEmitter {
     super ();
 
     // check queues are pipelined
-    if (! src_q.pipeline) throw Error ('source queue is not pipelined');
+    if (!src_q.pipeline) throw Error ('source queue is not pipelined');
 
     this._opts = opts || {};
     this._src = src_q;
@@ -26,8 +26,22 @@ class BaseLink  extends EventEmitter {
   src () {return this._src;}
   name () {return this._name;}
 
+  static Type () {return 'pipeline:processor:BaseLink';}
+  type () {return BaseLink.Type();}
+
+  to_yaml_obj () {
+    const obj = {
+      type: this.type(),
+      src: this.src().name(),
+      fn: this._ondata_orig
+    };
+
+    return obj;
+  }
+
   /////////////////////////////////////////
   on_data (ondata) {
+    this._ondata_orig = ondata;
     this._ondata = ondata.bind (this);
   }
 
@@ -41,6 +55,13 @@ class BaseLink  extends EventEmitter {
   stop () {
     this._src.cancel ();
   }
+
+
+  /////////////////////////////////////////
+  _add_to_pipeline () {
+    this._src.pipeline()._add_processor (this);
+  }
+
 
   /////////////////////////////////////////
   _mature (opts) {

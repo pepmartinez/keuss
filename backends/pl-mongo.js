@@ -1,4 +1,5 @@
-var _ = require ('lodash');
+const _ =    require ('lodash');
+const yaml = require ('js-yaml');
 
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
@@ -6,6 +7,7 @@ var mongo =       require ('mongodb');
 var Queue =    require ('../Queue');
 var QFactory = require ('../QFactory');
 
+const debug = require('debug')('keuss:Pipeline:Main');
 
 class PipelinedMongoQueue extends Queue {
 
@@ -273,6 +275,9 @@ class Pipeline {
     this._factory = factory;
     this._col = factory._db.collection (this._name);
     this.ensureIndexes (err => {});
+
+    this._queues = {};
+    this._processors = {};
   }
 
   name () {
@@ -280,16 +285,55 @@ class Pipeline {
   }
 
   queue (name, opts) {
-    return new PipelinedMongoQueue (name, this, opts);
+    if (this._queues[name]) {
+      debug ('returning existing queue [%s]', name);
+      return this._queues[name];
+    }
+
+    const q = new PipelinedMongoQueue (name, this, opts);
+    debug ('created queue [%s]', name);
+    this._queues[name] = q;
+    return q;
   }
 
-  list (cb) {
-    // TODO
-    cb (null, []);
+  queues ()     {return this._queues;}
+  processors () {return this._processors;}
+
+  start () {
+    _.each (this.processors, (v, k) => v.start ());
   }
 
-  ///////////////////////////////////////////////////////////////////////////////
-  // private parts
+  stop () {
+    _.each (this.processors, (v, k) => v.stop ());
+  }
+
+  _to_yaml () {
+    let obj = {
+      name: this.name (),
+      factory: this._factory.to_yaml_obj (),
+      queues: {},
+      processors: {}
+    };
+
+    _.each (this._queues, (v,k) => {
+      obj.queues[k] = {
+        type: v.type()
+      }
+    });
+
+    _.each (this._processors, (v,k) => {
+      obj.processors[k] = v.to_yaml_obj ()
+    });
+
+
+    return yaml.dump (obj);
+  }
+
+  _add_processor (pr) {
+    this._processors [pr.name ()] = pr;
+    debug ('added processor [%s] to pipeline [%s]', pr.name (), this.name ());
+  }
+
 
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
@@ -305,6 +349,18 @@ class Factory extends QFactory {
     this._mongo_conn = mongo_conn;
     this._db = mongo_conn.db();
     this._pipelines = {};
+  }
+
+  pipeline (name) {
+    if (this._pipelines[name]) {
+      debug ('returning existing pipeline [%s]', name);
+      return this._pipelines[name];
+    }
+
+    const pl = new Pipeline (name, this);
+    debug ('created pipeline [%s]', name);
+    this._pipelines[name] = pl;
+    return pl;
   }
 
   queue (name, opts) {

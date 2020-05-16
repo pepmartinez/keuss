@@ -224,7 +224,7 @@ class MongoStatsFactory {
   }
 
   static Type() { return 'mongo' }
-  type() { return Type() }
+  type() { return MongoStatsFactory.Type() }
 
 
   stats(ns, name, opts) {

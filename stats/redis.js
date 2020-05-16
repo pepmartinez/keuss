@@ -209,7 +209,7 @@ class RedisStatsFactory {
   }
 
   static Type() { return 'redis' }
-  type() { return Type() }
+  type() { return RedisStatsFactory.Type() }
 
 
   stats(ns, name, opts) {

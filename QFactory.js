@@ -107,6 +107,25 @@ class QFactory {
       cb (null, ret);
     });
   }
+
+  to_yaml_obj () {
+    let obj = {
+      name: this.name (),
+      type: this.type (),
+      opts: _.omit (this._opts, ['stats', 'signaller']),
+      signaller: {
+        type: this.signaller_factory().type(),
+        opts: this._opts.signaller.opts
+      },
+      stats: {
+        type: this.stats_factory().type(),
+        opts: this._opts.stats.opts
+      }
+    };
+
+    return obj;
+  }
+
 }
 
 module.exports = QFactory;

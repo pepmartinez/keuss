@@ -21,11 +21,20 @@ class DirectLink extends BaseLink{
     this._name = src_q.name () + '->' + dst_q.name ();
     this._dst = dst_q;
 
+    this._add_to_pipeline ();
     debug ('created Pipeline/DirectLink %s', this._name);
   }
 
   dst () {return this._dst;}
 
+  static Type () {return 'pipeline:processor:DirectLink';}
+  type () {return DirectLink.Type();}
+
+  to_yaml_obj () {
+    let obj = super.to_yaml_obj ();
+    obj.dst = this._dst.name ();
+    return obj;
+  }
 
   /////////////////////////////////////////
   _next (id, opts, cb) {

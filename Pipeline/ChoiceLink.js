@@ -27,6 +27,7 @@ class ChoiceLink extends BaseLink{
 
     this._name = src_q.name () + '->{' + _.join (_.map (dst_q_array, i => i.name()), ',') + '}';
 
+    this._add_to_pipeline ();
     debug ('created Pipeline/ChoiceLink %s', this._name);
   }
 
@@ -36,6 +37,14 @@ class ChoiceLink extends BaseLink{
   dst_dimension ()   {return this._dst_q_array.length;}
   dst_names ()       {return _.map (this._dst_q_idx, (v, k) => k);}
 
+  static Type () {return 'pipeline:processor:ChoiceLink';}
+  type () {return ChoiceLink.Type();}
+
+  to_yaml_obj () {
+    let obj = super.to_yaml_obj ();
+    obj.dst = _.map (this._dst_q_array, q => q.name ());
+    return obj;
+  }
 
   /////////////////////////////////////////
   _next (id, opts, cb) {

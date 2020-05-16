@@ -113,7 +113,7 @@ class MemStatsFactory {
   }
 
   type () {
-    return Type ();
+    return MemStatsFactory.Type ();
   }
 
   queues (ns, opts, cb) {
