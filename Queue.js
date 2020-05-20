@@ -92,7 +92,6 @@ class Queue {
   ////////////////////////////////////////////////////////////////////////////
 
   stats    (cb) {this._stats.values (cb);}
-  topology (cb) {this._stats.topology (cb);}
   paused   (cb) {this._stats.paused (cb);}
 
   // placeholder methods
@@ -521,7 +520,6 @@ class Queue {
     async.parallel ({
       type:          cb => cb (null, this.type()),
       stats:         cb => this.stats (cb),
-      topology:      cb => this.topology (cb),
       paused:        cb => this.paused (cb),
       next_mature_t: cb => this.next_t (cb),
       size:          cb => this.size (cb),

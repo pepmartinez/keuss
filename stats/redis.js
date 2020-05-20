@@ -11,7 +11,6 @@ var debug = require('debug')('keuss:Stats:Redis');
  * stores in:
  *   - counters                   in keuss:stats:<ns>:<name>:counter_<counter> -> int
  *   - opts (queue creation opts) in keuss:stats:<ns>:<name>:opts              -> string/json
- *   - topology                   in keuss:stats:<ns>:<name>:topology          -> string/json
 */
 class RedisStats {
   constructor(ns, name, factory, opts) {
@@ -149,36 +148,12 @@ class RedisStats {
   }
 
 
-  topology (tplg, cb) {
-    if (!cb) {
-      // get
-      cb = tplg;
-      this._rediscl.hget (this._id, 'topology', (err, res) => {
-        if (err) return cb(err);
-        if (!res) return cb(null, {});
-        try {
-          if (res) res = JSON.parse(res);
-          cb (null, res);
-        }
-        catch (e) {
-          cb(e);
-        }
-      });
-    }
-    else {
-      // set
-      this._rediscl.hset (this._id, 'topology', JSON.stringify (tplg), cb);
-    }
-  }
-
-
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
 
     var tasks = [
-      cb => this._rediscl.hdel (this._id, 'opts', cb),
-      cb => this._rediscl.hdel (this._id, 'topology', cb)
+      cb => this._rediscl.hdel (this._id, 'opts', cb)
     ];
 
     this.values ((err, vals) => {
@@ -243,12 +218,6 @@ class RedisStatsFactory {
               for (let k in v) {
                 if (k.startsWith ('counter_')) {
                   ret.counters[k.substr (8)] = parseInt(v[k]);
-                }
-                else if (k == 'topology') {
-                  ret[k] = JSON.parse (v[k]);
-                }
-                else if (k == 'opts') {
-                  ret[k] = JSON.parse (v[k]);
                 }
                 else if (k == 'opts') {
                   ret[k] = JSON.parse (v[k]);

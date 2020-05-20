@@ -164,28 +164,6 @@ class MongoStats {
     }
   }
 
-  topology (tplg, cb) {
-    if (!cb) {
-      // get
-      cb = tplg;
-
-      this._coll().findOne ({_id: this._id}, {projection: {topology: 1}}, (err, res) => {
-        if (err) return cb (err);
-        debug ('mongo stats - topology: get %s -> %j', this._name, res);
-        cb (null, (res && res.topology) || {});
-      });
-    }
-    else {
-      // set
-      var upd = {$set: {topology : tplg}};
-
-      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
-        debug ('mongo stats: updated %s -> %j', this._name, upd);
-        cb (err);
-      });
-    }
-  }
-
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
@@ -193,8 +171,7 @@ class MongoStats {
     var upd = {
       $unset: {
         counters: 1,
-        opts: 1,
-        topology: 1
+        opts: 1
       }
     };
 
@@ -253,7 +230,6 @@ class MongoStatsFactory {
             ns: elem.ns,
             name: elem.name,
             counters: elem.counters,
-            topology: elem.topology,
             opts: elem.opts,
             paused: elem.paused || false
           };

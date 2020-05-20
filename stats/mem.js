@@ -10,7 +10,6 @@ class MemStats {
       name: name,
       counters: {},
       opts: {},
-      topology: {},
       paused: false
     };
   }
@@ -73,23 +72,9 @@ class MemStats {
     }
   }
 
-  topology (tplg, cb) {
-    if (!cb) {
-      // get
-      cb = tplg;
-      cb (null, this._s.topology);
-    }
-    else {
-      // set
-      this._s.topology = tplg;
-      cb ();
-    }
-  }
-
   clear (cb) {
     this._s.counters = {}
     this._s.opts = {};
-    this._s.topology = {};
     this._s.paused = false;
 
     // TODO remove from factory
