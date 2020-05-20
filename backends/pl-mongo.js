@@ -280,10 +280,12 @@ class Pipeline {
     this._processors = {};
   }
 
-  name () {
-    return this._name;
-  }
+  name ()       {return this._name;}
+  queues ()     {return this._queues;}
+  processors () {return this._processors;}
 
+
+  //////////////////////////////////////////////////////////////////
   queue (name, opts) {
     if (this._queues[name]) {
       debug ('returning existing queue [%s]', name);
@@ -296,17 +298,20 @@ class Pipeline {
     return q;
   }
 
-  queues ()     {return this._queues;}
-  processors () {return this._processors;}
 
+  //////////////////////////////////////////////////////////////////
   start () {
     _.each (this.processors, (v, k) => v.start ());
   }
 
+
+  //////////////////////////////////////////////////////////////////
   stop () {
     _.each (this.processors, (v, k) => v.stop ());
   }
 
+
+  //////////////////////////////////////////////////////////////////
   _to_yaml () {
     let obj = {
       name: this.name (),
@@ -321,14 +326,13 @@ class Pipeline {
       }
     });
 
-    _.each (this._processors, (v,k) => {
-      obj.processors[k] = v.to_yaml_obj ()
-    });
-
+    _.each (this._processors, (v,k) => obj.processors[k] = v.to_yaml_obj ());
 
     return yaml.dump (obj);
   }
 
+
+  //////////////////////////////////////////////////////////////////
   _add_processor (pr) {
     this._processors [pr.name ()] = pr;
     debug ('added processor [%s] to pipeline [%s]', pr.name (), this.name ());
