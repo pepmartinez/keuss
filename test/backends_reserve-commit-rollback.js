@@ -37,7 +37,7 @@ var factory = null;
     ], done));
 
     it('queue is created empty and ok', done => {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_1');
       should.equal(q.nextMatureDate(), null);
 
       async.series([
@@ -57,7 +57,7 @@ var factory = null;
     });
 
     it('sequential push & pops with no delay, go as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_2');
 
       async.series([
         function (cb) {
@@ -141,7 +141,7 @@ var factory = null;
     });
 
     it('sequential push & pops with delays, go as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_3');
 
       async.series([
         function (cb) {
@@ -252,7 +252,7 @@ var factory = null;
     });
 
     it('timed-out pops work as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_4');
 
       async.series([
         function (cb) {
@@ -380,7 +380,7 @@ var factory = null;
     });
 
     it('pop cancellation works as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_5');
 
       async.series([
         function (cb) {
@@ -457,7 +457,7 @@ var factory = null;
     });
 
     it('simultaneous timed out pops on delayed items go in the expected order', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_6');
 
       var hrTime = process.hrtime()
 
@@ -564,7 +564,7 @@ var factory = null;
     });
 
     it('should do raw reserve & commit as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_7');
       var id = null;
 
       async.series([
@@ -645,7 +645,7 @@ var factory = null;
     });
 
     it('should do raw reserve & rollback as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_8');
       var id = null;
 
       async.series([
@@ -779,7 +779,7 @@ var factory = null;
     });
 
     it('should do get.reserve & ok as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_9');
       var id = null;
 
       async.series([
@@ -852,7 +852,7 @@ var factory = null;
     it('should manage rollback on invalid id as expected', function (done) {
       if (MQ_item.label == 'Redis OrderedQueue') return done ();
 
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_10');
 
       async.series([
         function (cb) {
@@ -879,7 +879,7 @@ var factory = null;
 
       if (MQ_item.label == 'Redis OrderedQueue') return done ();
 
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_11');
       var state = {};
 
       async.series([
@@ -924,7 +924,7 @@ var factory = null;
     });
 
     it('should manage rollback on unknown id as expected', function (done) {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_12');
 
       async.series([
         function (cb) {
@@ -941,7 +941,7 @@ var factory = null;
 
 
     it('should rollback ok using full object', done => {
-      var q = factory.queue('test_queue');
+      var q = factory.queue('test_queue_13');
       var state = {};
 
       async.series([
