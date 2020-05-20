@@ -12,8 +12,8 @@ const debug = require('debug')('keuss:Pipeline:Main');
 class PipelinedMongoQueue extends Queue {
 
   //////////////////////////////////////////////
-  constructor (name, pipeline, opts) {
-    super (name, pipeline._factory, opts);
+  constructor (name, pipeline, opts, orig_opts) {
+    super (name, pipeline._factory, opts, orig_opts);
 
     this._pipeline = pipeline;
     this._col = this._pipeline._col;
@@ -286,13 +286,13 @@ class Pipeline {
 
 
   //////////////////////////////////////////////////////////////////
-  queue (name, opts) {
+  queue (name, opts, orig_opts) {
     if (this._queues[name]) {
       debug ('returning existing queue [%s]', name);
       return this._queues[name];
     }
 
-    const q = new PipelinedMongoQueue (name, this, opts);
+    const q = new PipelinedMongoQueue (name, this, opts, orig_opts);
     debug ('created queue [%s]', name);
     this._queues[name] = q;
     return q;
@@ -322,7 +322,8 @@ class Pipeline {
 
     _.each (this._queues, (v,k) => {
       obj.queues[k] = {
-        type: v.type()
+        type: v.type(),
+        opts: v._orig_opts
       }
     });
 
@@ -369,9 +370,8 @@ class Factory extends QFactory {
 
   queue (name, opts) {
     if (!opts) opts = {};
-    if (!opts.pipeline) opts.pipeline = 'default';
 
-    var pl_name = opts.pipeline;
+    var pl_name = opts.pipeline || 'default';
     var pipeline = this._pipelines[pl_name];
 
     if (!pipeline) {
@@ -381,7 +381,7 @@ class Factory extends QFactory {
 
     var full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return pipeline.queue (name, full_opts);
+    return pipeline.queue (name, full_opts, opts);
   }
 
   close (cb) {

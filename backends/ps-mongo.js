@@ -10,8 +10,8 @@ var QFactory =    require ('../QFactory');
 class PersistentMongoQueue extends Queue {
 
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
-    super (name, factory, opts);
+  constructor (name, factory, opts, orig_opts) {
+    super (name, factory, opts, orig_opts);
 
     this._factory = factory;
     this._col = factory._db.collection (name);
@@ -239,9 +239,9 @@ class Factory extends QFactory {
   }
 
   queue (name, opts) {
-    var full_opts = {}
+    var full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new PersistentMongoQueue (name, this, full_opts);
+    return new PersistentMongoQueue (name, this, full_opts, opts);
   }
 
   close (cb) {
