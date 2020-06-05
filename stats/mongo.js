@@ -2,18 +2,18 @@ var _ =           require ('lodash');
 var async =       require ('async');
 var MongoClient = require ('mongodb').MongoClient;
 
+var Stats = require ('../Stats');
+
 var debug = require('debug')('keuss:Stats:Mongo');
 
 /*
  * plain into a single mongo coll
 */
-class MongoStats {
+class MongoStats  extends Stats {
   constructor(ns, name, factory, opts) {
-    this._ns = ns;
-    this._name = name;
+    super (ns, name, factory);
     this._id = 'keuss:stats:' + ns + ':' + name;
     this._opts = opts || {};
-    this._factory = factory;
     this._cache = {};
 
     var upd = {
@@ -27,20 +27,6 @@ class MongoStats {
       debug ('mongo stats created, ns %s, name %s, opts %j', ns, name, opts);
     });
   }
-
-
-  type() {
-    return this._factory.type();
-   }
-
-   ns () {
-     return this._ns;
-   }
-
-   name () {
-     return this._name;
-   }
-
 
   values(cb) {
     this._coll().findOne ({_id: this._id}, {projection: {counters: 1}}, (err, res) => {

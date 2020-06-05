@@ -1,5 +1,7 @@
-var _ =     require('lodash');
-var async = require('async');
+var _ =     require ('lodash');
+var async = require ('async');
+
+var Stats = require ('../Stats');
 
 var RedisConn = require('../utils/RedisConn');
 
@@ -12,13 +14,12 @@ var debug = require('debug')('keuss:Stats:Redis');
  *   - counters                   in keuss:stats:<ns>:<name>:counter_<counter> -> int
  *   - opts (queue creation opts) in keuss:stats:<ns>:<name>:opts              -> string/json
 */
-class RedisStats {
+class RedisStats extends Stats {
   constructor(ns, name, factory, opts) {
-    this._ns = ns;
-    this._name = name;
+    super (ns, name, factory);
+
     this._id = 'keuss:stats:' + ns + ':' + name;
     this._opts = opts || {};
-    this._factory = factory;
     this._rediscl = factory._rediscl;
     this._cache = {};
 
@@ -26,19 +27,6 @@ class RedisStats {
     this._rediscl.hset (this._id, 'ns',   this._ns);
 
     debug ('created redis stats with ns %s, name %s, options %j', ns, name, opts);
-  }
-
-
-  type() {
-    return this._factory.type();
-  }
-
-  ns () {
-    return this._ns;
-  }
-
-  name () {
-    return this._name;
   }
 
   values(cb) {

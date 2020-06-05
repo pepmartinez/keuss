@@ -1,10 +1,13 @@
 var _ = require ('lodash');
 
+var Stats = require ('../Stats');
+
 var debug = require('debug')('keuss:Stats:Mem');
 
-class MemStats {
+class MemStats extends Stats {
   constructor (ns, name, factory) {
-    this._factory = factory;
+    super (ns, name, factory);
+
     this._s = {
       ns: ns,
       name: name,
@@ -12,18 +15,6 @@ class MemStats {
       opts: {},
       paused: false
     };
-  }
-
-  type () {
-    return this._factory.type ();
-  }
-
-  ns () {
-    return this._s.ns;
-  }
-
-  name () {
-    return this._s.name;
   }
 
   values (cb) {
