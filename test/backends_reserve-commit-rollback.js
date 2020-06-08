@@ -2,6 +2,9 @@ var async =  require ('async');
 var should = require ('should');
 var _ =      require ('lodash');
 
+var LocalSignal = require ('../signal/local');
+var MemStats =    require ('../stats/mem');
+
 var MongoClient = require ('mongodb').MongoClient;
 
 var factory = null;
@@ -18,6 +21,8 @@ var factory = null;
     before(function (done) {
       var opts = {
         url: 'mongodb://localhost/keuss_test_backends_rcr',
+        signaller: { provider: LocalSignal},
+        stats: {provider: MemStats}
       };
 
       MQ(opts, function (err, fct) {

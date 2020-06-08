@@ -32,10 +32,12 @@ var factory = null;
           var opts = {
             url: 'mongodb://localhost/keuss_test_pause',
             signaller: {
-              provider: signal_item.signal
+              provider: signal_item.signal,
+              opts: {url: 'mongodb://localhost/keuss_test_pause_signal'}
             },
             stats: {
-              provider: stats_item.stats
+              provider: stats_item.stats,
+              opts: {url: 'mongodb://localhost/keuss_test_pause_stats'}
             }
           };
 
@@ -51,6 +53,14 @@ var factory = null;
             cb => setTimeout (cb, 1000),
             cb => factory.close (cb),
             cb => MongoClient.connect ('mongodb://localhost/keuss_test_pause', (err, cl) => {
+              if (err) return done (err);
+              cl.db().dropDatabase (() => cl.close (cb))
+            }),
+            cb => MongoClient.connect ('mongodb://localhost/keuss_test_pause_stats', (err, cl) => {
+              if (err) return done (err);
+              cl.db().dropDatabase (() => cl.close (cb))
+            }),
+            cb => MongoClient.connect ('mongodb://localhost/keuss_test_pause_signal', (err, cl) => {
               if (err) return done (err);
               cl.db().dropDatabase (() => cl.close (cb))
             })

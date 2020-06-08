@@ -4,8 +4,8 @@ const yaml = require ('js-yaml');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var Queue =    require ('../Queue');
-var QFactory = require ('../QFactory');
+var Queue =                     require ('../Queue');
+var QFactory_MongoDB_defaults = require ('../QFactory-MongoDB-defaults');
 
 const debug = require('debug')('keuss:Pipeline:Main');
 
@@ -343,7 +343,7 @@ class Pipeline {
 }
 
 
-class Factory extends QFactory {
+class Factory extends QFactory_MongoDB_defaults {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;

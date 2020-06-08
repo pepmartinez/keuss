@@ -2,6 +2,9 @@ const async =  require ('async');
 const should = require ('should');
 const Chance = require ('chance');
 
+var LocalSignal = require ('../signal/local');
+var MemStats =    require ('../stats/mem');
+
 const MongoClient = require('mongodb').MongoClient;
 
 const CHC = require ('../Pipeline/ChoiceLink');
@@ -28,7 +31,9 @@ function loop (n, fn, cb) {
     before (done => {
       const opts = {
         url: 'mongodb://localhost/__test_pipeline_choicelink__',
-        opts:  { useUnifiedTopology: true }
+        opts:  { useUnifiedTopology: true },
+        signaller: { provider: LocalSignal},
+        stats: {provider: MemStats}
       };
 
       MQ (opts, (err, fct) => {
@@ -41,6 +46,10 @@ function loop (n, fn, cb) {
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb),
+      cb => MongoClient.connect ('mongodb://localhost/__test_pipeline_choicelink__', (err, cl) => {
+        if (err) return done (err);
+        cl.db().dropDatabase (() => cl.close (cb))
+      })
     ], done));
 
     it ('3-elem choice pipeline distributes ok', done => {

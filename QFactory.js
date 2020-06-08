@@ -10,19 +10,18 @@ var debug = require('debug')('keuss:QFactory');
 class QFactory {
   constructor (opts) {
     this._opts = opts || {};
-
     this._name = opts.name || 'N';
 
+    debug ('created QFactory %s with opts %o', this._name, this._opts);
+  }
+
+  async_init (cb) {
     if (!this._opts.stats)      this._opts.stats = {};
     if (!this._opts.stats.opts) this._opts.stats.opts = {};
 
     if (!this._opts.signaller)      this._opts.signaller = {};
     if (!this._opts.signaller.opts) this._opts.signaller.opts = {};
 
-    debug ('created QFactory %s with opts %o', this._name, this._opts);
-  }
-
-  async_init (cb) {
     var signal_provider = this._opts.signaller.provider || LocalSignal;
     var stats_provider = this._opts.stats.provider || MemStats;
 

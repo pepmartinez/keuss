@@ -9,17 +9,17 @@ var Mem =   require ('../stats/mem');
 var Redis = require ('../stats/redis');
 var Mongo = require ('../stats/mongo');
 
+const MongoClient = require ('mongodb').MongoClient;
+
 var ns = 'some-class';
 var name = 'test-stats';
 
 
-var tests = {
+_.forEach ({
   Mem: Mem,
   Redis: Redis,
   Mongo: Mongo
-};
-
-_.forEach (tests, (CL, CLName) => {
+}, (CL, CLName) => {
 
   describe (CLName + ' stats provider', function () {
 
@@ -29,6 +29,10 @@ _.forEach (tests, (CL, CLName) => {
 
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
+      cb => MongoClient.connect ('mongodb://localhost/keuss_stats', (err, cl) => {
+        if (err) return done (err);
+        cl.db().dropDatabase (() => cl.close (cb))
+      })
     ], done));
 
     it ('creates ok', done => {
