@@ -9,7 +9,7 @@ class ChoiceLink extends BaseLink{
   constructor (src_q, dst_q_array, opts) {
     super (src_q, opts);
 
-    if (! _.isArray (dst_q_array)) throw Error ('destination-queues is not an array');
+    if (!_.isArray (dst_q_array)) throw Error ('destination-queues is not an array');
 
     this._dst_q_array = dst_q_array;
     this._dst_q_idx = {};

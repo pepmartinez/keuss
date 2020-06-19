@@ -1,11 +1,13 @@
-const _ =    require ('lodash');
-const yaml = require ('js-yaml');
+const _ =     require ('lodash');
+const async = require ('async');
+const yaml =  require ('js-yaml');
 
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
 var Queue =                     require ('../Queue');
 var QFactory_MongoDB_defaults = require ('../QFactory-MongoDB-defaults');
+const DirectLink = require('../Pipeline/DirectLink');
 
 const debug = require('debug')('keuss:Pipeline:Main');
 
@@ -343,13 +345,149 @@ class Pipeline {
 }
 
 
-class Factory extends QFactory_MongoDB_defaults {
-  constructor (opts, mongo_conn) {
-    super (opts);
-    this._mongo_conn = mongo_conn;
-    this._db = mongo_conn.db();
-    this._pipelines = {};
+class PipelineBuilder {
+  constructor (factory) {
+    this._factory = factory;
+    this._tasks = [];
+    this._state = {};
   }
+
+  pipeline (name) {
+    // TODO close pipeline if present
+    this._tasks.push (
+      cb => {
+        debug ('pipelinebuilder: new pipeline %s', name);
+        this._state.pipeline = this._factory.pipeline (name);
+        cb ();
+      }
+    );
+
+    return this;
+  }
+
+  queue (name, opts) {
+    this._tasks.push (
+      cb => {
+        if (!this._state.pipeline) return cb (`when creating queue ${name}: no pipeline. You need to call pipeline() first`);
+        debug ('pipelinebuilder[%s]: new queue %s', this._state.pipeline.name (), name);
+        this._factory._queue_from_pipeline (name, this._state.pipeline, opts);
+        cb ();
+      }
+    );
+
+    return this;
+  }
+
+  directLink (src, dst, func, opts) {
+    this._tasks.push (
+      cb => {
+        if (!this._state.pipeline) return cb (`when creating DirectLink: no pipeline. You need to call pipeline() first`);
+
+        const src_q = this._state.pipeline.queues()[src];
+        const dst_q = this._state.pipeline.queues()[dst];
+
+        try {
+          const pr = new DirectLink (src_q, dst_q, opts);
+          pr.on_data (func);
+          debug ('pipelinebuilder[%s]: new DirectLink %s', this._state.pipeline.name (), pr.name ());
+          cb ();
+        }
+        catch (e) {
+          cb (e);
+        }
+      }
+    );
+
+    return this;
+  }
+
+  choiceLink (src, dst, func, opts) {
+    this._tasks.push (
+      cb => {
+        if (!this._state.pipeline) return cb (`when creating ChoiceLink: no pipeline. You need to call pipeline() first`);
+        const src_q = this._state.pipeline.queues()[src];
+        const dst_q = dst.map (q => this._state.pipeline.queues()[q]);
+
+        try {
+          const pr = new ChoiceLink (src_q, dst_q, opts);
+          pr.on_data (func);
+          debug ('pipelinebuilder[%s]: new ChoiceLink %s', this._state.pipeline.name (), pr.name ());
+          cb ();
+        }
+        catch (e) {
+          cb (e);
+        }
+      }
+    );
+
+    return this;
+  }
+
+  sink (src, func, opts) {
+    this._tasks.push (
+      cb => {
+        if (!this._state.pipeline) return cb (`when creating Sink: no pipeline. You need to call pipeline() first`);
+        const src_q = this._state.pipeline.queues()[src];
+
+        try {
+          const pr = new Sink (src_q, opts);
+          pr.on_data (func);
+          debug ('pipelinebuilder[%s]: new Sink %s', this._state.pipeline.name (), pr.name ());
+          cb ();
+        }
+        catch (e) {
+          cb (e);
+        }
+      }
+    );
+
+    return this;
+  }
+
+  done (cb) {
+    async.series (this._tasks, err => {
+      if (err) {
+        debug ('pipelinebuilder[%s]: error on creation, resetting state: ', (this._state.pipeline ? this._state.pipeline.name () : '-'), err);
+      }
+      else {
+        debug ('pipelinebuilder[%s]: created, resetting state', this._state.pipeline.name ());
+      }
+
+      const pl = this._state.pipeline;
+
+      this._state = {};
+      this._tasks = [];
+      cb (err, pl);
+    });
+  }
+}
+
+
+class Factory extends QFactory_MongoDB_defaults {
+  constructor (opts, mongo_data_conn, mongo_topology_conn) {
+    super (opts);
+    this._mongo_data_conn = mongo_data_conn;
+    this._mongo_topology_conn = mongo_topology_conn;
+    this._db = mongo_data_conn.db();
+    this._topology_db = mongo_topology_conn.db();
+    this._pipelines = {};
+
+    this._topology_db.collection ('factory').updateOne ({
+      _id: this._name
+    }, {
+      $set: {
+        opts: opts
+      }
+    }, {
+      upsert: true
+    });
+  }
+
+
+  builder () {
+    return new PipelineBuilder (this);
+  }
+
 
   pipeline (name) {
     if (this._pipelines[name]) {
@@ -363,6 +501,7 @@ class Factory extends QFactory_MongoDB_defaults {
     return pl;
   }
 
+
   queue (name, opts) {
     if (!opts) opts = {};
 
@@ -374,25 +513,28 @@ class Factory extends QFactory_MongoDB_defaults {
       pipeline = this._pipelines[pl_name];
     }
 
-    var full_opts = {};
-    _.merge(full_opts, this._opts, opts);
-    return pipeline.queue (name, full_opts, opts);
+    return this._queue_from_pipeline (name, pipeline, opts);
   }
+
 
   close (cb) {
     super.close (() => {
-      if (this._mongo_conn) {
-        this._mongo_conn.close ();
-        this._mongo_conn = null;
-      }
-
-      if (cb) return cb ();
+      async.parallel ([
+        cb => this._mongo_data_conn.close (cb),
+        cb => this._mongo_topology_conn.close (cb)
+      ], err => {
+        this._mongo_data_conn = null;
+        this._mongo_topology_conn = null;
+        if (cb) return cb (err);
+      });
     });
   }
+
 
   type () {
     return PipelinedMongoQueue.Type ();
   }
+
 
   capabilities () {
     return {
@@ -401,15 +543,52 @@ class Factory extends QFactory_MongoDB_defaults {
       pipeline: true
     };
   }
+
+
+  _queue_from_pipeline (name, pipeline, opts) {
+    if (!opts) opts = {};
+
+    var full_opts = {};
+    _.merge(full_opts, this._opts, opts);
+    return pipeline.queue (name, full_opts, opts);
+  }
 }
 
-function creator (opts, cb) {
-  var _opts = opts || {};
-  var m_url = _opts.url || 'mongodb://localhost:27017/keuss';
 
-  MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
+function creator (opts, cb) {
+  const _opts = opts || {};
+  const m_url = _opts.url || 'mongodb://localhost:27017/keuss';
+  let   m_topology_url = _opts.topology_url;
+
+  if (!m_topology_url) {
+    let arr = m_url.split ('?');
+    arr[0] += '_status';
+    m_topology_url = arr.join ('?');
+  }
+
+  async.series ([
+    cb => MongoClient.connect (m_url, { useNewUrlParser: true }, (err, cl) => {
+      if (err) {
+        debug ('error while connecting to data mongoDB [%s]', m_url, err);
+        return cb (err);
+      }
+
+      debug ('connected OK to data mongoDB %s', m_url);
+      cb (null, cl);
+    }),
+    cb => MongoClient.connect (m_topology_url, { useNewUrlParser: true }, (err, cl) => {
+      if (err) {
+        debug ('error while connecting to topology mongoDB [%s]', m_topology_url, err);
+        return cb (err);
+      }
+
+      debug ('connected OK to topology mongoDB %s', m_topology_url);
+      cb (null, cl);
+    }),
+  ], (err, res) => {
     if (err) return cb (err);
-    var F = new Factory (_opts, cl);
+
+    var F = new Factory (_opts, res[0], res[1]);
     F.async_init (err => cb (null, F));
   });
 }
