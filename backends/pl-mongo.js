@@ -7,7 +7,10 @@ var mongo =       require ('mongodb');
 
 var Queue =                     require ('../Queue');
 var QFactory_MongoDB_defaults = require ('../QFactory-MongoDB-defaults');
+
 const DirectLink = require('../Pipeline/DirectLink');
+const ChoiceLink = require('../Pipeline/ChoiceLink');
+const Sink = require('../Pipeline/Sink');
 
 const debug = require('debug')('keuss:Pipeline:Main');
 
@@ -298,13 +301,13 @@ class Pipeline {
 
   //////////////////////////////////////////////////////////////////
   start () {
-    _.each (this.processors, (v, k) => v.start ());
+    _.each (this._processors, (v, k) => v.start ());
   }
 
 
   //////////////////////////////////////////////////////////////////
   stop () {
-    _.each (this.processors, (v, k) => v.stop ());
+    _.each (this._processors, (v, k) => v.stop ());
   }
 
 

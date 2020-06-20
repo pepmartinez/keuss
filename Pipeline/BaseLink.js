@@ -49,6 +49,7 @@ class BaseLink  extends EventEmitter {
   start (ondata) {
     if (ondata) this.on_data (ondata);
     this._process (this._ondata);
+    debug ('%s: started', this._name);
   }
 
   /////////////////////////////////////////
