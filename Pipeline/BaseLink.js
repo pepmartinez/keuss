@@ -76,6 +76,29 @@ class BaseLink  extends EventEmitter {
     }
   }
 
+
+  /////////////////////////////////////////
+  _on_error (err, elem, ondata) {
+    // error: drop or retry?
+    if (err.drop === true) {
+      // drop: commit and forget
+      this.src().ok (elem, err => {
+        if (err) this.emit ('error', {on: 'src-queue-commit-on-error', elem, err});
+        debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
+        this._process (ondata);
+      });
+    }
+    else {
+      // retry: rollback
+      this.src().ko (elem, this._rollback_next_t (elem), err => {
+        if (err) this.emit ('error', {on: 'src-queue-rollback-on-error', elem, err});
+        debug ('%s: in error, rolled back: %s', this._name, elem._id);
+        this._process (ondata);
+      });
+    }
+  }
+
+
   /////////////////////////////////////////
   _process (ondata) {
     debug ('%s: attempting reserve', this._name);
@@ -96,30 +119,11 @@ class BaseLink  extends EventEmitter {
       }
 
       // do something
+      try {
       ondata (elem, (err, res) => {
         debug ('%s: processed: %s', this._name, elem._id);
 
-        if (err) {
-          // error: drop or retry?
-          if (err.drop === true) {
-            // drop: commit and forget
-            this.src().ok (elem, err => {
-              if (err) this.emit ('error', {on: 'src-queue-commit-on-error', elem, err});
-              debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
-              this._process (ondata);
-            });
-          }
-          else {
-            // retry: rollback
-            this.src().ko (elem, this._rollback_next_t (elem), err => {
-              if (err) this.emit ('error', {on: 'src-queue-rollback-on-error', elem, err});
-              debug ('%s: in error, rolled back: %s', this._name, elem._id);
-              this._process (ondata);
-            });
-          }
-
-          return;
-        }
+        if (err) return this._on_error (err, elem, ondata);
 
         // drop it (act as sink) ?
         if ((res === false) || (res && res.drop)) {
@@ -153,6 +157,13 @@ class BaseLink  extends EventEmitter {
           });
         }
       });
+      }
+      catch (e) {
+        debug ('catch error, emitting it: ', e);
+        console.log ('catch error, emitting it: ', e);
+        this.emit (e);
+        this._on_error (e, elem, ondata);
+      }
     });
   }
 
