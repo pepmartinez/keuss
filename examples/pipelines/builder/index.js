@@ -1,14 +1,10 @@
-var MQ = require    ('../../../backends/pl-mongo');
 const Chance = require ('chance');
+const vm =     require ('vm');
 
 
 const chance = new Chance();
 
-
-
-function get_a_delay (min, max) {
-  return chance.integer ({min, max});
-}
+const MQ = require    ('../../../backends/pl-mongo');
 
 function loop (n, fn, cb) {
   if (n == 0) return cb ();
@@ -16,6 +12,23 @@ function loop (n, fn, cb) {
     if (err) return cb (err);
     setImmediate (() => loop (n-1, fn, cb));
   });
+}
+
+const factory_opts = {
+  url: 'mongodb://localhost/qeus'
+};
+
+
+const num_elems = 1111;
+let   processed = 0;
+
+
+const src = `
+const Chance = require ('chance');
+const chance = new Chance();
+
+function get_a_delay (min, max) {
+  return chance.integer ({min, max});
 }
 
 function sink_process (elem, done) {
@@ -43,40 +56,46 @@ function dl_process (elem, done) {
   });
 }
 
+const q_opts = {};
 
-var factory_opts = {
-  url: 'mongodb://localhost/qeus'
-};
-
-const num_elems = 100;
-let   processed = 0;
-
-// initialize factory
-MQ (factory_opts, (err, factory) => {
-  if (err) return console.error (err);
-
-  var q_opts = {};
-
-  factory.builder ()
+builder
   .pipeline ('a_test_etcher')
   .queue ('test_pl_1', q_opts)
   .queue ('test_pl_2', q_opts)
   .directLink ('test_pl_1', 'test_pl_2', dl_process)
   .sink ('test_pl_2', sink_process)
-  .done ((err, pl) => {
-    if (err) return console.error (err);
-    console.log ('pipeline IS READY')
-    pl.start ();
-    console.log ('pipeline IS RUNNING')
-    console.log (pl._to_yaml());
-
-    loop (
-      num_elems,
-      (n, next) => setTimeout (() => pl.queues()['test_pl_1'].push ({a:n, b:'see it fail...'}, next), chance.integer ({min:0, max: 20})),
-      err => console.log (err || 'done')
-    );
-
-  })
+  .done (done);
+`
 
 
+// initialize factory
+MQ (factory_opts, (err, factory) => {
+  if (err) return console.error (err);
+
+  const context = {
+    require: require,
+    setTimeout: setTimeout,
+    console: console,
+    process: process,
+    processed: processed,
+    num_elems: num_elems,
+    builder: factory.builder(),
+    done: (err, pl) => {
+      if (err) return console.error (err);
+      console.log ('pipeline IS READY')
+      pl.start ();
+      console.log ('pipeline IS RUNNING')
+      console.log (pl._to_yaml());
+
+      loop (
+        num_elems,
+        (n, next) => setTimeout (() => pl.queues()['test_pl_1'].push ({a:n, b:'see it fail...'}, next), chance.integer ({min:0, max: 20})),
+        err => console.log (err || 'done')
+      );
+    }
+  }
+
+  const script = new vm.Script(src);
+  vm.createContext(context);
+  script.runInContext (context);
 });
