@@ -14,11 +14,6 @@ class Sink extends BaseLink{
   static Type () {return 'pipeline:processor:Sink';}
   type () {return Sink.Type();}
 
-  to_yaml_obj () {
-    let obj = super.to_yaml_obj ();
-    return obj;
-  }
-
   /////////////////////////////////////////
   _next (id, opts, callback) {
     this.src().ok (id, (err, res) => {

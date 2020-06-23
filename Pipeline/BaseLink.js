@@ -29,15 +29,6 @@ class BaseLink  extends EventEmitter {
   static Type () {return 'pipeline:processor:BaseLink';}
   type () {return BaseLink.Type();}
 
-  to_yaml_obj () {
-    const obj = {
-      type: this.type(),
-      src: this.src().name(),
-      fn: this._ondata_orig
-    };
-
-    return obj;
-  }
 
   /////////////////////////////////////////
   on_data (ondata) {

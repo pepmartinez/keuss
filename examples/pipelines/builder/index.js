@@ -85,7 +85,6 @@ MQ (factory_opts, (err, factory) => {
       console.log ('pipeline IS READY')
       pl.start ();
       console.log ('pipeline IS RUNNING')
-      console.log (pl._to_yaml());
 
       loop (
         num_elems,

@@ -107,7 +107,7 @@ class QFactory {
     });
   }
 
-  to_yaml_obj () {
+  to_descriptor_obj () {
     let obj = {
       name: this.name (),
       type: this.type (),

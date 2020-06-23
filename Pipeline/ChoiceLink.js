@@ -38,11 +38,6 @@ class ChoiceLink extends BaseLink{
   static Type () {return 'pipeline:processor:ChoiceLink';}
   type () {return ChoiceLink.Type();}
 
-  to_yaml_obj () {
-    let obj = super.to_yaml_obj ();
-    obj.dst = _.map (this._dst_q_array, q => q.name ());
-    return obj;
-  }
 
   /////////////////////////////////////////
   _next (id, opts, cb) {

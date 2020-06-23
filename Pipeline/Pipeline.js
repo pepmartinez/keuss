@@ -1,5 +1,4 @@
-const _ =    require ('lodash');
-const yaml = require ('js-yaml');
+const _ =  require ('lodash');
 
 const PipelinedMongoQueue = require ('./Queue');
 
@@ -44,28 +43,6 @@ class Pipeline {
   //////////////////////////////////////////////////////////////////
   stop () {
     _.each (this._processors, (v, k) => v.stop ());
-  }
-
-
-  //////////////////////////////////////////////////////////////////
-  _to_yaml () {
-    let obj = {
-      name: this.name (),
-      factory: this._factory.to_yaml_obj (),
-      queues: {},
-      processors: {}
-    };
-
-    _.each (this._queues, (v,k) => {
-      obj.queues[k] = {
-        type: v.type(),
-        opts: v._orig_opts
-      }
-    });
-
-    _.each (this._processors, (v,k) => obj.processors[k] = v.to_yaml_obj ());
-
-    return yaml.dump (obj);
   }
 
 

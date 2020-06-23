@@ -30,12 +30,6 @@ class DirectLink extends BaseLink{
   static Type () {return 'pipeline:processor:DirectLink';}
   type () {return DirectLink.Type();}
 
-  to_yaml_obj () {
-    let obj = super.to_yaml_obj ();
-    obj.dst = this._dst.name ();
-    return obj;
-  }
-
   /////////////////////////////////////////
   _next (id, opts, cb) {
     this.src().pl_step (id, this.dst(), opts, (err, res) => {

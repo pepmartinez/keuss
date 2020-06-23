@@ -27,13 +27,6 @@ MQ (factory_opts, (err, factory) => {
     });
   });
 
-  console.log (q1.pipeline()._to_yaml());
-
-/*
-  const fs   = require('fs');
-  fs.writeFileSync ('ddd.yaml', q1.pipeline()._to_yaml());
-*/
-  /*
   // insert elements in the entry queue
   async.timesLimit (3, 3, (n, next) => q1.push ({a:n, b:'see it spin...'}, next));
 
@@ -42,5 +35,4 @@ MQ (factory_opts, (err, factory) => {
     console.log ('end point get', res);
     next ();
   }));
-  */
 });
