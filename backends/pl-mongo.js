@@ -1,5 +1,6 @@
 const _ =     require ('lodash');
 const async = require ('async');
+const vm =    require ('vm');
 
 const MongoClient = require ('mongodb').MongoClient;
 
@@ -12,6 +13,7 @@ const PipelinedMongoQueue = require ('../Pipeline/Queue');
 const debug = require('debug')('keuss:Pipeline:Main');
 
 
+///////////////////////////////////////////////////////////
 class Factory extends QFactory_MongoDB_defaults {
   constructor (opts, mongo_data_conn, mongo_topology_conn) {
     super (opts);
@@ -33,11 +35,33 @@ class Factory extends QFactory_MongoDB_defaults {
   }
 
 
+  ///////////////////////////////////////////////////////////
   builder () {
     return new PipelineBuilder (this);
   }
 
 
+  ///////////////////////////////////////////////////////////
+  pipelineFromRecipe (src, opts, cb) {
+    const context = {
+      require:     require,
+      setTimeout:  setTimeout,
+      setInterval: setInterval,
+      console:     console,
+      process:     process,
+      builder:     this.builder (),
+      done:        cb
+    };
+
+    if (opts && opts.context) _.merge (context, opts.context);
+
+    const script = new vm.Script (src);
+    vm.createContext (context);
+    script.runInContext (context);
+  }
+
+
+  ///////////////////////////////////////////////////////////
   pipeline (name) {
     if (this._pipelines[name]) {
       debug ('returning existing pipeline [%s]', name);
@@ -51,6 +75,7 @@ class Factory extends QFactory_MongoDB_defaults {
   }
 
 
+  ///////////////////////////////////////////////////////////
   queue (name, opts) {
     if (!opts) opts = {};
 
@@ -66,6 +91,7 @@ class Factory extends QFactory_MongoDB_defaults {
   }
 
 
+  ///////////////////////////////////////////////////////////
   close (cb) {
     super.close (() => {
       async.parallel ([
@@ -80,11 +106,13 @@ class Factory extends QFactory_MongoDB_defaults {
   }
 
 
+  ///////////////////////////////////////////////////////////
   type () {
     return PipelinedMongoQueue.Type ();
   }
 
 
+  ///////////////////////////////////////////////////////////
   capabilities () {
     return {
       sched:    true,
@@ -94,6 +122,7 @@ class Factory extends QFactory_MongoDB_defaults {
   }
 
 
+  ///////////////////////////////////////////////////////////
   _queue_from_pipeline (name, pipeline, opts) {
     if (!opts) opts = {};
 
@@ -104,6 +133,7 @@ class Factory extends QFactory_MongoDB_defaults {
 }
 
 
+///////////////////////////////////////////////////////////
 function creator (opts, cb) {
   const _opts = opts || {};
   const m_url = _opts.url || 'mongodb://localhost:27017/keuss';

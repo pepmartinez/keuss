@@ -6,6 +6,8 @@ const Sink =       require('../Pipeline/Sink');
 
 const debug = require('debug')('keuss:Pipeline:Builder');
 
+
+///////////////////////////////////////////////////////////
 class PipelineBuilder {
   constructor (factory) {
     this._factory = factory;
@@ -13,6 +15,7 @@ class PipelineBuilder {
     this._state = {};
   }
 
+  ///////////////////////////////////////////////////////////
   pipeline (name) {
     // TODO close pipeline if present
     this._tasks.push (
@@ -26,6 +29,7 @@ class PipelineBuilder {
     return this;
   }
 
+  ///////////////////////////////////////////////////////////
   queue (name, opts) {
     this._tasks.push (
       cb => {
@@ -39,6 +43,7 @@ class PipelineBuilder {
     return this;
   }
 
+  ///////////////////////////////////////////////////////////
   directLink (src, dst, func, opts) {
     this._tasks.push (
       cb => {
@@ -62,6 +67,7 @@ class PipelineBuilder {
     return this;
   }
 
+  ///////////////////////////////////////////////////////////
   choiceLink (src, dst, func, opts) {
     this._tasks.push (
       cb => {
@@ -84,6 +90,7 @@ class PipelineBuilder {
     return this;
   }
 
+  ///////////////////////////////////////////////////////////
   sink (src, func, opts) {
     this._tasks.push (
       cb => {
@@ -105,6 +112,7 @@ class PipelineBuilder {
     return this;
   }
 
+  ///////////////////////////////////////////////////////////
   done (cb) {
     async.series (this._tasks, err => {
       if (err) {

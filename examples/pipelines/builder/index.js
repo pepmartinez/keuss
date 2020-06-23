@@ -1,5 +1,4 @@
 const Chance = require ('chance');
-const vm =     require ('vm');
 
 
 const chance = new Chance();
@@ -19,7 +18,7 @@ const factory_opts = {
 };
 
 
-const num_elems = 1111;
+const num_elems = 11;
 let   processed = 0;
 
 
@@ -32,6 +31,7 @@ function get_a_delay (min, max) {
 }
 
 function sink_process (elem, done) {
+//  throw Error ('suck it');
   setTimeout (() => {
     console.log ('%s: sunk elem [a %d, choice %d]', this.name(), elem.payload.a, elem.payload.choice);
     done();
@@ -72,29 +72,21 @@ builder
 MQ (factory_opts, (err, factory) => {
   if (err) return console.error (err);
 
-  const context = {
-    require: require,
-    setTimeout: setTimeout,
-    console: console,
-    process: process,
-    processed: processed,
-    num_elems: num_elems,
-    builder: factory.builder(),
-    done: (err, pl) => {
-      if (err) return console.error (err);
-      console.log ('pipeline IS READY')
-      pl.start ();
-      console.log ('pipeline IS RUNNING')
-
-      loop (
-        num_elems,
-        (n, next) => setTimeout (() => pl.queues()['test_pl_1'].push ({a:n, b:'see it fail...'}, next), chance.integer ({min:0, max: 20})),
-        err => console.log (err || 'done')
-      );
+  factory.pipelineFromRecipe (src, {
+    context: {
+      num_elems,
+      processed
     }
-  }
+  }, (err, pl) => {
+    if (err) return console.error (err);
+    console.log ('pipeline IS READY')
+    pl.start ();
+    console.log ('pipeline IS RUNNING, inserting load')
 
-  const script = new vm.Script(src);
-  vm.createContext(context);
-  script.runInContext (context);
+    loop (
+      num_elems,
+      (n, next) => setTimeout (() => pl.queues()['test_pl_1'].push ({a:n, b:'see it fail...'}, next), chance.integer ({min:0, max: 20})),
+      err => console.log (err || 'done')
+    );
+  });
 });
