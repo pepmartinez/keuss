@@ -42,22 +42,47 @@ class Factory extends QFactory_MongoDB_defaults {
 
 
   ///////////////////////////////////////////////////////////
-  pipelineFromRecipe (src, opts, cb) {
+  pipelineFromRecipe (bs_src_array, setup_src_array, opts, cb) {
     const context = {
-      require:     require,
-      setTimeout:  setTimeout,
-      setInterval: setInterval,
-      console:     console,
-      process:     process,
-      builder:     this.builder (),
-      done:        cb
+      Buffer,
+      clearImmediate,
+      clearInterval,
+      clearTimeout,
+      require,
+      setImmediate,
+      setTimeout,
+      setInterval,
+      TextEncoder,
+      TextDecoder,
+      URL,
+      URLSearchParams,
+      builder: this.builder (),
+      done:    cb
     };
 
     if (opts && opts.context) _.merge (context, opts.context);
 
-    const script = new vm.Script (src);
     vm.createContext (context);
-    script.runInContext (context);
+
+    _.each (bs_src_array, (elem, idx) => {
+      const src = elem.src || elem;
+      const sname = elem.name || `bootstrap[${idx}]`;
+
+      debug ('Loading BS script %s', sname);
+      const script = new vm.Script (src, {filename: sname});
+      script.runInContext (context);
+      debug ('BS script %s loaded', sname);
+    });
+
+    _.each (setup_src_array, (elem, idx) => {
+      const src = elem.src || elem;
+      const sname = elem.name || `setup[${idx}]`;
+
+      debug ('Loading Setup script %s', sname);
+      const script = new vm.Script (src, {filename: sname});
+      script.runInContext (context);
+      debug ('Setup script %s loaded', sname);
+    });
   }
 
 
