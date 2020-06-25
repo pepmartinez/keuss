@@ -55,7 +55,7 @@ const bs_src_array = [
 
   function choice_process (elem, done) {
     setTimeout (() => {
-      if (chance.bool ({likelihood: 69})) {
+      if (chance.bool ({likelihood: 9})) {
         console.log ('%s: failing on elem %o on try [%d]', this.name(), elem.payload, elem.tries);
         return done ({e: 'cl1 induced a failure'});
       }
@@ -78,7 +78,6 @@ const setup_src_array = [
   const q_opts = {};
 
   builder
-  .pipeline ('a_test_etcher')
   .queue ('test_pl_1', q_opts)
   .queue ('test_pl_2', q_opts)
   .queue ('test_pl_3', q_opts)
@@ -89,11 +88,12 @@ const setup_src_array = [
   .sink ('test_pl_3', sink_process)
   .sink ('test_pl_4', sink_process)
   .sink ('test_pl_5', sink_process)
+  .onError (console.log)
   .done (done);
   `
 ];
 
-const num_elems = 1111;
+const num_elems = 3333;
 let   processed = 0;
 
 // initialize factory
@@ -101,6 +101,7 @@ MQ (factory_opts, (err, factory) => {
   if (err) return console.error (err);
 
   factory.pipelineFromRecipe (
+    'a_test_etcher',
     bs_src_array,
     setup_src_array,
     {

@@ -1,4 +1,5 @@
 const async = require ('async');
+const _ =     require ('lodash');
 
 const DirectLink = require('../Pipeline/DirectLink');
 const ChoiceLink = require('../Pipeline/ChoiceLink');
@@ -33,7 +34,7 @@ class PipelineBuilder {
   queue (name, opts) {
     this._tasks.push (
       cb => {
-        if (!this._state.pipeline) return cb (`when creating queue ${name}: no pipeline. You need to call pipeline() first`);
+        if (!this._state.pipeline) return cb (`when creating queue ${name}: no pipeline. You need to call pipeline() first, and do no calls after done()`);
         debug ('[%s]: new queue %s', this._state.pipeline.name (), name);
         this._factory._queue_from_pipeline (name, this._state.pipeline, opts);
         cb ();
@@ -47,7 +48,7 @@ class PipelineBuilder {
   directLink (src, dst, func, opts) {
     this._tasks.push (
       cb => {
-        if (!this._state.pipeline) return cb (`when creating DirectLink: no pipeline. You need to call pipeline() first`);
+        if (!this._state.pipeline) return cb (`when creating DirectLink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
 
         const src_q = this._state.pipeline.queues()[src];
         const dst_q = this._state.pipeline.queues()[dst];
@@ -71,7 +72,7 @@ class PipelineBuilder {
   choiceLink (src, dst, func, opts) {
     this._tasks.push (
       cb => {
-        if (!this._state.pipeline) return cb (`when creating ChoiceLink: no pipeline. You need to call pipeline() first`);
+        if (!this._state.pipeline) return cb (`when creating ChoiceLink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
         const src_q = this._state.pipeline.queues()[src];
         const dst_q = dst.map (q => this._state.pipeline.queues()[q]);
 
@@ -94,7 +95,7 @@ class PipelineBuilder {
   sink (src, func, opts) {
     this._tasks.push (
       cb => {
-        if (!this._state.pipeline) return cb (`when creating Sink: no pipeline. You need to call pipeline() first`);
+        if (!this._state.pipeline) return cb (`when creating Sink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
         const src_q = this._state.pipeline.queues()[src];
 
         try {
@@ -113,6 +114,28 @@ class PipelineBuilder {
   }
 
   ///////////////////////////////////////////////////////////
+  onError (fn) {
+    // add event listener for error
+    this._tasks.push (
+      cb => {
+        if (!this._state.pipeline) return cb (`when adding onError: no pipeline. You need to call pipeline() first, and do no calls after done()`);
+        _.each (this._state.pipeline.processors (), (v, k) => {
+          v.on ('error', e => {
+            e.processor = v;
+            fn (e);
+          });
+
+          debug ('added error listener on processor %s', k);
+        });
+
+        cb ();
+      }
+    );
+
+    return this;
+  }
+
+  ///////////////////////////////////////////////////////////
   done (cb) {
     async.series (this._tasks, err => {
       if (err) {
@@ -123,6 +146,7 @@ class PipelineBuilder {
       }
 
       const pl = this._state.pipeline;
+      this._state.pipeline = null;
 
       this._state = {};
       this._tasks = [];

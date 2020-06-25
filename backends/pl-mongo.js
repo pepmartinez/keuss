@@ -42,7 +42,7 @@ class Factory extends QFactory_MongoDB_defaults {
 
 
   ///////////////////////////////////////////////////////////
-  pipelineFromRecipe (bs_src_array, setup_src_array, opts, cb) {
+  pipelineFromRecipe (name, bs_src_array, setup_src_array, opts, cb) {
     const context = {
       Buffer,
       clearImmediate,
@@ -56,7 +56,7 @@ class Factory extends QFactory_MongoDB_defaults {
       TextDecoder,
       URL,
       URLSearchParams,
-      builder: this.builder (),
+      builder: this.builder ().pipeline(name),
       done:    cb
     };
 
@@ -83,6 +83,20 @@ class Factory extends QFactory_MongoDB_defaults {
       script.runInContext (context);
       debug ('Setup script %s loaded', sname);
     });
+
+
+    this._topology_db.collection ('pipelines').updateOne ({
+      _id: name
+    }, {
+      $set: {
+        bs: bs_src_array,
+        setup: setup_src_array
+      }
+    }, {
+      upsert: true
+    });
+
+
   }
 
 
