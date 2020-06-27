@@ -71,7 +71,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -111,7 +111,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -148,7 +148,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -220,7 +220,7 @@ var factory = null;
         pll1.stop();
         pll2.stop ();
 
-        done ();
+        setTimeout (done, 250);
       });
 
       async.timesLimit (5, 1, (n, next) =>
@@ -268,7 +268,7 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
@@ -316,7 +316,7 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
@@ -364,14 +364,13 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
     });
-
 
   });
 });

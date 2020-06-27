@@ -55,7 +55,7 @@ const bs_src_array = [
 
   function choice_process (elem, done) {
     setTimeout (() => {
-      if (chance.bool ({likelihood: 89})) {
+      if (chance.bool ({likelihood: 9})) {
         console.log ('%s: failing on elem %o on try [%d]', this.name(), elem.payload, elem.tries);
         return done ({e: 'cl1 induced a failure'});
       }
@@ -93,7 +93,7 @@ const setup_src_array = [
   `
 ];
 
-const num_elems = 13333;
+const num_elems = 3;
 let   processed = 0;
 
 // initialize factory

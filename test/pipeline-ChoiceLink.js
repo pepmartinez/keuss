@@ -95,7 +95,7 @@ function loop (n, fn, cb) {
               }
             });
 
-            done ();
+            setTimeout (done, 250);
           }, 100);
         }
 
@@ -162,10 +162,16 @@ function loop (n, fn, cb) {
           err: { e: 'ill-specified dst queue [6]' }
         });
 
-        const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
-        client.connect(err => {
-          client.db().collection ('pl2').deleteMany ({}, () => done ());
-        });
+        sk1.stop ();
+        sk2.stop ();
+        sk3.stop ();
+
+        setTimeout (() => {
+          const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
+          client.connect(err => {
+            client.db().collection ('pl2').deleteMany ({}, () => done ());
+          });
+        }, 250);
       });
 
       cl1.start (function (elem, done) {
@@ -211,10 +217,16 @@ function loop (n, fn, cb) {
           err: { e: 'ill-specified dst queue [nowhere]' }
         });
 
-        const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
-        client.connect(err => {
-          client.db().collection ('pl3').deleteMany ({}, () => done ());
-        });
+        sk1.stop ();
+        sk2.stop ();
+        sk3.stop ();
+
+        setTimeout (() => {
+          const client = new MongoClient('mongodb://localhost/__test_pipeline_choicelink__');
+          client.connect(err => {
+            client.db().collection ('pl3').deleteMany ({}, () => done ());
+          });
+        }, 250);
       });
 
       cl1.start (function (elem, done) {
