@@ -40,6 +40,14 @@ class ChoiceLink extends BaseLink{
 
 
   /////////////////////////////////////////
+  desc () {
+    return _.merge (super.desc(), {
+      dst: _.map (this._dst_q_array, q => q.name ())
+    });
+  }
+
+
+  /////////////////////////////////////////
   _next (id, opts, cb) {
     let dst = null;
 

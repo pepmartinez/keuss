@@ -30,6 +30,15 @@ class DirectLink extends BaseLink{
   static Type () {return 'pipeline:processor:DirectLink';}
   type () {return DirectLink.Type();}
 
+
+  /////////////////////////////////////////
+  desc () {
+    return _.merge (super.desc(), {
+      dst: this.dst().name()
+    });
+  }
+
+
   /////////////////////////////////////////
   _next (id, opts, cb) {
     this.src().pl_step (id, this.dst(), opts, (err, res) => {

@@ -31,6 +31,15 @@ class BaseLink  extends EventEmitter {
 
 
   /////////////////////////////////////////
+  desc () {
+    return {
+      type: this.type (),
+      src: this.src().name()
+    };
+  }
+
+
+  /////////////////////////////////////////
   on_data (ondata) {
     this._ondata_orig = ondata;
     this._ondata = ondata.bind (this);
@@ -98,7 +107,11 @@ class BaseLink  extends EventEmitter {
       debug ('%s: reserved element: %o', this._name, elem);
 
       if (err) {
-        if (err == 'cancel') return; // end the process loop
+        if (err == 'cancel') {
+          debug ('%s: pipeline processor cancelled', this._name);
+          return; // end the process loop
+        }
+
         debug ('%s: error in reserve:', this._name, err);
         this.emit ('error', {on: 'src-queue-pop', err});
         return this._process (ondata);

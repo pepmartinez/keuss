@@ -84,7 +84,6 @@ class Factory extends QFactory_MongoDB_defaults {
       debug ('Setup script %s loaded', sname);
     });
 
-
     this._topology_db.collection ('pipelines').updateOne ({
       _id: name
     }, {

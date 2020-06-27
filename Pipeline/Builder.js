@@ -145,7 +145,16 @@ class PipelineBuilder {
         debug ('[%s]: created, resetting state', this._state.pipeline.name ());
 
         // TODO save state of creation into topology db
-
+        this._factory._topology_db.collection ('pipelines').updateOne ({
+          _id: this._state.pipeline.name ()
+        }, {
+          $set: {
+            queues: _.keys (this._state.pipeline.queues ()),
+            processors: _.mapValues (this._state.pipeline.processors (), p => p.desc())
+          }
+        }, {
+          upsert: true
+        });
       }
 
       const pl = this._state.pipeline;
