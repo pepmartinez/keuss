@@ -18,9 +18,9 @@ class PipelineBuilder {
 
   ///////////////////////////////////////////////////////////
   pipeline (name) {
-    // TODO close pipeline if present
     this._tasks.push (
       cb => {
+        if (this._state.pipeline) return cb (`when creating pipeline ${name}: pipeline() called already`);
         debug ('new pipeline %s', name);
         this._state.pipeline = this._factory.pipeline (name);
         cb ();
@@ -143,6 +143,9 @@ class PipelineBuilder {
       }
       else {
         debug ('[%s]: created, resetting state', this._state.pipeline.name ());
+
+        // TODO save state of creation into topology db
+
       }
 
       const pl = this._state.pipeline;

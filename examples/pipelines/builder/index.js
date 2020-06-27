@@ -41,7 +41,7 @@ const bs_src_array = [
         }, 1000);
       }
 
-    }, get_a_delay (10, 200));
+    }, get_a_delay (10, 20));
   }
 
   function dl_process (elem, done) {
@@ -55,7 +55,7 @@ const bs_src_array = [
 
   function choice_process (elem, done) {
     setTimeout (() => {
-      if (chance.bool ({likelihood: 9})) {
+      if (chance.bool ({likelihood: 89})) {
         console.log ('%s: failing on elem %o on try [%d]', this.name(), elem.payload, elem.tries);
         return done ({e: 'cl1 induced a failure'});
       }
@@ -68,7 +68,7 @@ const bs_src_array = [
           $set: {stamp_1: 'passed', choice: idx, choice_try: elem.tries}
         }
       });
-    }, get_a_delay (10, 100));
+    }, get_a_delay (10, 20));
   }
   `
 ];
@@ -93,7 +93,7 @@ const setup_src_array = [
   `
 ];
 
-const num_elems = 3333;
+const num_elems = 13333;
 let   processed = 0;
 
 // initialize factory
