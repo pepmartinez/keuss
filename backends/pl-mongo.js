@@ -56,33 +56,38 @@ class Factory extends QFactory_MongoDB_defaults {
       TextDecoder,
       URL,
       URLSearchParams,
-      builder: this.builder ().pipeline(name),
-      done:    cb
+      builder: this.builder ().pipeline (name),
+      done: cb
     };
 
     if (opts && opts.context) _.assign (context, opts.context);
 
     vm.createContext (context);
 
-    _.each (bs_src_array, (elem, idx) => {
-      const src = elem.src || elem;
-      const sname = elem.name || `bootstrap[${idx}]`;
+    try {
+      _.each (bs_src_array, (elem, idx) => {
+        const src = elem.src || elem;
+        const sname = elem.name || `bootstrap[${idx}]`;
 
-      debug ('Loading BS script %s', sname);
-      const script = new vm.Script (src, {filename: sname});
-      script.runInContext (context);
-      debug ('BS script %s loaded', sname);
-    });
+        debug ('Loading BS script %s', sname);
+        const script = new vm.Script (src, {filename: sname});
+        script.runInContext (context);
+        debug ('BS script %s loaded', sname);
+      });
 
-    _.each (setup_src_array, (elem, idx) => {
-      const src = elem.src || elem;
-      const sname = elem.name || `setup[${idx}]`;
+      _.each (setup_src_array, (elem, idx) => {
+        const src = elem.src || elem;
+        const sname = elem.name || `setup[${idx}]`;
 
-      debug ('Loading Setup script %s', sname);
-      const script = new vm.Script (src, {filename: sname});
-      script.runInContext (context);
-      debug ('Setup script %s loaded', sname);
-    });
+        debug ('Loading Setup script %s', sname);
+        const script = new vm.Script (src, {filename: sname});
+        script.runInContext (context);
+        debug ('Setup script %s loaded', sname);
+      });
+    }
+    catch (err) {
+      return cb (err);
+    }
 
     this._topology_db.collection ('pipelines').updateOne ({
       _id: name
