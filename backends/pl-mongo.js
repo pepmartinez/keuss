@@ -60,7 +60,7 @@ class Factory extends QFactory_MongoDB_defaults {
       done:    cb
     };
 
-    if (opts && opts.context) _.merge (context, opts.context);
+    if (opts && opts.context) _.assign (context, opts.context);
 
     vm.createContext (context);
 
