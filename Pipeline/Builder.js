@@ -51,7 +51,10 @@ class PipelineBuilder {
         if (!this._state.pipeline) return cb (`when creating DirectLink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
 
         const src_q = this._state.pipeline.queues()[src];
+        if (!src_q) return cb (`when creating DirectLink: nonexistent src queue [${src}]`);
+
         const dst_q = this._state.pipeline.queues()[dst];
+        if (!dst_q) return cb (`when creating DirectLink: nonexistent dst queue [${dst}]`);
 
         try {
           const pr = new DirectLink (src_q, dst_q, opts);
@@ -73,8 +76,16 @@ class PipelineBuilder {
     this._tasks.push (
       cb => {
         if (!this._state.pipeline) return cb (`when creating ChoiceLink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
+
         const src_q = this._state.pipeline.queues()[src];
-        const dst_q = dst.map (q => this._state.pipeline.queues()[q]);
+        if (!src_q) return cb (`when creating ChoiceLink: nonexistent src queue [${src}]`);
+
+        let dst_q = [];
+        for (let i = 0; i < dst.length; i++) {
+          const q = this._state.pipeline.queues()[dst[i]];
+          if (!q) return cb (`when creating ChoiceLink: nonexistent dst queue [${dst[i]}]`);
+          dst_q.push (q);
+        }
 
         try {
           const pr = new ChoiceLink (src_q, dst_q, opts);
@@ -97,6 +108,7 @@ class PipelineBuilder {
       cb => {
         if (!this._state.pipeline) return cb (`when creating Sink: no pipeline. You need to call pipeline() first, and do no calls after done()`);
         const src_q = this._state.pipeline.queues()[src];
+        if (!src_q) return cb (`when creating Sink: nonexistent src queue [${src}]`);
 
         try {
           const pr = new Sink (src_q, opts);
