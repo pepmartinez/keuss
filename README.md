@@ -17,6 +17,7 @@ Job Queues an pipelines on selectable backends (for now: mongodb and redis) for 
   - [Usage](#usage)
     - [Factory API](#factory-api)
       - [Initialization](#initialization)
+        - [MongoDB defaults](#mongodb-defaults)
       - [Queue creation](#queue-creation)
       - [Factory close](#factory-close)
     - [Signaller](#signaller-1)
@@ -191,6 +192,12 @@ the following backend-dependent values:
   * `redis`: data to create a redis connection to the Redis acting as backend, see below
 * backend *ps-mongo*
   * `ttl`: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs
+
+##### MongoDB defaults
+On MongoDB-based backends, `signaller` and `stats` default to:
+* `signaller`: uses `mongo-capped`, using the same mongodb url than the backend, but postfixing the db with `_signal`
+* `stats`: uses `mongo-capped`, using the same mongodb url than the backend, but postfixing the db with `_stats`
+This alows cleaner and more concise initialization, using a sane default
 
 #### Queue creation
 ```javascript

@@ -1,4 +1,8 @@
 # Changelog
+* v1.6.0
+  * added sane defaults for stats and signal for mongodb-based backends (using mongo stats and signal)
+  * added pipeline builder
+  * added ability to create a full pipeline from text (making it trivial to be stored in file)
 * v1.5.12
   * corrected small pipeline-related issues
 * v1.5.11 (void)
