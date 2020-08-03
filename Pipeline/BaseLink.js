@@ -17,7 +17,7 @@ class BaseLink  extends EventEmitter {
     super ();
 
     // check queues are pipelined
-    if (! src_q.pipeline) throw Error ('source queue is not pipelined');
+    if (!src_q.pipeline) throw Error ('source queue is not pipelined');
 
     this._opts = opts || {};
     this._src = src_q;
@@ -26,8 +26,22 @@ class BaseLink  extends EventEmitter {
   src () {return this._src;}
   name () {return this._name;}
 
+  static Type () {return 'pipeline:processor:BaseLink';}
+  type () {return BaseLink.Type();}
+
+
+  /////////////////////////////////////////
+  desc () {
+    return {
+      type: this.type (),
+      src: this.src().name()
+    };
+  }
+
+
   /////////////////////////////////////////
   on_data (ondata) {
+    this._ondata_orig = ondata;
     this._ondata = ondata.bind (this);
   }
 
@@ -35,12 +49,20 @@ class BaseLink  extends EventEmitter {
   start (ondata) {
     if (ondata) this.on_data (ondata);
     this._process (this._ondata);
+    debug ('%s: started', this._name);
   }
 
   /////////////////////////////////////////
   stop () {
     this._src.cancel ();
   }
+
+
+  /////////////////////////////////////////
+  _add_to_pipeline () {
+    this._src.pipeline()._add_processor (this);
+  }
+
 
   /////////////////////////////////////////
   _mature (opts) {
@@ -54,6 +76,29 @@ class BaseLink  extends EventEmitter {
     }
   }
 
+
+  /////////////////////////////////////////
+  _on_error (err, elem, ondata) {
+    // error: drop or retry?
+    if (err.drop === true) {
+      // drop: commit and forget
+      this.src().ok (elem, err => {
+        if (err) this.emit ('error', {on: 'src-queue-commit-on-error', elem, err});
+        debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
+        this._process (ondata);
+      });
+    }
+    else {
+      // retry: rollback
+      this.src().ko (elem, this._rollback_next_t (elem), err => {
+        if (err) this.emit ('error', {on: 'src-queue-rollback-on-error', elem, err});
+        debug ('%s: in error, rolled back: %s', this._name, elem._id);
+        this._process (ondata);
+      });
+    }
+  }
+
+
   /////////////////////////////////////////
   _process (ondata) {
     debug ('%s: attempting reserve', this._name);
@@ -62,7 +107,11 @@ class BaseLink  extends EventEmitter {
       debug ('%s: reserved element: %o', this._name, elem);
 
       if (err) {
-        if (err == 'cancel') return; // end the process loop
+        if (err == 'cancel') {
+          debug ('%s: pipeline processor cancelled', this._name);
+          return; // end the process loop
+        }
+
         debug ('%s: error in reserve:', this._name, err);
         this.emit ('error', {on: 'src-queue-pop', err});
         return this._process (ondata);
@@ -74,30 +123,11 @@ class BaseLink  extends EventEmitter {
       }
 
       // do something
+      try {
       ondata (elem, (err, res) => {
         debug ('%s: processed: %s', this._name, elem._id);
 
-        if (err) {
-          // error: drop or retry?
-          if (err.drop === true) {
-            // drop: commit and forget
-            this.src().ok (elem, err => {
-              if (err) this.emit ('error', {on: 'src-queue-commit-on-error', elem, err});
-              debug ('%s: in error, marked to be dropped: %s', this._name, elem._id);
-              this._process (ondata);
-            });
-          }
-          else {
-            // retry: rollback
-            this.src().ko (elem, this._rollback_next_t (elem), err => {
-              if (err) this.emit ('error', {on: 'src-queue-rollback-on-error', elem, err});
-              debug ('%s: in error, rolled back: %s', this._name, elem._id);
-              this._process (ondata);
-            });
-          }
-
-          return;
-        }
+        if (err) return this._on_error (err, elem, ondata);
 
         // drop it (act as sink) ?
         if ((res === false) || (res && res.drop)) {
@@ -131,6 +161,13 @@ class BaseLink  extends EventEmitter {
           });
         }
       });
+      }
+      catch (e) {
+        debug ('catch error, emitting it: ', e);
+        console.log ('catch error, emitting it: ', e);
+        this.emit (e);
+        this._on_error (e, elem, ondata);
+      }
     });
   }
 

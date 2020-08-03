@@ -9,8 +9,8 @@ var QFactory =   require ('../QFactory');
 class RedisListQueue extends Queue {
 
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
-    super (name, factory, opts);
+  constructor (name, factory, opts, orig_opts) {
+    super (name, factory, opts, orig_opts);
 
     this._rediscl = factory._rediscl;
     this._redis_l_name = 'keuss:q:list:' + this._name;
@@ -93,9 +93,9 @@ class Factory extends QFactory {
   }
 
   queue (name, opts) {
-    var full_opts = {}
+    var full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new RedisListQueue (name, this, full_opts);
+    return new RedisListQueue (name, this, full_opts, opts);
   }
 
   close (cb) {
@@ -123,7 +123,6 @@ function creator (opts, cb) {
   var _opts = opts || {};
   var rediscl = RedisConn.conn (_opts.redis);
   var F = new Factory (_opts, rediscl);
-//  console.log ('factory created with opts %j, calling async_init', opts)
   F.async_init ((err) => cb (null, F));
 }
 

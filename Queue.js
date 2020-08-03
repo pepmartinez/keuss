@@ -8,13 +8,14 @@ var debug = require('debug')('keuss:Queue:base');
 class Queue {
 
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
+  constructor (name, factory, opts, orig_opts) {
   //////////////////////////////////////////////
     if (!name) {
       throw new Error ('provide a queue name');
     }
 
     this._opts = opts || {};
+    this._orig_opts = orig_opts || {};
 
     this._name = name;
     this._factory = factory;
@@ -35,9 +36,8 @@ class Queue {
     this._signaller = factory._signaller_factory.signal (this, this._opts.signaller.opts);
     this._stats = factory._stats_factory.stats (factory.name(), this.name (), this._opts.stats.opts);
 
-    // save opts minus stats & signaller
-    var __opts = _.omit (this._opts, ['signaller', 'stats']);
-    this._stats.opts (__opts, () => {});
+    // save original options
+    this._stats.opts (orig_opts || {}, () => {});
 
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
@@ -92,7 +92,6 @@ class Queue {
   ////////////////////////////////////////////////////////////////////////////
 
   stats    (cb) {this._stats.values (cb);}
-  topology (cb) {this._stats.topology (cb);}
   paused   (cb) {this._stats.paused (cb);}
 
   // placeholder methods
@@ -521,7 +520,6 @@ class Queue {
     async.parallel ({
       type:          cb => cb (null, this.type()),
       stats:         cb => this.stats (cb),
-      topology:      cb => this.topology (cb),
       paused:        cb => this.paused (cb),
       next_mature_t: cb => this.next_t (cb),
       size:          cb => this.size (cb),

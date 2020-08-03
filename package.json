@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.5.12",
+  "version": "1.6.0",
   "keywords": [
     "queue",
     "persistent",
@@ -27,18 +27,18 @@
   "license": "GPL-3.0",
   "dependencies": {
     "async": "~3.2.0",
-    "ioredis": "~4.16.3",
-    "lodash": "~4.17.15",
-    "mitt": "~1.2.0",
-    "mongodb": "~3.5.0",
-    "uuid": "~8.0.0",
-    "@nodebb/mubsub": "~1.6.0",
+    "ioredis": "~4.17.3",
+    "lodash": "~4.17.19",
+    "mitt": "~2.1.0",
+    "mongodb": "~3.5.9",
+    "uuid": "~8.2.0",
+    "@nodebb/mubsub": "~1.6.2",
     "debug": "~4.1.1",
-    "async-lock": "~1.2.2"
+    "async-lock": "~1.2.4"
   },
   "devDependencies": {
-    "mocha": "~7.1.2",
-    "chance": "~1.1.4",
+    "mocha": "~8.0.1",
+    "chance": "~1.1.6",
     "should": "~13.2.3"
   },
   "scripts": {

@@ -1,30 +1,20 @@
 var _ = require ('lodash');
 
+var Stats = require ('../Stats');
+
 var debug = require('debug')('keuss:Stats:Mem');
 
-class MemStats {
+class MemStats extends Stats {
   constructor (ns, name, factory) {
-    this._factory = factory;
+    super (ns, name, factory);
+
     this._s = {
       ns: ns,
       name: name,
       counters: {},
       opts: {},
-      topology: {},
       paused: false
     };
-  }
-
-  type () {
-    return this._factory.type ();
-  }
-
-  ns () {
-    return this._s.ns;
-  }
-
-  name () {
-    return this._s.name;
   }
 
   values (cb) {
@@ -73,23 +63,9 @@ class MemStats {
     }
   }
 
-  topology (tplg, cb) {
-    if (!cb) {
-      // get
-      cb = tplg;
-      cb (null, this._s.topology);
-    }
-    else {
-      // set
-      this._s.topology = tplg;
-      cb ();
-    }
-  }
-
   clear (cb) {
     this._s.counters = {}
     this._s.opts = {};
-    this._s.topology = {};
     this._s.paused = false;
 
     // TODO remove from factory
@@ -113,7 +89,7 @@ class MemStatsFactory {
   }
 
   type () {
-    return Type ();
+    return MemStatsFactory.Type ();
   }
 
   queues (ns, opts, cb) {

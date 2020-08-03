@@ -2,7 +2,12 @@
 var async =   require ('async');
 var should =  require ('should');
 
+var LocalSignal = require ('../signal/local');
+var MemStats =    require ('../stats/mem');
+
 var PDL = require ('../Pipeline/DirectLink');
+
+const MongoClient = require ('mongodb').MongoClient;
 
 var factory = null;
 
@@ -13,7 +18,12 @@ var factory = null;
     var MQ = MQ_item.mq;
 
     before (done => {
-      var opts = {};
+      var opts = {
+        url: 'mongodb://localhost/__test_pipeline_directlink__',
+        opts:  { useUnifiedTopology: true },
+        signaller: { provider: LocalSignal},
+        stats: {provider: MemStats}
+      };
 
       MQ (opts, (err, fct) => {
         if (err) return done (err);
@@ -24,7 +34,11 @@ var factory = null;
 
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
-      cb => factory.close (cb)
+      cb => factory.close (cb),
+      cb => MongoClient.connect ('mongodb://localhost/__test_pipeline_directlink__', (err, cl) => {
+        if (err) return done (err);
+        cl.db().dropDatabase (() => cl.close (cb))
+      })
     ], done));
 
     it ('3-elem pipeline flows begin to end, no payload changes', done => {
@@ -57,7 +71,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -97,7 +111,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -134,7 +148,7 @@ var factory = null;
         res.tries.should.equal (0);
         res._q.should.equal ('test_1_pl_3');
 
-        done ();
+        setTimeout (done, 250);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
@@ -206,7 +220,7 @@ var factory = null;
         pll1.stop();
         pll2.stop ();
 
-        done ();
+        setTimeout (done, 250);
       });
 
       async.timesLimit (5, 1, (n, next) =>
@@ -254,7 +268,7 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
@@ -302,7 +316,7 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
@@ -350,14 +364,13 @@ var factory = null;
           ], (err, res) => {
             if (err) return done (err);
             res.should.eql ([0,0,0]);
-            done ();
+            setTimeout (done, 250);
           });
         }, 500);
       });
 
       q1.push ({a:5, b:'see it run...'}, {}, () => {});
     });
-
 
   });
 });

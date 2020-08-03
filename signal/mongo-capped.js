@@ -80,7 +80,7 @@ class MCSignalFactory {
   }
 
   static Type () {return 'signal:mongo-capped'}
-  type () {return Type ()}
+  type () {return MCSignalFactory.Type ()}
 
   signal (channel, opts) {
     return new MCSignal (channel, this, opts);

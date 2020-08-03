@@ -8,8 +8,8 @@ var debug = require('debug')('keuss:backend:BucketMongoSafe');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var Queue =    require ('../Queue');
-var QFactory = require ('../QFactory');
+var Queue =                     require ('../Queue');
+var QFactory_MongoDB_defaults = require ('../QFactory-MongoDB-defaults');
 
 var State = {
   Available: 1,
@@ -524,9 +524,9 @@ class BucketMongoSafeQueue extends Queue {
     reject_timeout_grace || (opts.reserve_delay * 0.8);
   */
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
+  constructor (name, factory, opts, orig_opts) {
   //////////////////////////////////////////////
-    super (name, factory, opts);
+    super (name, factory, opts, orig_opts);
 
     this._factory = factory;
     this._col = factory._db.collection (name);
@@ -852,7 +852,7 @@ class BucketMongoSafeQueue extends Queue {
 };
 
 
-class Factory extends QFactory {
+class Factory extends QFactory_MongoDB_defaults {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;
@@ -862,7 +862,7 @@ class Factory extends QFactory {
   queue (name, opts) {
     var full_opts = {}
     _.merge(full_opts, this._opts, opts);
-    return new BucketMongoSafeQueue (name, this, full_opts);
+    return new BucketMongoSafeQueue (name, this, full_opts, opts);
   }
 
   close (cb) {

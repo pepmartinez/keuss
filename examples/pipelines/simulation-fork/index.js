@@ -1,17 +1,15 @@
 // mongodb: create a consumer and a producer
 const Chance = require ('chance');
 
-const MQ =     require ('../../../backends/pl-mongo');
-const signal = require ('../../../signal/mongo-capped');
-const stats =  require ('../../../stats/mongo');
-const DCT =    require ('../../../Pipeline/DirectLink');
-const SNK =    require ('../../../Pipeline/Sink');
-const CHC =    require ('../../../Pipeline/ChoiceLink');
+const MQ =  require ('../../../backends/pl-mongo');
+const DCT = require ('../../../Pipeline/DirectLink');
+const SNK = require ('../../../Pipeline/Sink');
+const CHC = require ('../../../Pipeline/ChoiceLink');
 
 
 const chance = new Chance();
 
-const num_elems = 1000;
+const num_elems = 100;
 let   processed = 0;
 
 
@@ -46,19 +44,7 @@ function sink_process (elem, done) {
 
 const factory_opts = {
   url: 'mongodb://localhost/qeus_pl',
-  signaller: {
-    provider: signal,
-    opts: {
-      url: 'mongodb://localhost/qeus_pl_signal',
-      channel: 'das_channel'
-    }
-  },
-  stats: {
-    provider: stats,
-    opts: {
-      url: 'mongodb://localhost/qeus_pl_stats'
-    }
-  },
+  options: { useNewUrlParser: true },
   deadletter: {
     max_ko: 3
   }
@@ -69,7 +55,7 @@ MQ (factory_opts, (err, factory) => {
   if (err) return console.error (err);
 
   // factory ready, create queues on default pipeline
-  const q_opts = {};
+  const q_opts = {aaa: 666, b: 'yy'};
   const q1 = factory.queue ('pl_many_q_1', q_opts);
   const q2 = factory.queue ('pl_many_q_2', q_opts);
   const q3 = factory.queue ('pl_many_q_3', q_opts);

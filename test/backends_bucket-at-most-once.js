@@ -2,6 +2,11 @@
 var async =   require ('async');
 var should =  require ('should');
 
+var LocalSignal = require ('../signal/local');
+var MemStats =    require ('../stats/mem');
+
+const MongoClient = require ('mongodb').MongoClient;
+
 var factory = null;
 
 [
@@ -12,7 +17,11 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
   var MQ = MQ_item.mq;
 
   before (function (done) {
-    var opts = {url: 'mongodb://localhost/keuss_test_bucket_at_most_once'};
+    var opts = {
+      url: 'mongodb://localhost/keuss_test_bucket_at_most_once',
+      signaller: { provider: LocalSignal},
+      stats: {provider: MemStats}
+    };
 
     MQ (opts, function (err, fct) {
       if (err) return done (err);
@@ -24,7 +33,11 @@ describe ('bucket-at-most-once with ' + MQ_item.label + ' queue backend', functi
 
   after (done => async.series ([
     cb => setTimeout (cb, 1000),
-    cb => factory.close (cb)
+    cb => factory.close (cb),
+    cb => MongoClient.connect ('mongodb://localhost/keuss_test_bucket_at_most_once', (err, cl) => {
+      if (err) return done (err);
+      cl.db().dropDatabase (() => cl.close (cb))
+    })
   ], done));
 
   it ('queue is created empty and ok', function (done){

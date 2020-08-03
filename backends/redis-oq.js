@@ -9,8 +9,8 @@ var QFactory =          require ('../QFactory');
 class RedisOQ extends Queue {
 
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
-    super (name, factory, opts);
+  constructor (name, factory, opts, orig_opts) {
+    super (name, factory, opts, orig_opts);
 
     this._rediscl = factory._rediscl;
     this._roq = factory._roq_factory.roq (this._name);
@@ -144,9 +144,9 @@ class Factory extends QFactory {
   }
 
   queue (name, opts) {
-    var full_opts = {}
+    var full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new RedisOQ (name, this, full_opts);
+    return new RedisOQ (name, this, full_opts, opts);
   }
 
   close (cb) {

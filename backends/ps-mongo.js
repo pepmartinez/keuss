@@ -4,14 +4,15 @@ var _ =     require ('lodash');
 var MongoClient = require ('mongodb').MongoClient;
 var mongo =       require ('mongodb');
 
-var Queue =       require ('../Queue');
-var QFactory =    require ('../QFactory');
+var Queue =                     require ('../Queue');
+var QFactory_MongoDB_defaults = require ('../QFactory-MongoDB-defaults');
+
 
 class PersistentMongoQueue extends Queue {
 
   //////////////////////////////////////////////
-  constructor (name, factory, opts) {
-    super (name, factory, opts);
+  constructor (name, factory, opts, orig_opts) {
+    super (name, factory, opts, orig_opts);
 
     this._factory = factory;
     this._col = factory._db.collection (name);
@@ -231,7 +232,7 @@ class PersistentMongoQueue extends Queue {
 }
 
 
-class Factory extends QFactory {
+class Factory extends QFactory_MongoDB_defaults {
   constructor (opts, mongo_conn) {
     super (opts);
     this._mongo_conn = mongo_conn;
@@ -239,9 +240,9 @@ class Factory extends QFactory {
   }
 
   queue (name, opts) {
-    var full_opts = {}
+    var full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new PersistentMongoQueue (name, this, full_opts);
+    return new PersistentMongoQueue (name, this, full_opts, opts);
   }
 
   close (cb) {

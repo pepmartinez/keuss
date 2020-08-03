@@ -2,18 +2,18 @@ var _ =           require ('lodash');
 var async =       require ('async');
 var MongoClient = require ('mongodb').MongoClient;
 
+var Stats = require ('../Stats');
+
 var debug = require('debug')('keuss:Stats:Mongo');
 
 /*
  * plain into a single mongo coll
 */
-class MongoStats {
+class MongoStats  extends Stats {
   constructor(ns, name, factory, opts) {
-    this._ns = ns;
-    this._name = name;
+    super (ns, name, factory);
     this._id = 'keuss:stats:' + ns + ':' + name;
     this._opts = opts || {};
-    this._factory = factory;
     this._cache = {};
 
     var upd = {
@@ -27,20 +27,6 @@ class MongoStats {
       debug ('mongo stats created, ns %s, name %s, opts %j', ns, name, opts);
     });
   }
-
-
-  type() {
-    return this._factory.type();
-   }
-
-   ns () {
-     return this._ns;
-   }
-
-   name () {
-     return this._name;
-   }
-
 
   values(cb) {
     this._coll().findOne ({_id: this._id}, {projection: {counters: 1}}, (err, res) => {
@@ -164,28 +150,6 @@ class MongoStats {
     }
   }
 
-  topology (tplg, cb) {
-    if (!cb) {
-      // get
-      cb = tplg;
-
-      this._coll().findOne ({_id: this._id}, {projection: {topology: 1}}, (err, res) => {
-        if (err) return cb (err);
-        debug ('mongo stats - topology: get %s -> %j', this._name, res);
-        cb (null, (res && res.topology) || {});
-      });
-    }
-    else {
-      // set
-      var upd = {$set: {topology : tplg}};
-
-      this._coll().updateOne ({_id: this._id}, upd, {upsert: true}, (err) => {
-        debug ('mongo stats: updated %s -> %j', this._name, upd);
-        cb (err);
-      });
-    }
-  }
-
   clear(cb) {
     this._cancelFlush();
     this._cache = {};
@@ -193,8 +157,7 @@ class MongoStats {
     var upd = {
       $unset: {
         counters: 1,
-        opts: 1,
-        topology: 1
+        opts: 1
       }
     };
 
@@ -224,7 +187,7 @@ class MongoStatsFactory {
   }
 
   static Type() { return 'mongo' }
-  type() { return Type() }
+  type() { return MongoStatsFactory.Type() }
 
 
   stats(ns, name, opts) {
@@ -253,7 +216,6 @@ class MongoStatsFactory {
             ns: elem.ns,
             name: elem.name,
             counters: elem.counters,
-            topology: elem.topology,
             opts: elem.opts,
             paused: elem.paused || false
           };

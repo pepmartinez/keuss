@@ -9,17 +9,17 @@ var Mem =   require ('../stats/mem');
 var Redis = require ('../stats/redis');
 var Mongo = require ('../stats/mongo');
 
+const MongoClient = require ('mongodb').MongoClient;
+
 var ns = 'some-class';
 var name = 'test-stats';
 
 
-var tests = {
+_.forEach ({
   Mem: Mem,
   Redis: Redis,
   Mongo: Mongo
-};
-
-_.forEach (tests, (CL, CLName) => {
+}, (CL, CLName) => {
 
   describe (CLName + ' stats provider', function () {
 
@@ -29,6 +29,10 @@ _.forEach (tests, (CL, CLName) => {
 
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
+      cb => MongoClient.connect ('mongodb://localhost/keuss_stats', (err, cl) => {
+        if (err) return done (err);
+        cl.db().dropDatabase (() => cl.close (cb))
+      })
     ], done));
 
     it ('creates ok', done => {
@@ -151,27 +155,6 @@ _.forEach (tests, (CL, CLName) => {
       });
     });
 
-    it ('manages topology ok', done => {
-      CL ((err, ftry) => {
-        if (err) return done(err);
-        var mem = ftry.stats (ns, name);
-        var topology = {a:1, b: {t:'yy', tt: 99}};
-
-        async.series([
-          cb => mem.clear (cb),
-          cb => mem.topology (topology, cb),
-          cb => setTimeout (() => mem.topology ((err, tplg) => {
-            tplg.should.eql (topology);
-            cb();
-          }), 200),
-          cb => mem.clear (cb),
-          cb => setTimeout (cb, 200)
-        ], (err, results) => {
-          ftry.close();
-          done (err);
-        });
-      });
-    });
 
     it ('manages pause/resume ok', done => {
       CL ((err, ftry) => {
@@ -211,14 +194,10 @@ _.forEach (tests, (CL, CLName) => {
         var mem2 = ftry.stats (ns, name + '-2');
         var opts1 = {s:0, a: 'yy'};
         var opts2 = {s:7, at: 'yy--j'};
-        var topology1 = {a:1, b: {t:'yy', tt: 99}};
-        var topology2 = {a:17, b: {t:'yyuyyrtyurt', tt: 77777}, cc: 7};
 
         async.series([
           cb => mem1.clear (cb),
           cb => mem2.clear (cb),
-          cb => mem1.topology (topology1, cb),
-          cb => mem2.topology (topology2, cb),
           cb => mem1.opts (opts1, cb),
           cb => mem2.opts (opts2, cb),
           cb => mem1.incr ('v1', 8, cb),
@@ -233,8 +212,8 @@ _.forEach (tests, (CL, CLName) => {
           cb => setTimeout (() => ftry.queues (ns, {full: true}, (err, res) => {
             if (err) return cb (err);
             res.should.eql ({
-              'test-stats': { name: 'test-stats', ns: 'some-class', topology: topology1, opts: opts1, counters: {v1: 8, v2: 6 }, paused: false },
-              'test-stats-2': { name: 'test-stats-2', ns: 'some-class', topology: topology2, opts: opts2, counters: {v1: 4, v3: 45}, paused: false }
+              'test-stats': { name: 'test-stats', ns: 'some-class', opts: opts1, counters: {v1: 8, v2: 6 }, paused: false },
+              'test-stats-2': { name: 'test-stats-2', ns: 'some-class', opts: opts2, counters: {v1: 4, v3: 45}, paused: false }
             });
 
             cb ();

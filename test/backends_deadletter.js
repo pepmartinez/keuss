@@ -2,9 +2,10 @@ var async =  require ('async');
 var should = require ('should');
 var _ =      require ('lodash');
 
+var LocalSignal = require ('../signal/local');
+var MemStats =    require ('../stats/mem');
+
 const MongoClient = require ('mongodb').MongoClient;
-
-
 
 
 function stats (q, cb) {
@@ -54,6 +55,8 @@ function accept (q, stage, cb) {
 function get_mq_factory (MQ, opts, cb) {
   const common_opts = {
     url: 'mongodb://localhost/keuss_test_backends_deadletter',
+    signaller: { provider: LocalSignal},
+    stats: {provider: MemStats},
     deadletter: {
     }
   };

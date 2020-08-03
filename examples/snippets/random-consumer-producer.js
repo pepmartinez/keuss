@@ -1,6 +1,16 @@
-var MQ =                  require ('../backends/bucket-mongo-safe');
-var signal_mongo_capped = require ('../signal/mongo-capped');
-var stats_mongo =         require ('../stats/mongo');
+/*
+ * 
+ * Runs a set of producers and consumers, where consumers do a reserve-commit-rollback cycle. In each cycle a 
+ * consumer would randomly choose whether to commit or rollback (10% chance of rollback). No deadletter is used
+ * so elements are retried ad infinitum until processed ok
+ * 
+ * Upon completion (all items generated and consumed ok) some stats will be shown
+ * 
+ * It uses bucket-mongo-safe backend for high throughput
+ * 
+*/
+
+var MQ = require ('../../backends/bucket-mongo-safe');
 
 var _ =      require ('lodash');
 var async =  require ('async');
@@ -12,23 +22,16 @@ var factory_opts = {
   url: 'mongodb://localhost/qeus',
   name: 'Random-NS',
   reject_delta_base: 2000,
-  reject_delta_factor: 2000,
-  signaller: {
-    provider: signal_mongo_capped,
-    opts: {
-      url: 'mongodb://localhost/qeus_signal',
-      channel: 'a_channel'
-    }
-  },
-  stats: {
-    provider: stats_mongo,
-    opts: {
-      url: 'mongodb://localhost/qeus_stats'
-    }
-  }
+  reject_delta_factor: 2000
 };
 
+// tets dimensions: elems to produce and consume, number of consumers, number of producers
+const num_elems = 10000000;
+const num_producers = 3;
+const num_consumers = 7;
+const commit_likelihood = 95;
 
+// stats holder
 var selfs = {
   consumers: {},
   producers: {}
@@ -79,7 +82,7 @@ function run_consumers (q, cnt, cb) {
   shareds.pc = shared_ctx;
 
   var tasks = [];
-  for (var i = 0; i < 7; i++) tasks.push ((cb) => run_a_pop_consumer (shared_ctx, cb));
+  for (var i = 0; i < num_consumers; i++) tasks.push ((cb) => run_a_pop_consumer (shared_ctx, cb));
   async.parallel (tasks, cb);
 }
 
@@ -99,7 +102,7 @@ function reserve_and_commit_one (shared_ctx, self_ctx, cb) {
 
     das_pop++;
 
-    if (chance.bool({likelihood: 40})) {
+    if (chance.bool({likelihood: commit_likelihood})) {
       shared_ctx.q.ok (res._id, (err) => {
         if (err) return cb (err);
         self_ctx.ok_count ++;
@@ -156,7 +159,7 @@ function run_rcr_consumers (q, cnt, cb) {
   shareds.rcrc = shared_ctx;
 
   var tasks = [];
-  for (var i = 0; i < 7; i++) 
+  for (var i = 0; i < num_consumers; i++) 
     tasks.push ((cb) => run_a_rcr_consumer (shared_ctx, cb));
   
   async.parallel (tasks, cb);
@@ -204,7 +207,7 @@ function run_producers (q, cnt, cb) {
   shareds.prod = shared_ctx;
 
   var tasks = [];
-  for (var i = 0; i < 3; i++) tasks.push ((cb) => run_a_producer (shared_ctx, cb));
+  for (var i = 0; i < num_producers; i++) tasks.push ((cb) => run_a_producer (shared_ctx, cb));
   async.parallel (tasks, cb);
 }
 
@@ -230,9 +233,9 @@ MQ (factory_opts, function (err, factory) {
   }, 2000);
 
   async.parallel ([
-    (cb) => run_producers (q, 10000000, cb),
+    (cb) => run_producers (q, num_elems, cb),
 //    (cb) => run_consumers (q, 250000, cb),
-    (cb) => run_rcr_consumers (q, 10000000, cb),
+    (cb) => run_rcr_consumers (q, num_elems, cb),
   ], (err) => {
     if (err) {
       console.error (err);
