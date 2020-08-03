@@ -106,31 +106,6 @@ class RedisOQ extends Queue {
       callback (null, new Date (parseInt (res[1])));
     });
   }
-
-
-
-  //////////////////////////////////////////////////////////////////
-  static list (cb) {
-    var colls = [];
-
-    _s_rediscl.keys ('keuss:q:ordered_queue:index:?*', (err, collections) => {
-      if (err) return cb (err);
-
-      collections.forEach (coll => colls.push (coll.substring (28)));
-
-      // add "keuss:stats:redis:list:*" to try to add empty queues
-      _s_rediscl.keys ('keuss:stats:redis:oq:?*', (err, collections) => {
-        if (err) return cb (err);
-
-        collections.forEach (coll => {
-          var qname = coll.substring (21);
-          if (_.indexOf (colls, qname) == -1) colls.push (qname);
-        });
-
-        cb (null, colls);
-      });
-    });
-  }
 };
 
 
