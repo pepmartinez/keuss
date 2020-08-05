@@ -5,8 +5,8 @@ module.exports = {
   baseUrl: '/keuss/',
   onBrokenLinks: 'throw',
   favicon: 'img/favicon.ico',
-  organizationName: 'pepmartinez', // Usually your GitHub org/user name.
-  projectName: 'keuss', // Usually your repo name.
+  organizationName: 'pepmartinez',
+  projectName: 'keuss',
   themeConfig: {
     navbar: {
       title: 'Keuss job queues',
@@ -33,32 +33,15 @@ module.exports = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Start Here',
           items: [
             {
-              label: 'Style Guide',
+              label: 'Documentation',
               to: 'docs/',
             },
             {
-              label: 'Second Doc',
-              to: 'docs/doc2/',
-            },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'Twitter',
-              href: 'https://twitter.com/docusaurus',
+              label: 'Examples',
+              to: 'docs/examples',
             },
           ],
         },
