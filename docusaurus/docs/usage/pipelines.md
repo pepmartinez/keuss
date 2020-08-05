@@ -1,40 +1,10 @@
-# Keuss Pipelines
+---
+id: pipelines
+title: Pipelines
+sidebar_label: Pipelines
+---
+
 True atomic [ETL-like](https://en.wikipedia.org/wiki/Extract,_transform,_load) queues and processors
-
-# Contents
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
-
-- [Keuss Pipelines](#keuss-pipelines)
-- [Contents](#contents)
-- [About](#about)
-- [Real, simple example](#real-simple-example)
-- [Pipeline-aware Queues](#pipeline-aware-queues)
-- [Processors](#processors)
-  - [BaseLink](#baselink)
-    - [Creation](#creation)
-    - [Methods](#methods)
-    - [Process Function](#process-function)
-      - [Semantic `this` in process function](#semantic-this-in-process-function)
-    - [Events](#events)
-  - [DirectLink](#directlink)
-    - [Creation](#creation-1)
-    - [Methods](#methods-1)
-    - [Process Function](#process-function-1)
-  - [ChoiceLink](#choicelink)
-    - [Creation](#creation-2)
-    - [Methods](#methods-2)
-    - [Process Function](#process-function-2)
-  - [Sink](#sink)
-    - [Creation](#creation-3)
-    - [Methods](#methods-3)
-    - [Process Function](#process-function-3)
-- [Examples](#examples)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
 
 # About
 Pipelines is a Keuss extension for building [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) processing graphs with ease while guaranteeing atomicity in the processing: whatever happens at the processing of an element, the element is guaranteed to be in either the source or in the destination queue; never in both, never in none.
@@ -311,5 +281,6 @@ No extra methods are provided in addition to those of `BaseLink`
 In the case of successful processing (i.e.: no `err` in the callback invocation) the item is removed from the pipeline, exactly as if `res.drop` were specified. Actually, `res` is totally ignored
 
 # Examples
-* [simplest](examples/pipelines/simplest): a very simple pipeline with just 2 queues connected with a DirectLink
-* [simulation-fork](examples/pipelines/simulation-fork): a somewhat complete example with `DirectLink`, `ChoiceLink` and `Sink` instances connecting 5 queues in a fork-like flow. Each process function adds some basic simulated processing with payload updates, random failures and random delays. It also uses deadletter
+* [simplest](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/simplest): a very simple pipeline with just 2 queues connected with a DirectLink
+* [simulation-fork](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/simulation-fork): a somewhat complete example with `DirectLink`, `ChoiceLink` and `Sink` instances connecting 5 queues in a fork-like flow. Each process function adds some basic simulated processing with payload updates, random failures and random delays. It also uses deadletter
+* [builder](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/builder): variant of `simulation-fork` done with a pipeline builder

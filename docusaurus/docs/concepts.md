@@ -73,6 +73,4 @@ Three options are provided to store the stats:
 * *Backends* need to be initialized before being used. Exact initialization details depend on each backend.
 * When creating a *queue*, a *signaller* and a *stats* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *local* and *mem*, respectively, are used.
 * *Queues* are created on-demand, and are never destroyed as far as keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
-* *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue.
-
-More info on pipelines [here](Pipeline/README.md)
+* *Pipelines* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue. More info on pipelines [here](usage/pipelines.md)
