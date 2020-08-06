@@ -5,13 +5,13 @@ sidebar_label: Redis Connections
 ---
 
 Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will create it from the opts object passed:
-* if opts is a function, it is executed. It is expected to return a redis connection
-* if it's an object and contains a 'Redis' field, this field is used to create a new ioredis Redis object, as in *return new Redis (opts.Redis)*
-* if it's an object and contains a 'Cluster' field, this field is used to create a new ioredis Redis.Cluster object, as in *return new Redis.Cluster (opts.Cluster)*
-* else, a ioredis Redis object is created with opts as param, as in *return new Redis (opts)*
+* If `opts` is a function, it is executed. It is expected to return a redis connection
+* If it's an object and contains a `Redis` field, this field is used to create a new [ioredis Redis object](https://github.com/luin/ioredis), as in *return new Redis (opts.Redis)*
+* if it's an object and contains a `Cluster` field, this field is used to create a new [ioredis Redis.Cluster](https://redis.io/topics/cluster-spec) object, as in *return new Redis.Cluster (opts.Cluster)*
+* Else, a ioredis Redis object is created with `opts` as param, as in *return new Redis (opts)*
 
-Examples:
-* default options
+## Examples:
+* Default options:
   ```javascript
   var MQ = require ('keuss/backends/redis-list');
   var factory_opts = {};
@@ -20,7 +20,8 @@ Examples:
     ...
   });
   ```
-* specific redis params for ioredis Redis client
+
+* Specific redis params for ioredis Redis client:
   ```javascript
   var MQ = require ('keuss/backends/redis-list');
   var factory_opts = {
@@ -39,7 +40,8 @@ Examples:
     ...
   });
   ```
-* use a factory function
+
+* Using a factory function:
   ```javascript
   var MQ = require ('keuss/backends/redis-list');
   var Redis = require ('ioredis');

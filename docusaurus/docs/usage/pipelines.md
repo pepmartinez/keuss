@@ -14,7 +14,7 @@ Keuss pipelines are build upon Keuss Queues with *pipeline* capacity, which mean
 Queues are linked together with processing units named *Processors*, which glue together a source queue with zero or more destination queues. Each processor encapsulates a loop that could be described -in its simplest form- as follows:
 
 
-```
+```javascript
 forever do
   src_queue.reserve () -> element    # reserve an element from entry queue
   process (element) -> err, res      # process the element
