@@ -43,6 +43,10 @@ module.exports = {
               label: 'Examples',
               to: 'docs/examples',
             },
+            {
+              label: 'ChangeLog',
+              to: 'docs/changelog',
+            },
           ],
         },
         {
