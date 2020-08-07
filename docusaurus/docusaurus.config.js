@@ -36,6 +36,10 @@ module.exports = {
           title: 'Start Here',
           items: [
             {
+              label: 'Quickstart',
+              to: 'docs/quickstart',
+            },
+            {
               label: 'Documentation',
               to: 'docs/',
             },
