@@ -12,8 +12,9 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: (
       <>
-        Keuss does not reinvent the wheel: it uses existing technologies (Redis, MongoDB) to build
-        professional-grade Job Queues on top of them
+        Keuss does not reinvent the wheel: it uses existing components (Redis, MongoDB) to provide foundation
+        services (HA-safe storage, event bus, shared key/value storage) and builds professional-grade Job
+        Queues on top of them
       </>
     ),
   },
@@ -22,8 +23,8 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: (
       <>
-        All types of job queues share a common, simple and concise API. Also, sensible defaults are
-        provided for all configuration.
+        All types of job queues share a common, simple and concise API. Sensible defaults are
+        provided for all configuration, and semantics are coherent across all types
       </>
     ),
   },
@@ -32,8 +33,9 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
-        All commonly seek features for job queues are provided: durability, at-most-once, at-least-once,
-        deadletter, schedule, delays, replay...
+        Unlike other external-storage job queue implementations, Keuss provides all commonly seek features
+        for job queues: durability, at-most-once, at-least-once, deadletter, schedule, delays, history,
+        clustering...
       </>
     ),
   },
@@ -44,6 +46,24 @@ const features = [
       <>
         Balance between durability guarantees, base technologies and performance can be achieved by
         selecting amongst the offered implementations
+      </>
+    ),
+  },
+  {
+    title: <>Performance</>,
+    imageUrl: 'img/undraw_docusaurus_react.svg',
+    description: (
+      <>
+        Performance (as in throughput and latency) is part of the design goals of Keuss
+      </>
+    ),
+  },
+  {
+    title: <>Cluster ready</>,
+    imageUrl: 'img/undraw_docusaurus_react.svg',
+    description: (
+      <>
+        Job Queues are ready to be used seamlessly on a clustered environment with no extra effort
       </>
     ),
   },
