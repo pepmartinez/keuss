@@ -15,12 +15,22 @@ a **Queue** is more of an interface, a definition of what it can do. Keuss queue
 * Get element count whose not-before datetime is in the future (scheduled elements).
 * Get usage stats: elements inserted, elements extracted.
 
-*element* here translates to any js object. Internally, it's usually managed as json.
+*Element* here translates to any js object. Internally, it's usually managed as json.
+
+## Bucket
+The initial idea for Keuss Queues, transtated the elements inserted in the queue into rows of the backed storage. This makes it easy to inspect the elements values directly in the backend, which is pretty useful when you need to debug things up. Buckets came later, as a way to pack more than one message into a single row of the backend to gain performance. See [Bucked-based backends](usage/buckets).
 
 ## Pipeline
-A **pipeline** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the *'commit element in incoming queue, insert element in the next queue'* to be atomic. This removes chances for race conditions, or message losses.
+A **[pipeline](usage/pipelines)** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the *'commit element in incoming queue, insert element in the next queue'* to be atomic. This removes chances for race conditions, or message losses.
 
 The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors.
+
+## Processor
+A **processor** is an object tied to one or more queues, that controls the flow of messages between them. They are used mainly to define **pipelines**. Currently there are 4 specialized classes of processors defined:
+* [BaseLink](usage/pipelines#baselink): This is really more of a base definition for the rest of the specialized processors. 
+* [DirectLink](usage/pipelines#directlink) (one queue to another).
+* [ChoiceLink](usage/pipelines#choicelink) (one queue to one or more queues).
+* [Sink](usage/pipelines#sink) (endpoint, one queue to none).
 
 ## Storage
 **Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 7 backends, with various levels of features and performance:

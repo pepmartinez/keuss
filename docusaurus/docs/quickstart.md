@@ -87,13 +87,13 @@ MQ ({
   });
 });
 ```
-1. an element is inserted
-2. an element is reserved. It reserves the element previously inserted, and returns it
-3. this should print the element reserved
-4. the element reserved is rejected, indicating that it should not be made available until `now + 1500` millisecs
-5. a second attempt at a reserve, this should return an element after 1500 millisecs
-6. the same element should be printed here, except for the `tries` that should be `1` instead of `0`
-7. the element is committed and thus removed from the queue
+1. An element is inserted.
+2. An element is reserved. It reserves the element previously inserted, and returns it.
+3. This should print the element reserved.
+4. The element reserved is rejected, indicating that it should not be made available until `now + 1500` millisecs.
+5. A second attempt at a reserve, this should return an element after 1500 millisecs.
+6. The same element should be printed here, except for the `tries` that should be `1` instead of `0`.
+7. The element is committed and thus removed from the queue.
 
 ## Backend interchangeability
 This example works with any definition of `MQ` that supports reserve/commit (that is, any except `redis-list` and `bucket-mongo`); you just need to specify the chosen backend. For example, to use the `bucket-mongo-safe` backend:
@@ -101,13 +101,12 @@ This example works with any definition of `MQ` that supports reserve/commit (tha
 const MQ = require ('keuss/backends/bucket-mongo-safe');
 ```
 
-# Full producer and consumer loops
-This is a more comvoluted example: a set of producers inserting messages, and another set of consumers consumig them, all in parallel. The queue stats (elements pushed, elements popped) are shown every second
+## Full producer and consumer loops
+This is a more convoluted example: a set of producers inserting messages, and another set of consumers consumig them, all in parallel. The queue stats (elements pushed, elements popped) are shown every second.
 
-Try and change the uncommented `const MQ = require('keuss/backends/...');`  to see the performance differences between backends
+Try and change the uncommented `const MQ = require('keuss/backends/...');`  to see the performance differences between backends.
 
-Also, notice that, when, running with any mongodb-based backend, stats figures are cumulative across different executions: if you
-run it several times, you'll see the stats' figures also include data from previous executions
+Also, notice that, when, running with any mongodb-based backend, stats figures are cumulative across different executions: if you run it several times, you'll see the stats' figures also include data from previous executions.
 
 ```js
 const async = require ('async');

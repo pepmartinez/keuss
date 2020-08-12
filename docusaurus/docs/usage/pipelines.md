@@ -4,7 +4,7 @@ title: Pipelines
 sidebar_label: Pipelines
 ---
 
-True atomic [ETL-like](https://en.wikipedia.org/wiki/Extract,_transform,_load) queues and processors
+True atomic [ETL-like](https://en.wikipedia.org/wiki/Extract,_transform,_load) queues and processors.
 
 # About
 Pipelines is a Keuss extension for building [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) processing graphs with ease while guaranteeing atomicity in the processing: whatever happens at the processing of an element, the element is guaranteed to be in either the source or in the destination queue; never in both, never in none.
