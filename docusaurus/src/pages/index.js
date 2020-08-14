@@ -9,7 +9,7 @@ import styles from './styles.module.css';
 const features = [
   {
     title: <>Based on existing components</>,
-    imageUrl: 'img/undraw_docusaurus_mountain.svg',
+//    imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: (
       <>
         Keuss does not reinvent the wheel: it uses existing components (Redis, MongoDB) to provide foundation
@@ -20,7 +20,7 @@ const features = [
   },
   {
     title: <>Easy to use</>,
-    imageUrl: 'img/undraw_docusaurus_tree.svg',
+//    imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: (
       <>
         All types of job queues share a common, simple and concise API. Sensible defaults are
@@ -30,7 +30,7 @@ const features = [
   },
   {
     title: <>Professional-grade features</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+//    imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
         Unlike other external-storage job queue implementations, Keuss provides all commonly seek features
@@ -41,7 +41,7 @@ const features = [
   },
   {
     title: <>Flexibility</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+//    imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
         Balance between durability guarantees, base technologies and performance can be achieved by
@@ -51,7 +51,7 @@ const features = [
   },
   {
     title: <>Performance</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+//    imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
         Performance (as in throughput and latency) is part of the design goals of Keuss
@@ -60,7 +60,7 @@ const features = [
   },
   {
     title: <>Cluster ready</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+//    imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
         Job Queues are ready to be used seamlessly on a clustered environment with no extra effort
