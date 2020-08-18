@@ -27,7 +27,7 @@ The pipeline concept is, indeed, an extension of the reserve-commit model; it is
 
 ## Processor
 A **processor** is an object tied to one or more queues, that controls the flow of messages between them. They are used mainly to define **pipelines**. Currently there are 4 specialized classes of processors defined:
-* [BaseLink](usage/pipelines#baselink): This is really more of a base definition for the rest of the specialized processors. 
+* [BaseLink](usage/pipelines#baselink): This is really more of a base definition for the rest of the specialized processors.
 * [DirectLink](usage/pipelines#directlink) (one queue to another).
 * [ChoiceLink](usage/pipelines#choicelink) (one queue to one or more queues).
 * [Sink](usage/pipelines#sink) (endpoint, one queue to none).
@@ -65,7 +65,7 @@ bucket-mongo-safe | x | x | - | - | +++++
 
 So far, the only events published by keuss are:
 * *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago.
-* queue paused/resumed.
+* *queue X paused/resumed*.
 
 ## Stats
 **Stats** provides counters and metrics on queues, shared among keuss clients. The supported stats are:
