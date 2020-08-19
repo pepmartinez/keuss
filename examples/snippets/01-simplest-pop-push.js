@@ -1,6 +1,13 @@
-const async = require ('async');
-const MQ =    require ('keuss/backends/mongo');
+/*
+ * 
+ * very simple example of push & pop: an element is pushed, and then popped
+ * 
+ */
 
+const async = require ('async');
+const MQ =    require ('../../backends/mongo');
+
+// initialize factory
 MQ ({
   url: 'mongodb://localhost/keuss_test'
 }, (err, factory) => {
@@ -10,7 +17,9 @@ MQ ({
   const q = factory.queue ('test_queue', {});
 
   async.series([
+  // push element
     cb => q.push ({elem: 1, headline: 'something something', tags: {a: 1, b: 2}}, cb),
+  // pop element
     cb => q.pop ('consumer-1', cb)
   ], (err, res) => {
     if (err) {

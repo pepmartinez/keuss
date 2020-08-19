@@ -1,11 +1,22 @@
+/*
+ * 
+ * simplest-possible producer and consumer loops: a loop of parallel producers push N elements in a queue; 
+ * another loop of parallel consumers pop the elements out of the queue 
+ * 
+ * Queue stats are also shown every second
+ * 
+ */
+
+
 const async = require ('async');
 
 // choice of backend
-const MQ =    require ('keuss/backends/bucket-mongo-safe');
-//const MQ =    require ('keuss/backends/redis-oq');
-//const MQ =    require ('keuss/backends/mongo');
-//const MQ =    require ('keuss/backends/ps-mongo');
+const MQ =    require ('../../backends/bucket-mongo-safe');
+//const MQ =    require ('../../backends/redis-oq');
+//const MQ =    require ('../../backends/mongo');
+//const MQ =    require ('../../backends/ps-mongo');
 
+// initialize factory
 MQ ({
   url: 'mongodb://localhost/keuss_test'
 }, (err, factory) => {
@@ -24,14 +35,14 @@ MQ ({
   }, 1000);
 
   async.parallel ([
-    // producers' loop
+    // producers' loop, with 'producers' parallel producers
     cb => async.timesLimit (msgs, producers, (n, next) => {
       q.push ({elem: n, headline: 'something something', tags: {a: 1, b: 2}}, next);
     }, err => {
       console.log ('producer loop ended');
       cb (err);
     }),
-    // consumers' loop
+    // consumers' loop, with 'consumers' parallel consumers
     cb => async.timesLimit (msgs, consumers, (n, next) => {
       q.pop ('theconsumer', {reserve: true}, (err, item) => {
         if (err) return cb (err);
