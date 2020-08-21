@@ -1,6 +1,7 @@
 /*
  * 
  * simple sequence of insert, reserve, rollback and commits over a bucket-mongo-safe queue
+ * every now and then queue stats are shown; a delay is added to ensure stats' flow happens
  * 
  */
 
@@ -25,35 +26,38 @@ MQ(factory_opts, (err, factory) => {
     cb => q.push({ elem: 1, pl: 'twetrwte' }, cb),
     cb => q.push({ elem: 2, pl: 'twetrwte' }, cb),
     cb => q.push({ elem: 3, pl: 'twetrwte' }, cb),
-    cb => setTimeout (cb, 1000),
+    cb => setTimeout (cb, 500),
     cb => q.stats ((err, res) => {
-        console.log('queue stats now: %j', res);
+        console.log('queue stats now: %o', res);
         cb(err);
     }),
    cb => q.pop ('c1', {reserve: true}, (err, res) => {
         id = res._id;
-        console.log('reserved element %j, id is %s', res, id)
+        console.log('reserved element %o, id is %s', res, id)
         cb(err);
     }),
+    cb => setTimeout (cb, 500),
     cb => q.stats ((err, res) => {
-        console.log('queue stats now: %j', res);
+        console.log('queue stats now: %o', res);
         cb(err);
     }),
     cb => q.ko(id, (err, res) => {
       console.log('rolled back element %s -> %s', id, res);
       cb();
     }),
+    cb => setTimeout (cb, 500),
     cb => q.stats ((err, res) => {
-        console.log('queue stats now: %j', res);
+        console.log('queue stats now: %o', res);
         cb(err);
     }),
     cb => q.pop ('c1', {reserve: true}, (err, res) => {
       id = res._id;
-      console.log('reserved element %j, id is %s', res, id)
+      console.log('reserved element %o, id is %s', res, id)
       cb(err);
     }),
+    cb => setTimeout (cb, 500),
     cb => q.stats ((err, res) => {
-      console.log('queue stats now: %j', res);
+      console.log('queue stats now: %o', res);
       cb(err);
     }),
     cb => q.ok (id, (err, res) => {
@@ -62,7 +66,7 @@ MQ(factory_opts, (err, factory) => {
     }),
     cb => setTimeout (cb, 1000),
     cb => q.stats ((err, res) => {
-      console.log('queue stats now: %j', res);
+      console.log('queue stats now: %o', res);
       cb(err);
     }),
     cb => q.drain (cb),

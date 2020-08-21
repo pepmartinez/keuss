@@ -25,7 +25,7 @@ var factory_opts = {
   reject_delta_factor: 2000
 };
 
-// tets dimensions: elems to produce and consume, number of consumers, number of producers
+// test dimensions: elems to produce and consume, number of consumers, number of producers
 const num_elems = 10000000;
 const num_producers = 3;
 const num_consumers = 7;
