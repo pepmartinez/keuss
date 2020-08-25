@@ -10,6 +10,8 @@ Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting 
 * if it's an object and contains a `Cluster` field, this field is used to create a new [ioredis Redis.Cluster](https://redis.io/topics/cluster-spec) object, as in *return new Redis.Cluster (opts.Cluster)*
 * Else, a ioredis Redis object is created with `opts` as param, as in *return new Redis (opts)*
 
+This apparent complexity is required since redis connections are inherently created in a different way for standalone, sentinel and cluster servers
+
 ## Examples:
 * Default options:
   ```javascript

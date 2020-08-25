@@ -64,8 +64,13 @@ bucket-mongo-safe | x | x | - | - | +++++
 * *`mongo-capped`*: uses pubsub on top of a mongodb capped collection, using [@nodebb/mubsub](https://www.npmjs.com/package/@nodebb/mubsub)
 
 So far, the only events published by keuss are:
-* *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if another one of the same type (same client, same queue) was already fired less than 50ms ago.
+* *element inserted in queue X*, which allows other clients waiting for elements to be available to wake up and retry. A client will not fire an event if
+  another one of the same type (same client, same queue) was already fired less than 50ms ago.
 * *queue X paused/resumed*.
+
+The use of a signaller provider different from `local` allows the formation of a cluster of clients: all those clients sharing the same signaller object
+(with the same configuration, obviously) will see and share the same set of events and therefore can collaborate (for example, all consumers of a given
+queue *on every machine* will be awaken when an insertion happens *on any machine*)
 
 ## Stats
 **Stats** provides counters and metrics on queues, shared among keuss clients. The supported stats are:
@@ -78,9 +83,16 @@ Three options are provided to store the stats:
 * *`redis`*: backed by redis hashes. Modifications are buffered in memory and flushed every 100ms.
 * *`mongo`*: backed by mongodb using one object per queue inside a single collection. Modifications are buffered in memory and flushed every 100ms.
 
+The use of a stats provider different from `mem` allows for a shared view of a cluster of clients: all those clients sharing the same stats object
+(with the same configuration, obviously) will see a coherent, aggregated view of the stats (all clients will update the stats)
+
+The stats can also be used as a queue discovery source: existing queues can be recreated from the information stored (in fact, extra information
+needed to ensure this is also stored alongside the actual stats). Keuss does not, at this point, provide any actual *recreate* functionality on
+top of this
+
 ## How all fits together
 * *`Queues`*, or rather clients to individual queues, are created using a *backend* as factory.
 * *`Backends`* need to be initialized before being used. Exact initialization details depend on each backend.
-* When creating a *`queue`*, a *`signaller`* and a *`stats`* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *`local`* and *`mem`*, respectively, are used.
+* When creating a *`queue`*, a *`signaller`* and a *`stats`* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *`local`* and *`mem`*, respectively, are used for redis-based backends; for mongodb-based backends, *`mongo-capped`* and *`mongo`* are used intead as defaults
 * *`Queues`* are created on-demand, and are never destroyed as far as Keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
 * *`Pipelines`* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue. More info on pipelines [here](usage/pipelines.md)
