@@ -1,9 +1,43 @@
 module.exports = {
-  someSidebar: {
-    Intro:     ['about', 'quickstart', 'concepts'],
-    Usage:     ['usage/putting-all-together', 'usage/buckets', 'usage/shutdown', 'usage/no-signaller', 'usage/redis-conns', 'usage/pipelines'],
-    API:       ['api/factory', 'api/signal', 'api/stats', 'api/queue'],
-    Examples:  ['examples'],
-    Changelog: ['changelog'],
-  },
+  someSidebar: [
+    {
+      type: 'category',
+      label: 'Intro',
+      items: [
+        'about',
+        'quickstart',
+        'concepts'
+      ]
+    },
+    {
+      type: 'category',
+      label: 'Usage',
+      items: [
+        'usage/putting-all-together',
+        'usage/buckets',
+        'usage/shutdown',
+        'usage/no-signaller',
+        'usage/redis-conns',
+        {
+          Pipelines: [
+            'usage/pipelines/about',
+            'usage/pipelines/processors',
+            'usage/pipelines/examples',
+          ]
+        }
+      ]
+    },
+    {
+      type: 'category',
+      label: 'API',
+      items: [
+        'api/factory',
+        'api/signal',
+        'api/stats',
+        'api/queue'
+      ]
+    },
+    {type: 'doc', id: 'examples'},
+    {type: 'doc', id: 'changelog'},
+  ],
 };
