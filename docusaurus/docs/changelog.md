@@ -3,7 +3,9 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
-
+* v1.6.1
+  * added Docusaurus based documentation
+  * fixed deps' vulnerabilities
 * v1.6.0
   * added sane defaults for stats and signal for mongodb-based backends (using mongo stats and signal)
   * added pipeline builder
