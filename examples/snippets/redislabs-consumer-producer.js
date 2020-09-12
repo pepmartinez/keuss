@@ -1,6 +1,6 @@
 // redis-list consumer & producer on a redislabs Redis
 
-var MQ = require('../backends/redis-list');
+var MQ = require('../../backends/redis-list');
 
 var factory_opts = {
   redis: {
