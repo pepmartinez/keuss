@@ -115,3 +115,35 @@ MQ (factory_opts, (err, factory) => {
 ```
 
 ## Creation with `Factory.pipelineFromRecipe`
+`Factory.pipelineFromRecipe` provides a way to define pipelines entirely from strings, including queue, processors, the functions
+to be used as process functions and all the code used on those functions. In this way a full, self-contained pipeline can be specified
+in a file or set of files
+
+Under the hood it uses [node.js VM module](https://nodejs.org/dist/latest-v12.x/docs/api/vm.html) to create the `Pipeline` object: once created it can be used normally outside of the creation VM
+
+`Factory.pipelineFromRecipe` is provided only on factories created from backends with pipelining support. This single method take the following parameters:
+
+```javascript
+Factory.pipelineFromRecipe (
+  pipeline_name,
+  array_of_bootstrap_code,
+  array_of_setup_code,
+  extra_context,
+  done
+)
+```
+
+1. A new VM is created using the merge of the default context and the parameter `extra_context`. The default context contains the following:
+   * `Buffer`
+   * `require`
+   * `clearImmediate`, `clearInterval`, `clearTimeout`, `setImmediate`, `setTimeout`, `setInterval`
+   * `TextEncoder`, `TextDecoder`
+   * `URL`, `URLSearchParams`
+   * `builder`: an already initialized builder object, as in `factory.builder ().pipeline (name)`
+   * `done`: a function to call when the pipeline is ready, or an error arises. Expects to be `fn (err, pipeline)`
+2. Each of the strings in the `array_of_bootstrap_code` is executed in the VM
+3. Each of the strings in the `array_of_setup_code` is executed in the VM. It is expected to eventually call `done` with the error or the finished pipeline (`done`is accesible in the context)
+
+The whole idea is to prepare all the needed code for processors' functions in the `array_of_bootstrap_code`, then create the pipeline in the `array_of_setup_code`, calling the `done` function whith the created pipeline
+
+You can find a full example [here](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/fromRecipe)
