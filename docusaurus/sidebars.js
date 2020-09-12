@@ -22,6 +22,7 @@ module.exports = {
           Pipelines: [
             'usage/pipelines/about',
             'usage/pipelines/processors',
+            'usage/pipelines/building',
             'usage/pipelines/examples',
           ]
         }
