@@ -21,16 +21,16 @@ a **Queue** is more of an interface, a definition of what it can do. Keuss queue
 The initial idea for Keuss Queues, transtated the elements inserted in the queue into rows of the backed storage. This makes it easy to inspect the elements values directly in the backend, which is pretty useful when you need to debug things up. Buckets came later, as a way to pack more than one message into a single row of the backend to gain performance. See [Bucked-based backends](usage/buckets).
 
 ## Pipeline
-A **[pipeline](usage/pipelines)** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the *'commit element in incoming queue, insert element in the next queue'* to be atomic. This removes chances for race conditions, or message losses.
+A **[pipeline](usage/pipelines/about)** is an enhanced queue that provides an extra operation: pass an element to another queue **atomically**. In an scenario where processors are linked with queues, it is usually a good feature to allow the *'commit element in incoming queue, insert element in the next queue'* to be atomic. This removes chances for race conditions, or message losses.
 
 The pipeline concept is, indeed, an extension of the reserve-commit model; it is so far implemented only atop mongodb, and it is anyway considered as a 'low-level' feature, best used by means of specialized classes to encapsulate the aforementioned processors.
 
 ## Processor
 A **processor** is an object tied to one or more queues, that controls the flow of messages between them. They are used mainly to define **pipelines**. Currently there are 4 specialized classes of processors defined:
-* [BaseLink](usage/pipelines#baselink): This is really more of a base definition for the rest of the specialized processors.
-* [DirectLink](usage/pipelines#directlink) (one queue to another).
-* [ChoiceLink](usage/pipelines#choicelink) (one queue to one or more queues).
-* [Sink](usage/pipelines#sink) (endpoint, one queue to none).
+* [BaseLink](usage/pipelines/processors#baselink): This is really more of a base definition for the rest of the specialized processors.
+* [DirectLink](usage/pipelines/processors#directlink) (one queue to another).
+* [ChoiceLink](usage/pipelines/processors#choicelink) (one queue to one or more queues).
+* [Sink](usage/pipelines/processors#sink) (endpoint, one queue to none).
 
 ## Storage
 **Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 7 backends, with various levels of features and performance:
@@ -95,4 +95,4 @@ top of this
 * *`Backends`* need to be initialized before being used. Exact initialization details depend on each backend.
 * When creating a *`queue`*, a *`signaller`* and a *`stats`* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *`local`* and *`mem`*, respectively, are used for redis-based backends; for mongodb-based backends, *`mongo-capped`* and *`mongo`* are used intead as defaults
 * *`Queues`* are created on-demand, and are never destroyed as far as Keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
-* *`Pipelines`* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue. More info on pipelines [here](usage/pipelines.md)
+* *`Pipelines`* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue. More info on pipelines [here](usage/pipelines/about)
