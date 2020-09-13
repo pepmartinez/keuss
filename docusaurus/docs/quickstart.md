@@ -5,12 +5,15 @@ sidebar_label: Quickstart
 ---
 
 ## Package Install
+
 `keuss` is installed in the regular way for any npm package:
 
 ```bash
 npm install keuss
 ```
-# Basic usage (with regular MongoDB backend)
+
+## Basic usage (with regular MongoDB backend)
+
 Here's a minimal example of how keuss works. [async](https://www.npmjs.com/package/async) is used to implement asynchronous flows in a much readable manner
 
 ```javascript
@@ -47,15 +50,19 @@ MQ ({
   });
 });
 ```
+
 This small test creates a queue named `test_queue` backed by mongodb in the mongoDB collection at `mongodb://localhost/keuss_test`. Then, a single element is first inserted in the queue, then read from it and printed
 
 ## Backend interchangeability
+
 This example works with any available definition of `MQ`; you just need to specify the chosen backend. For example, to use the `redis-list` backend:
+
 ```js
 const MQ = require ('keuss/backends/redis-list');
 ```
 
-# reserve-commit-rollback
+## reserve-commit-rollback
+
 ```javascript
 const async = require ('async');
 const MQ =    require ('keuss/backends/mongo');
@@ -87,6 +94,7 @@ MQ ({
   });
 });
 ```
+
 1. An element is inserted.
 2. An element is reserved. It reserves the element previously inserted, and returns it.
 3. This should print the element reserved.
@@ -96,12 +104,15 @@ MQ ({
 7. The element is committed and thus removed from the queue.
 
 ## Backend interchangeability
+
 This example works with any definition of `MQ` that supports reserve/commit (that is, any except `redis-list` and `bucket-mongo`); you just need to specify the chosen backend. For example, to use the `bucket-mongo-safe` backend:
+
 ```js
 const MQ = require ('keuss/backends/bucket-mongo-safe');
 ```
 
 ## Full producer and consumer loops
+
 This is a more convoluted example: a set of producers inserting messages, and another set of consumers consumig them, all in parallel. The queue stats (elements pushed, elements popped) are shown every second.
 
 Try and change the uncommented `const MQ = require('keuss/backends/...');`  to see the performance differences between backends.

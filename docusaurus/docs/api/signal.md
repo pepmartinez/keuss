@@ -4,6 +4,7 @@ title: Signaller API
 sidebar_label: Signaller
 ---
 ## Signaler factory
+
 Signaller factory is passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result for the *new* operation is indeed the factory; the result of the `require` is therefore a *metafactory*.
 
 ```javascript

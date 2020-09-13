@@ -11,7 +11,9 @@ Starting with v1.5.2 keuss includes 2 backends that do not share this limitation
 Two bucked-based backends were added, both based on mongodb: [bucket-mongo](#bucket-mongo) and [bucket-mongo-safe](#bucket-mongo-safe). Both are usable, but there is little gain on using fhe first over the second: `bucket-mongo` was used as a prototyping area, and although perfectly usable, it turned out `bucket-mongo-safe` is better in almost every aspect: it provides better guarantees and more features, at about the same performance.
 
 ### bucket-mongo-safe
+
 In addition to the general options, the factory accepts the following extra options:
+
 * `bucket_max_size`: maximum number of elements in a bucket, defaults to 1024
 * `bucket_max_wait`: milliseconds to wait before flushing a push bucket: pushes are buffered in a push bucket, which are flushed when they're full (reach `bucket_max_size` elements). If this amount of millisecs go by and the push bucket is not yet full, it is flushed as is. Defaults to 500.
 * `reserve_delay`: number of seconds a bucket keeps its 'reserved' status when read from mongodb. Defaults to 30.
@@ -21,6 +23,7 @@ In addition to the general options, the factory accepts the following extra opti
 * `state_flush_period`: flush intermediate state changes in each active read bucked every this amount of millisecs
 
 Bucket-mongo-safe works by packing many payloads in a single mongodb object:
+
 * At `push()` time, objects are buffered in memory and pushed (inserted) only when bucket_max_size has been reached or when a bucket has been getting filled for longer than bucket_max_wait millisecs.
 * At `pop/reserve` time full objects are read into mem, and then individual payloads returned from there. Both commits and pops are just marked in memory and then flushed every state_flush_period millisecs, or when the bucked is exhausted.
 * Buckets remain unmodified since they are created in terms of the payloads they contain: a `pop()` or `ko/ok` would only mark payloads inside buckets as read/not-anymore-available, but buckets are never splitted nor merged.
@@ -34,6 +37,7 @@ Scheduling on `bucket-mongo-safe` is perfectly possible, but with a twist: the e
 :::
 
 ### bucket-mongo
+
 This is a simpler version of buckets-on-mongodb, and for all purposes `bucket-mongo-safe` should be preferred; it does not provide reserve, nor schedule. It is however a tad faster and lighter on I/O.
 
 It is provided only for historical and educational purposes.

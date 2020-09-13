@@ -5,12 +5,15 @@ sidebar_label: Building
 ---
 
 Pipelines can be built in 3 ways:
+
 * By directly creating queues and processors, and bonding them together. This is rather low-level and is not the recommended way
 * By using a `PipelineBuilder`. This object provides a fluent API that's convenient and very simple. This is the recommended way to created pipelines in code
 * By using the method `pipelineFromRecipe` offered by the Queues Factories supporting pipelining. This allows a whole pipeline to be defined in a set of strings and therefore in external files; this makes pipelies portable, reproductible and totally cluster-ready
 
 ## Direct Pipeline Creation
+
 This is a quite simple approach: you create the queues, then you create the Processors that would glue them. Processors take i theit constructors the queues they use, so it's rather straightforward:
+
 ```javascript
 const MQ =  require ('../../../backends/pl-mongo');
 const DCT = require ('../../../Pipeline/DirectLink');
@@ -67,9 +70,11 @@ MQ (factory_opts, (err, factory) => {
 });
 
 ```
+
 See [Processors](processors.md) for all the available options and features (such as processing functions and error management)
 
 ## Creation with a `PipelineBuilder`
+
 `PipelineBuilder` provides a simpler way to create pipelines using a fluent api. Builders are obtained through `factory.builder()` and offers the following methods:
 
 * `pipeline(name)`: initializes a pipeline, passing a name to it. Must be called before any other method, and can be called only once
@@ -81,11 +86,14 @@ See [Processors](processors.md) for all the available options and features (such
 * `done(err, pipeline)`: finished the pipeline creation. No other calls can be done to the builder afterwards. In case of error, the error will be passed in `err`; if all went well `err` will be `null` and the newly created pipeline, an object of type `Pipeline`, will be passed in the `pipeline`; all further interactions with the pipeline will happen through this object
 
 ### Pipepine object
+
 The new Pipeline object exports the following methods:
+
 * `start()`: starts the pipeline (simply calls `start()` on all processors)
 * `stop()`: stops the pipeline (simply calls `stop()` on all processors)
 
 Here's a simplified example (for a complete, working example see [here](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/builder)):
+
 ```javascript
 MQ (factory_opts, (err, factory) => {
   if (err) return console.error (err);
@@ -115,6 +123,7 @@ MQ (factory_opts, (err, factory) => {
 ```
 
 ## Creation with `Factory.pipelineFromRecipe`
+
 `Factory.pipelineFromRecipe` provides a way to define pipelines entirely from strings, including queue, processors, the functions
 to be used as process functions and all the code used on those functions. In this way a full, self-contained pipeline can be specified
 in a file or set of files
