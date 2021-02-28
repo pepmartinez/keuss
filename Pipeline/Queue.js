@@ -48,7 +48,10 @@ class PipelinedMongoQueue extends Queue {
   get (callback) {
     this._col.findOneAndDelete ({_q: this._name, mature: {$lte: Queue.nowPlusSecs (0)}}, {sort: {mature : 1}}, (err, result) => {
       if (err) return callback (err);
-      callback (null, result && result.value);
+      const v = result && result.value;
+      if (!v) return callback ();
+      if (v.payload._bsontype == 'Binary') v.payload = v.payload.buffer;
+      callback (null, v);
     });
   }
 
@@ -75,7 +78,10 @@ class PipelinedMongoQueue extends Queue {
 
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
       if (err) return callback (err);
-      callback (null, result && result.value);
+      const v = result && result.value;
+      if (!v) return callback ();
+      if (v.payload._bsontype == 'Binary') v.payload = v.payload.buffer;
+      callback (null, v);
     });
   }
 

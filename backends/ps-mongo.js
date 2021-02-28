@@ -59,7 +59,10 @@ class PersistentMongoQueue extends Queue {
 
     this._col.findOneAndUpdate (q, updt, opts, (err, result) => {
       if (err) return callback (err);
-      callback (null, result && result.value);
+      const v = result && result.value;
+      if (!v) return callback ();
+      if (v.payload._bsontype == 'Binary') v.payload = v.payload.buffer;
+      callback (null, v);
     });
   }
 
@@ -86,7 +89,10 @@ class PersistentMongoQueue extends Queue {
 
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
       if (err) return callback (err);
-      callback (null, result && result.value);
+      const v = result && result.value;
+      if (!v) return callback ();
+      if (v.payload._bsontype == 'Binary') v.payload = v.payload.buffer;
+      callback (null, v);
     });
   }
 

@@ -124,6 +124,7 @@ class BucketMongoQueue extends Queue {
 
       if (this._read_bucket.b.length) {
         var elem = {payload: this._read_bucket.b.shift ()};
+        if (elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
         elem.tries = 0;
         elem.mature = this._read_bucket.mature;
         setImmediate (() => callback (null, elem));

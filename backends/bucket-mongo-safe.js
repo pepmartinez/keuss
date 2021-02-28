@@ -594,6 +594,7 @@ class BucketMongoSafeQueue extends Queue {
   get (callback) {
     this._read_bucket.get_element ((err, elem) => {
       if (err) return callback (err);
+      if (elem && elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
       callback (null, elem);
     });
   }
@@ -604,6 +605,7 @@ class BucketMongoSafeQueue extends Queue {
   reserve (callback) {
     this._read_bucket.reserve_element ((err, elem) => {
       if (err) return callback (err);
+      if (elem && elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
       callback (null, elem);
     });
   }

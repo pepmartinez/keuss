@@ -1,6 +1,5 @@
 * signal queue creation or read queues on refresh?
 * bridges?
-* expiration / deadletter (tied to at-least-one)?
 * queue traversal/query
 * priorities?
 * add factory archetypes (all-mongo, all-mongo-bucket...)
@@ -8,4 +7,7 @@
   + add some commonplace transforms (etl-like)
   + create a server for that, allow processor code defined externally
 + more and better examples
++ remove elements from queue by id
+* add headers as sibling to payload
 
+BUG: tries is +1 on buckets (use backends-payload tests)
