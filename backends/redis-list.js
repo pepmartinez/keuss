@@ -37,6 +37,11 @@ class RedisListQueue extends Queue {
       tries:   entry.tries
     };
 
+    if (Buffer.isBuffer (pl.payload)) {
+      pl.payload = pl.payload.toString ('base64');
+      pl.type = 'buffer';
+    }
+
     this._rediscl.lpush (this._redis_l_name, JSON.stringify (pl), (err, res) => {
       if (err) return callback (err);
       callback (null, res);
@@ -52,6 +57,14 @@ class RedisListQueue extends Queue {
       if (!res) return callback (null, null);
 
       var pl = JSON.parse (res);
+
+      if (pl.type == 'buffer') {
+        try {
+          pl.payload = Buffer.from (pl.payload, 'base64');
+        } catch (e) {
+        }
+      }
+
       pl.mature = new Date (0);
       callback (null, pl);
     });

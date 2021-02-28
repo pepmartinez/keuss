@@ -154,6 +154,12 @@ class RedisOrderedQueue {
       mature:  (entry.mature || new Date ()).getTime ()
     };
 
+
+    if (Buffer.isBuffer (pl.payload)) {
+      pl.payload = pl.payload.toString ('base64');
+      pl.type = 'buffer';
+    }
+
     this._rediscl.roq_push (this._name, pl._id, pl.mature, JSON.stringify (pl), done);
   }
 
@@ -165,6 +171,14 @@ class RedisOrderedQueue {
       if (!res) return done ();
       var obj = JSON.parse (res);
       obj.mature = obj.mature && new Date (obj.mature);
+
+      if (obj.type == 'buffer') {
+        try {
+          obj.payload = Buffer.from (obj.payload, 'base64');
+        } catch (e) {
+        }
+      }
+
       done (null, obj);
     });
   }
@@ -177,6 +191,14 @@ class RedisOrderedQueue {
       if (!res) return done ();
       var obj = JSON.parse (res);
       obj.mature = obj.mature && new Date (obj.mature);
+
+      if (obj.type == 'buffer') {
+        try {
+          obj.payload = Buffer.from (obj.payload, 'base64');
+        } catch (e) {
+        }
+      }
+
       done (null, obj);
     });
   }

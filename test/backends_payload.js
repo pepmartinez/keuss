@@ -15,8 +15,8 @@ var factory = null;
   {label: 'Tape MongoDB',           mq: require ('../backends/ps-mongo')},
   {label: 'Simple MongoDB Buckets', mq: require ('../backends/bucket-mongo')},
   {label: 'Safe MongoDB Buckets',   mq: require ('../backends/bucket-mongo-safe')},
-//  {label: 'Redis List',         mq: require ('../backends/redis-list')},
-  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
+  {label: 'Redis List',             mq: require ('../backends/redis-list')},
+  {label: 'Redis OrderedQueue',     mq: require ('../backends/redis-oq')},
 ].forEach(function (MQ_item) {
   describe('payload aspects on ' + MQ_item.label + ' queue backend, round 1', function () {
     var MQ = MQ_item.mq;
@@ -142,7 +142,7 @@ var factory = null;
   {label: 'Pipelined MongoDB',      mq: require ('../backends/pl-mongo')},
   {label: 'Tape MongoDB',           mq: require ('../backends/ps-mongo')},
   {label: 'Safe MongoDB Buckets',   mq: require ('../backends/bucket-mongo-safe')},
-//  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
+  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
 ].forEach(function (MQ_item) {
   describe('payload aspects on ' + MQ_item.label + ' queue backend, round 2', function () {
     var MQ = MQ_item.mq;

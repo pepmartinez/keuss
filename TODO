@@ -1,13 +1,24 @@
-* signal queue creation or read queues on refresh?
-* bridges?
+bugs
+-------------------------------------------------------------
+* tries is +1 on buckets (use backends-payload tests)
+
+
+prio 2
+-------------------------------------------------------------
+* add headers as sibling to payload
+* remove elements from queue by id
+
+
+prio 1
+-------------------------------------------------------------
 * queue traversal/query
 * priorities?
-* add factory archetypes (all-mongo, all-mongo-bucket...)
 * pipelines
   + add some commonplace transforms (etl-like)
   + create a server for that, allow processor code defined externally
-+ more and better examples
-+ remove elements from queue by id
-* add headers as sibling to payload
 
-BUG: tries is +1 on buckets (use backends-payload tests)
+
+prio 0
+-----------------------------------------------------------------
+* bridges?
+* signal queue creation or read queues on refresh?
