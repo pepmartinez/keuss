@@ -179,7 +179,7 @@ class Bucket {
     ) {
       debug ('Bucket: flushing entire bucket for retry (%o)', this._b_counts);
       is_reject = true;
-      var tries = this._tries || 1;
+      var tries = this._tries || 0;
 
       if (this._rollback_next_t) {
         mature = new Date (this._rollback_next_t);
@@ -595,6 +595,7 @@ class BucketMongoSafeQueue extends Queue {
     this._read_bucket.get_element ((err, elem) => {
       if (err) return callback (err);
       if (elem && elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
+      if (elem && elem.tries > 0) elem.tries--;
       callback (null, elem);
     });
   }
@@ -606,6 +607,7 @@ class BucketMongoSafeQueue extends Queue {
     this._read_bucket.reserve_element ((err, elem) => {
       if (err) return callback (err);
       if (elem && elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
+      if (elem && elem.tries > 0) elem.tries--;
       callback (null, elem);
     });
   }

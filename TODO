@@ -1,6 +1,5 @@
 bugs
 -------------------------------------------------------------
-* tries is +1 on buckets (use backends-payload tests)
 
 
 prio 2

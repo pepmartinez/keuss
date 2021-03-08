@@ -10,10 +10,11 @@ var MongoClient = require ('mongodb').MongoClient;
 var factory = null;
 
 [
-  {label: 'Simple MongoDB',     mq: require ('../backends/mongo')},
-  {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')},
-  {label: 'Tape MongoDB',       mq: require ('../backends/ps-mongo')},
-  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')}
+  {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo')},
+  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
+ // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')}
 ].forEach(function (MQ_item) {
   describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
     var MQ = MQ_item.mq;

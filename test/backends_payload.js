@@ -53,7 +53,7 @@ var factory = null;
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
           res.payload.should.eql ({a:1, b:'2'});
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -70,7 +70,7 @@ var factory = null;
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
           res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -87,7 +87,7 @@ var factory = null;
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
           res.payload.should.eql ("das payload");
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -104,7 +104,7 @@ var factory = null;
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
           res.payload.should.eql (123456);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -121,7 +121,7 @@ var factory = null;
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
           res.payload.should.eql (bf);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -131,10 +131,6 @@ var factory = null;
 
   });
 });
-
-
-
-
 
 
 [
@@ -181,7 +177,7 @@ var factory = null;
           if (err) return db (err);
           state.reserved_id = res._id;
           res.payload.should.eql ({a:1, b:'2'});
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -201,7 +197,7 @@ var factory = null;
           if (err) return db (err);
           state.reserved_id = res._id;
           res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -221,7 +217,7 @@ var factory = null;
           if (err) return db (err);
           state.reserved_id = res._id;
           res.payload.should.eql ("das payload");
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -241,7 +237,7 @@ var factory = null;
           if (err) return db (err);
           state.reserved_id = res._id;
           res.payload.should.eql (123456);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -261,7 +257,7 @@ var factory = null;
           if (err) return db (err);
           state.reserved_id = res._id;
           res.payload.should.eql (bf);
-//          res.tries.should.equal (0);
+          res.tries.should.equal (0);
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
