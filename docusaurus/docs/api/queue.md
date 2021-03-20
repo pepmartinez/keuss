@@ -97,7 +97,7 @@ q.next_t ((err, res) => {
 })
 ```
 
-Returns a `Date`, or `null` if queue is empty. Queues with no support for schedule/delay always return `null 
+Returns a `Date`, or `null` if queue is empty. Queues with no support for schedule/delay always return `null
 
 ### `push`: Add element to queue
 
@@ -108,6 +108,8 @@ q.push (payload, [opts,] (err, res) => {
 ```
 
 Adds payload to the queue and calls passed callback upon completion. Callback's *res* will contain the id assigned to the inserted element, if the backup provides one.
+
+`payload` can be an `object`, `array`, `string`, `number` or `Buffer`
 
 Possible opts:
 
