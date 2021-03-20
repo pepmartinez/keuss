@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[32],{101:function(e){e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"New website!","permalink":"/keuss/blog/2020/08/04/welcome"}]}')}}]);
