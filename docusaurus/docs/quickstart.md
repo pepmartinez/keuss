@@ -29,7 +29,13 @@ MQ ({
   const q = factory.queue ('test_queue', {});
 
   async.series([
-    cb => q.push ({elem: 1, headline: 'something something', tags: {a: 1, b: 2}}, cb),
+    cb => q.push (
+      {elem: 1, headline: 'something something', tags: {a: 1, b: 2}}, // this is the payload
+      {
+        hdrs: {h1: 'aaa', h2: 12, h3: false}  // let's add some headers too
+      },
+      cb
+    ),
     cb => q.pop ('consumer-1', cb)
   ], (err, res) => {
     if (err) {
@@ -42,7 +48,8 @@ MQ ({
       //   _id: <some id>,
       //   mature: <some date>,
       //   payload: { elem: 1, headline: 'something something', tags: { a: 1, b: 2 } },
-      //   tries: 0
+      //   tries: 0,
+      //   hdrs: {h1: 'aaa', h2: 12, h3: false}
       // }
     }
 

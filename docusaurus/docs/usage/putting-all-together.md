@@ -62,6 +62,29 @@ q1.push (elem, (err, res) => {
 }),
 ```
 
+Or, push also some headers:
+
+```javascript
+const elem = {
+  elem: 1,
+  headline: 'something something',
+  tags: {
+    a: 1,
+    b: 2
+  }
+};
+
+const headers = {
+  h1: 'a string',
+  h2: false,
+  h3: 666
+};
+
+q1.push (elem, {hdrs: headers}, (err, res) => {
+  // push finished, either with error or success...
+}),
+```
+
 ## Get elements from queue (pop)
 
 The easiest way to get elements from a queue is with a simple pop(). This would block until an element is ready, it would remove it from the queue and return it.
@@ -80,9 +103,12 @@ q1.pop (consumer_label, (err, res) => {
       //   mature: <some date>,
       //   payload: { elem: 1, headline: 'something something', tags: { a: 1, b: 2 } },
       //   tries: 0
+      //   hdrs: {}
       // }
-      //
       // that is, the actual element is at res.payload
+      //
+      // if the element was pushed with headers, they will be placed inside hdrs:
+      //   hdrs: {h1: 'a string', h2: false, h3: 666}
 }
 ```
 

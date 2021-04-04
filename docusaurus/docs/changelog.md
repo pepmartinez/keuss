@@ -3,7 +3,9 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
-* v1-6-2
+* v1.6.3
+  * added support for headers (along with payload)
+* v1.6.2
   * payload can be of type object, string, number of buffer
 * v1.6.1
   * added Docusaurus based documentation
