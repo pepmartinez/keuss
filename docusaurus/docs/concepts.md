@@ -17,7 +17,7 @@ A **Queue** is more of an interface, a definition of what it can do. Keuss queue
 * Get element count whose not-before datetime is in the future (scheduled elements).
 * Get usage stats: elements inserted, elements extracted.
 
-*Element* here translates to any js object. Internally, it's usually managed as json.
+*Element* here translates to any js object, js array, string, number or `Buffer`. Optionally, a set of headers (in the form of a js object with string, number or boolean values) can be added.
 
 ## Bucket
 

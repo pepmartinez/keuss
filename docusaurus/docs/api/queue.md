@@ -116,6 +116,7 @@ Possible opts:
 * `mature`: unix timestamp where the element would be elligible for extraction. It is guaranteed that the element won't be extracted before this time.
 * `delay`: delay in seconds to calculate the mature timestamp, if mature is not provided. For example, a delay=120 guarantees the element won't be extracted until 120 secs have elapsed *at least*.
 * `tries`: value to initialize the retry counter, defaults to 0 (still no retries).
+* `hdrs`: object with scalar-valued keys (ie, string, number or boolean) to be added alongside the `payload` as general purpose headers
 
 :::note
 **mature** and **delay** have no effect if the backend does not support delay/schedule.

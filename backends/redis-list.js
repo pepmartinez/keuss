@@ -34,7 +34,8 @@ class RedisListQueue extends Queue {
   insert (entry, callback) {
     var pl = {
       payload: entry.payload,
-      tries:   entry.tries
+      tries:   entry.tries,
+      hdrs:    entry.hdrs || {}
     };
 
     if (Buffer.isBuffer (pl.payload)) {

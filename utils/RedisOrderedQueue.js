@@ -151,6 +151,7 @@ class RedisOrderedQueue {
       _id:     entry.id || uuid.v4(),
       payload: entry.payload,
       tries:   entry.tries,
+      hdrs:    entry.hdrs || {},
       mature:  (entry.mature || new Date ()).getTime ()
     };
 

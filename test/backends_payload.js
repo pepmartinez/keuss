@@ -54,6 +54,7 @@ var factory = null;
           if (err) return db (err);
           res.payload.should.eql ({a:1, b:'2'});
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
       ], (err, res) => {
@@ -71,6 +72,7 @@ var factory = null;
           if (err) return db (err);
           res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
       ], (err, res) => {
@@ -88,6 +90,7 @@ var factory = null;
           if (err) return db (err);
           res.payload.should.eql ("das payload");
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
       ], (err, res) => {
@@ -105,6 +108,7 @@ var factory = null;
           if (err) return db (err);
           res.payload.should.eql (123456);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
       ], (err, res) => {
@@ -122,6 +126,129 @@ var factory = null;
           if (err) return db (err);
           res.payload.should.eql (bf);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
+          cb (null, res);
+        }),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+
+    it('should insert and pop json object payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ({a:1, b:'2'}, {hdrs}, cb),
+        cb => q.pop ('me', (err, res) => {
+          if (err) return db (err);
+          res.payload.should.eql ({a:1, b:'2'});
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and pop json array payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], {hdrs}, cb),
+        cb => q.pop ('me', (err, res) => {
+          if (err) return db (err);
+          res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and pop string payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ("das payload", {hdrs}, cb),
+        cb => q.pop ('me', (err, res) => {
+          if (err) return db (err);
+          res.payload.should.eql ("das payload");
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and pop number payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push (123456, {hdrs}, cb),
+        cb => q.pop ('me', (err, res) => {
+          if (err) return db (err);
+          res.payload.should.eql (123456);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and pop Buffer payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push (bf, {hdrs}, cb),
+        cb => q.pop ('me', (err, res) => {
+          if (err) return db (err);
+          res.payload.should.eql (bf);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
       ], (err, res) => {
@@ -134,11 +261,11 @@ var factory = null;
 
 
 [
-  {label: 'Simple MongoDB',         mq: require ('../backends/mongo')},
-  {label: 'Pipelined MongoDB',      mq: require ('../backends/pl-mongo')},
-  {label: 'Tape MongoDB',           mq: require ('../backends/ps-mongo')},
-  {label: 'Safe MongoDB Buckets',   mq: require ('../backends/bucket-mongo-safe')},
-  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
+  {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo')},
+  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
+  {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')},
 ].forEach(function (MQ_item) {
   describe('payload aspects on ' + MQ_item.label + ' queue backend, round 2', function () {
     var MQ = MQ_item.mq;
@@ -178,6 +305,7 @@ var factory = null;
           state.reserved_id = res._id;
           res.payload.should.eql ({a:1, b:'2'});
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -198,6 +326,7 @@ var factory = null;
           state.reserved_id = res._id;
           res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -218,6 +347,7 @@ var factory = null;
           state.reserved_id = res._id;
           res.payload.should.eql ("das payload");
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -238,6 +368,7 @@ var factory = null;
           state.reserved_id = res._id;
           res.payload.should.eql (123456);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -258,6 +389,7 @@ var factory = null;
           state.reserved_id = res._id;
           res.payload.should.eql (bf);
           res.tries.should.equal (0);
+          res.hdrs.should.eql ({});
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
@@ -265,6 +397,144 @@ var factory = null;
         done (err);
       });
     });
+
+
+
+    it('should insert and reserve json object payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var state = {};
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ({a:1, b:'2'}, {hdrs}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          res.payload.should.eql ({a:1, b:'2'});
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_id, cb),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and reserve json array payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var state = {};
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], {hdrs}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          res.payload.should.eql ([{a:1}, {b:'2'}, 4, 'yyy']);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_id, cb),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and reserve string payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var state = {};
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push ("das payload", {hdrs}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          res.payload.should.eql ("das payload");
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_id, cb),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and reserve number payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var state = {};
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      async.series([
+        cb => q.push (123456, {hdrs}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          res.payload.should.eql (123456);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_id, cb),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
+
+    it('should insert and reserve Buffer payloads ok with headers', done => {
+      var q = factory.queue('test_queue_1');
+      var state = {};
+      var hdrs = {
+        aaa: 'qwerty',
+        bbb: 12,
+        ccc: true,
+        ddd: 12.34
+      };
+
+      const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
+      async.series([
+        cb => q.push (bf, {hdrs}, cb),
+        cb => q.pop ('me', {reserve: true}, (err, res) => {
+          if (err) return db (err);
+          state.reserved_id = res._id;
+          res.payload.should.eql (bf);
+          res.tries.should.equal (0);
+          res.hdrs.should.eql (hdrs);
+          cb (null, res);
+        }),
+        cb => q.ok (state.reserved_id, cb),
+      ], (err, res) => {
+        done (err);
+      });
+    });
+
 
   });
 });

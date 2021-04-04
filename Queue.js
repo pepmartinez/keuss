@@ -279,9 +279,10 @@ class Queue {
 
     // build payload
     var msg = {
-      mature  : mature,
-      payload  : payload,
-      tries: opts.tries || 0
+      mature:  mature,
+      payload: payload,
+      tries:   opts.tries || 0,
+      hdrs:    opts.hdrs || {}
     };
 
     debug ('%s: about to insert %o', this._name, msg);
