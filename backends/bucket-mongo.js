@@ -54,7 +54,12 @@ class BucketMongoQueue extends Queue {
   // add element to queue
   insert (entry, callback) {
     if (this._insert_bucket.b.length == 0) this._insert_bucket.mature = entry.mature;
-    this._insert_bucket.b.push (entry.payload);
+
+    this._insert_bucket.b.push ({
+      __p: entry.payload,
+      __h: (entry.hdrs || {})
+    });
+
     var id = this._insert_bucket._id.toString () + '--' + this._insert_bucket.b.length;
     debug ('added to bucket, %s', id);
 
@@ -123,7 +128,19 @@ class BucketMongoQueue extends Queue {
       if (err) return callback (err);
 
       if (this._read_bucket.b.length) {
-        var elem = {payload: this._read_bucket.b.shift ()};
+        var pl =  this._read_bucket.b.shift ();
+        var elem = {};
+
+        if (pl.__p) {
+          // add-headers: array contains both payload and headers, breaks backwards compat
+          elem.payload = pl.__p;
+          elem.hdrs =    pl.__h;
+        }
+        else {
+          //  backwards compat, pre-headers: array contains whole payloads
+          elem.payload = pl;
+        }
+
         if (elem.payload._bsontype == 'Binary') elem.payload = elem.payload.buffer;
         elem.tries = 0;
         elem.mature = this._read_bucket.mature;
@@ -147,7 +164,6 @@ class BucketMongoQueue extends Queue {
       this._drain_read_cb = cb;
     }
   }
-
 
 
   /////////////////////////////////////////

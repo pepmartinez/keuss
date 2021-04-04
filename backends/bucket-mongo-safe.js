@@ -81,7 +81,17 @@ class Bucket {
 
     for (var i = this._last_b_idx; i <  this._b_states.length; i++) {
       if (this._b_states[i] == State.Available) {
-        var elem = {payload: this._b[i]};
+        var elem = {};
+        if (this._b[i].__p) {
+          // add-headers: array contains both payload and headers, breaks backwards compat
+          elem.payload = this._b[i].__p;
+          elem.hdrs =    this._b[i].__h;
+        }
+        else {
+          //  backwards compat, pre-headers: array contains whole payloads
+          elem.payload = this._b[i];
+        }
+
         elem.tries = this._tries;
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
@@ -566,7 +576,11 @@ class BucketMongoSafeQueue extends Queue {
     if (!this._insert_bucket.mature) this._insert_bucket.mature = entry.mature;
     else if (this._insert_bucket.mature.getTime () < entry.mature.getTime ()) this._insert_bucket.mature = entry.mature;
 
-    this._insert_bucket.b.push (entry.payload);
+    this._insert_bucket.b.push ({
+      __p: entry.payload,
+      __h: (entry.hdrs || {})
+    });
+
     var id = this._insert_bucket._id.toString () + ':' + this._insert_bucket.b.length;
     debug ('added to bucket, %s', id);
 
