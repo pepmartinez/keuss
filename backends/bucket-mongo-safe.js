@@ -656,6 +656,7 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
 
       cursor.toArray ((err, res) => {
+        debug ('calculating totalSize: aggregation pipeline returns %o', res);
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
         callback (null, res[0].v);
@@ -674,6 +675,7 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
 
       cursor.toArray ((err, res) => {
+        debug ('calculating size: aggregation pipeline returns %o', res);
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
         callback (null, res[0].v);
@@ -695,6 +697,7 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
 
       cursor.toArray ((err, res) => {
+        debug ('calculating schedSize: aggregation pipeline returns %o', res);
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
         callback (null, res[0].v);
@@ -715,6 +718,7 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
 
       cursor.toArray ((err, res) => {
+        debug ('calculating resvSize: aggregation pipeline returns %o', res);
         if (err) return callback (err);
         if (res.length == 0) return callback (null, 0);
         callback (null, res[0].v);
@@ -728,6 +732,7 @@ class BucketMongoSafeQueue extends Queue {
   next_t (callback) {
     this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
       if (err) return callback (err);
+      debug ('obtaining next_t: got %o', result && result.mature);
       callback (null, result && result.mature);
     });
   }
