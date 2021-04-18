@@ -21,7 +21,7 @@ function stats (q, cb) {
 function pop (q, stage, cb) {
   q.pop('c1', { reserve: true }, (err, res) => {
     stage.obj = res;
-//    console.log('reserved element %j', res);
+//    console.log('reserved element %o', res);
     cb(err);
   });
 }
@@ -35,7 +35,7 @@ function reject (q, stage, cb) {
       return cb (err);
     }
 
-//    console.log('rolled back element %s: %j', stage.obj._id, res);
+//    console.log('rolled back element %s: %o', stage.obj._id, res);
     cb();
   });
 }
@@ -116,28 +116,30 @@ function release_mq_factory (q, factory, cb) {
         (factory, cb) => {
           const q = factory.queue('test_queue_deadletter', {});
           const stage = {};
+          let tries= 0;
 
           async.race ([
             cb => async.series([
               cb => q.push (pl, cb),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb),
+              cb => reject (q, stage, (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb),
+              cb => reject (q, stage,  (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb),
+              cb => reject (q, stage,  (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb),
+              cb => reject (q, stage,  (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb),
+              cb => reject (q, stage,  (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
-              cb => reject (q, stage, cb)
+              cb => reject (q, stage,  (err) => {tries++;cb()}),
             ], err => {
               err.should.equal ('cancel');
               cb ();
             }),
             cb => factory.deadletter_queue().pop('c2', (err, res) => {
               res.payload.should.eql (pl);
+              tries.should.equal (5);
               cb (err);
             })
           ], err => cb (err, q, factory));
