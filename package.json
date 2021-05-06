@@ -28,7 +28,7 @@
   "dependencies": {
     "async": "~3.2.0",
     "ioredis": "~4.17.3",
-    "lodash": "~4.17.20",
+    "lodash": "~4.17.21",
     "mitt": "~2.1.0",
     "mongodb": "~3.5.9",
     "uuid": "~8.3.0",
