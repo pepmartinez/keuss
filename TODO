@@ -4,7 +4,6 @@ bugs
 
 prio 2
 -------------------------------------------------------------
-* add headers as sibling to payload
 * remove elements from queue by id
 
 
