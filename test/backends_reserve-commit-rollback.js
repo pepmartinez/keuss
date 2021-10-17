@@ -56,7 +56,10 @@ var factory = null;
         if (err) return done (err);
         results.should.eql([{
           get: 0,
-          put: 0
+          put: 0,
+          reserve: 0,
+          commit: 0,
+          rollback: 0
         }, 0, 0, 0, null]);
         done();
       });
@@ -66,82 +69,66 @@ var factory = null;
       var q = factory.queue('test_queue_2');
 
       async.series([
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, cb)
-        },
-        function (cb) {
-          q.push({
-            elem: 2,
-            pl: 'twetrwte'
-          }, cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
+        cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
+        cb => q.push({elem: 2, pl: 'twetrwte'}, cb),
+        cb => {
+          q.size ((err, size) => {
             size.should.equal(2);
             cb();
           })
         },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.eql({
-              get: 0,
-              put: 2
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime(), 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c1', cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.eql({
-              get: 1,
-              put: 2
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c2', cb)
-        },
+        cb => q.stats((err, res) => {
+          res.should.eql({
+            get: 0,
+            put: 2,
+            reserve: 0,
+            commit: 0,
+            rollback: 0
+          });
+          cb();
+        }),
+        cb=> q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime(), 500);
+          cb();
+        }),
+        cb => q.pop('c1', cb),
+        cb => q.size((err, size) => {
+          size.should.equal(1);
+          cb();
+        }),
+        cb => q.stats((err, res) => {
+          res.should.eql({
+            get: 1,
+            put: 2,
+            reserve: 0,
+            commit: 0,
+            rollback: 0
+          });
+          cb();
+        }),
+        cb => q.pop('c2', cb),
         function (cb) {
           q.size(function (err, size) {
             size.should.equal(0);
             cb();
           })
         },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.eql({
-              get: 2,
-              put: 2
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            should.equal(res, null);
-            cb();
-          })
-        }
-      ], function (err, results) {
+        cb => setTimeout (cb, 1000),
+        cb => q.stats((err, res) => {
+          res.should.eql({
+            get: 2,
+            put: 2,
+            reserve: 0,
+            commit: 0,
+            rollback: 0
+          });
+          cb();
+        }),
+        cb => q.next_t((err, res) => {
+          should.equal(res, null);
+          cb();
+        })
+      ], (err, results) => {
         done();
       });
     });
@@ -181,7 +168,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 0,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -211,10 +201,13 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 1,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
-          })
+          });
         },
         function (cb) {
           q.next_t(function (err, res) {
@@ -241,7 +234,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 2,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -250,7 +246,7 @@ var factory = null;
           q.next_t(function (err, res) {
             should.equal(res, null);
             cb();
-          })
+          });
         }
       ], function (err, results) {
         done();
@@ -292,7 +288,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 0,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -315,7 +314,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 0,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -338,7 +340,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 0,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -375,7 +380,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 2,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -452,7 +460,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 2,
-              put: 2
+              put: 2,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -505,7 +516,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 0,
-              put: 3
+              put: 3,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -559,7 +573,10 @@ var factory = null;
           q.stats(function (err, res) {
             res.should.eql({
               get: 3,
-              put: 3
+              put: 3,
+              reserve: 0,
+              commit: 0,
+              rollback: 0
             });
             cb();
           })
@@ -574,78 +591,53 @@ var factory = null;
       var id = null;
 
       async.series([
-        function (cb) {
-          q.push({
+        cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
+        cb => q.size((err, size) => {
+          size.should.equal(1);
+          cb();
+        }),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime(), 500);
+          cb();
+        }),
+        cb => q.reserve((err, res) => {
+          id = res._id;
+          res.payload.should.eql({
             elem: 1,
             pl: 'twetrwte'
-          }, cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime(), 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.reserve(function (err, res) {
-            id = res._id;
-            res.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            res.tries.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.commit(id, function (err, res) {
-            res.should.equal(true);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            should.equal(res, null);
-            cb();
-          })
-        }
-      ], function (err, results) {
+          });
+          res.tries.should.equal(0);
+          cb();
+        }),
+        cb => q.size((err, size) => {
+          size.should.equal(0);
+          cb();
+        }),
+        cb => q.totalSize((err, size) => {
+          size.should.equal(1);
+          cb();
+        }),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
+          cb();
+        }),
+        cb => q.commit(id, (err, res) => {
+          res.should.equal(true);
+          cb();
+        }),
+        cb => q.size((err, size) => {
+          size.should.equal(0);
+          cb();
+        }),
+        cb => q.totalSize((err, size) => {
+          size.should.equal(0);
+          cb();
+        }),
+        cb => q.next_t((err, res) => {
+          should.equal(res, null);
+          cb();
+        }),
+      ], (err, results) => {
         done();
       });
     });
@@ -778,7 +770,7 @@ var factory = null;
             should.equal(res, null);
             cb();
           })
-        }
+        },
       ], function (err, results) {
         done();
       });
@@ -849,7 +841,18 @@ var factory = null;
             should.equal(res, null);
             cb();
           })
-        }
+        },
+        cb => setTimeout (cb, 1000),
+        cb => q.stats((err, res) => {
+          res.should.eql({
+            get: 0,
+            put: 1,
+            reserve: 1,
+            commit: 1,
+            rollback: 0
+          });
+          cb();
+        }),
       ], function (err, results) {
         done();
       });
@@ -976,6 +979,17 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_obj, cb),
+        cb => setTimeout (cb, 1000),
+        cb => q.stats((err, res) => {
+          res.should.eql({
+            get: 0,
+            put: 1,
+            reserve: 3,
+            commit: 1,
+            rollback: 2
+          });
+          cb();
+        }),
       ], done);
     });
 

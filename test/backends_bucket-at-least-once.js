@@ -52,7 +52,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       function (cb) {q.totalSize (cb)},
       function (cb) {q.next_t (cb)},
     ], function(err, results) {
-      results.should.eql ([{get: 0, put: 0}, 0, 0, null])
+      results.should.eql ([{get: 0, put: 0, reserve: 0, commit: 0, rollback: 0}, 0, 0, null])
       done();
     });
   });
@@ -70,7 +70,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
         cb();
       })},
       function (cb) {q.stats (function (err, res) {
-        res.should.eql ({get: 0, put: 2});
+        res.should.eql ({get: 0, put: 2, reserve: 0, commit: 0, rollback: 0});
         cb();
       })},
       function (cb) {q.next_t (function (err, res) {
@@ -86,7 +86,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
         cb();
       })},
       function (cb) {q.stats (function (err, res) {
-        res.should.eql ({get: 1, put: 2});
+        res.should.eql ({get: 1, put: 2, reserve: 0, commit: 0, rollback: 0});
         cb();
       })},
       function (cb) {q.pop ('c2', function (err, ret) {
@@ -98,7 +98,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
         cb();
       })},
       function (cb) {q.stats (function (err, res) {
-        res.should.eql ({get: 2, put: 2});
+        res.should.eql ({get: 2, put: 2, reserve: 0, commit: 0, rollback: 0});
         cb();
       })},
     ], function(err, results) {
@@ -139,7 +139,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
         cb();
       })},
       function (cb) {q.stats (function (err, res) {
-        res.should.eql ({get: 2, put: 2});
+        res.should.eql ({get: 2, put: 2, reserve: 0, commit: 0, rollback: 0});
         cb();
       })},
     ], function(err, results) {
@@ -160,7 +160,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => setTimeout (cb, 666),
 
       (cb) => q.size ((err, size) => {size.should.equal (4); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 4}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 4, reserve: 0, commit: 0, rollback: 0}); cb(); }),
 
       (cb) => q.push ({elem:5, pl:'twetrwte'}, cb),
       (cb) => q.push ({elem:6, pl:'twetrwte'}, cb),
@@ -168,7 +168,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => setTimeout (cb, 666),
 
       (cb) => q.size ((err, size) => {size.should.equal (7); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0}); cb(); }),
 
       (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime(), 2000); cb(); }),
 
@@ -181,7 +181,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:7, pl:'twetrwte'}); cb (err); })},
 
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0}); cb(); }),
     ], function(err, results) {
       q.drain();
       done();
@@ -211,7 +211,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
       (cb) => q.totalSize ((err, size) => {size.should.equal (7); cb(); }),
       (cb) => q.schedSize ((err, size) => {size.should.equal (7); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0}); cb(); }),
 
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:5, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:6, pl:'twetrwte'}); cb (err); })},
@@ -222,7 +222,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:4, pl:'twetrwte'}); cb (err); })},
 
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0}); cb(); }),
     ], function(err, results) {
       q.drain();
       done();
@@ -239,13 +239,13 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => setTimeout (cb, 700),
 
       (cb) => q.size ((err, size) => {size.should.equal (2); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 2}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 2, reserve: 0, commit: 0, rollback: 0}); cb(); }),
 
       (cb) => q.push ({elem:3, pl:'twetrwte'}, cb),
       (cb) => setTimeout (cb, 700),
 
       (cb) => q.size ((err, size) => {size.should.equal (3); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 3}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 3, reserve: 0, commit: 0, rollback: 0}); cb(); }),
 
       (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() - 1400, 100); cb(); }),
 
@@ -283,7 +283,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:1, pl:'twetrwte'}); cb (err); })},
 
       (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 5, put: 3}); cb(); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 3, put: 3, reserve: 2, commit: 0, rollback: 2}); cb(); }),
     ], function(err, results) {
       q.drain();
       done();

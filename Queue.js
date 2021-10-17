@@ -42,6 +42,12 @@ class Queue {
     this._stats.incr ('get', 0);
     this._stats.incr ('put', 0);
 
+    if (factory.capabilities().reserve) {
+      this._stats.incr ('reserve', 0);
+      this._stats.incr ('commit', 0);
+      this._stats.incr ('rollback', 0);
+    }
+
     // if true, queue is being drained just before shutdown
     this._in_drain = false;
 
@@ -87,6 +93,9 @@ class Queue {
 
   // Date of next
   next_t (callback) {callback (null, null);}
+
+  // remove (and return if possible) by id
+  remove (id, callback) {callback(null, null);}
 
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
@@ -396,12 +405,18 @@ class Queue {
   // high level commit
   ok (obj, cb) {
     // allow commit with either _id of full object
-    if (obj._id) {
-      this.commit (obj._id, cb);
-    }
-    else {
-      this.commit (obj, cb);
-    }
+    const id = (obj._id ? obj._id : obj);
+    this.commit (id, (err, res) => {
+      if (!err){
+        debug ('%s: ok : committed ok tid %s', this._name, id);
+        this._stats.incr ('commit');
+      }
+      else {
+        debug ('%s: ok : error when committing tid %s: %o', this._name, id, err);
+      }
+
+      cb (err, res);
+    });
   }
 
 
@@ -436,6 +451,7 @@ class Queue {
         if (res) {
           var t = new Date (next_t || null);
           debug ('%s: ko : tid %s rolled back, new mature is %s', this._name, id, t);
+          if (!err) this._stats.incr ('rollback');
           this._signal_insertion (t);
         }
 
@@ -593,9 +609,9 @@ class Queue {
 
       // got an element
       this._next_mature_t = null;
-      this._stats.incr ('get');
+      this._stats.incr (consumer.reserve ? 'reserve': 'get');
 
-      debug ('%s - tid %s: getOrReserve_cb : got result %j', this._name, consumer.tid, result);
+      debug ('%s - tid %s: getOrReserve_cb : got result (%s) %j', this._name, consumer.tid, (consumer.reserve ? 'reserve': 'get'), result);
 
       // clean timeout timer
       if (consumer.cleanup_timeout) {
