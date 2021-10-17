@@ -293,7 +293,7 @@ class BucketSet {
 
     var opts = {
       sort: {mature : 1},
-      returnOriginal: false
+      returnDocument: 'after'
     };
 
     debug ('reading a new bucket');

@@ -84,7 +84,7 @@ class PersistentMongoQueue extends Queue {
 
     var opts = {
       sort: {mature : 1},
-      returnOriginal: true
+      returnDocument: 'before'
     };
 
     this._col.findOneAndUpdate (query, update, opts, (err, result) => {
