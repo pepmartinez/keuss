@@ -88,6 +88,9 @@ queue *on every machine* will be awaken when an insertion happens *on any machin
 
 * Elements put
 * Elements got
+* Elements reserved
+* Elements committed
+* Elements rolled back
 * Paused status
 
 Three options are provided to store the stats:

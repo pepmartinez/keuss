@@ -3,6 +3,13 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.6.6
+  * added reserve, commit, rollback counters to stats
+  * fixed mongo-driver deprecation
+* v1.6.5
+  * dependencies updated
+* v1.6.4
+  * dependencies updated
 * v1.6.3
   * added support for headers (along with payload)
 * v1.6.2
