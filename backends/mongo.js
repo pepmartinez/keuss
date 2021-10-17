@@ -188,6 +188,25 @@ class SimpleMongoQueue extends Queue {
   }
 
 
+  //////////////////////////////////////////////
+  // remove by id
+  remove (id, callback) {
+    try {
+      var query =  {
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id)
+      };
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as remove id: ' + e);
+    }
+
+    this._col.deleteOne (query, {}, (err, result) => {
+      if (err) return callback (err);
+      callback (null, result && (result.deletedCount == 1));
+    });
+  }
+
+
   ///////////////////////////////////////////////////////////////////////////////
   // private parts
 
@@ -231,7 +250,8 @@ class Factory extends QFactory_MongoDB_defaults {
     return {
       sched:    true,
       reserve:  true,
-      pipeline: false
+      pipeline: false,
+      remove:   true
     };
   }
 }
