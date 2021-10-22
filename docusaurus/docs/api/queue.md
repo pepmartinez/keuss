@@ -187,7 +187,12 @@ q.ko (id, next_t, (err, res) => {
 
 Rolls back a reserved element by its id (the id would be at `res._id` on the `res` param of `pop()` operation). This effectively makes the element available again at the queue, marking it to be mature at `next_t` (`next_t` being a millsec-unixtime). If no `next_t` is specified or a `null` is passed, `now()` is assumed.
 
-As with `ok()`, you can use the entire `res` object instead:
+the `res` param of the callback can take the following values:
+* `true` if all went ok and an element was in fact rolled back
+* *nullish* if the element does not exist in the queue
+* `'deadletter'` (as string) if the rollback resulted in the element being moved to deadletter 
+
+As with `ok()`, you can use the entire `res` object as `id`:
 
 ```javascript
 var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
@@ -199,6 +204,10 @@ var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
     ...
   })
   else q.ko (res, (err, res) => {
+    if (res === 'deadletter') {
+      // moved to deadletter
+      ...
+    }
     ...
   })
 });

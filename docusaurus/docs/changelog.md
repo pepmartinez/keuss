@@ -3,6 +3,8 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.6.7
+  * small fix on deadetter signalling   
 * v1.6.6
   * added reserve, commit, rollback counters to stats
   * fixed mongo-driver deprecation

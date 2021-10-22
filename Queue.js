@@ -720,11 +720,11 @@ class Queue {
       this._factory.deadletter_queue ().push (obj.payload, (err, res) => {
         if (err) {
           debug ('while moving %s to deadletter: %j', obj._id, err);
-          return cb (err);
+          return cb (err, 'deadletter');
         }
         else {
           debug ('moved %s to deadletter with _id %s', obj._id, res);
-          return cb (null, false);
+          return cb (null, 'deadletter');
         }
       });
     });
