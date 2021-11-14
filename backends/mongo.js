@@ -193,7 +193,8 @@ class SimpleMongoQueue extends Queue {
   remove (id, callback) {
     try {
       var query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id)
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
+        reserved: {$exists: false}
       };
     }
     catch (e) {
