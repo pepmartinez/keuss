@@ -235,6 +235,29 @@ class PipelinedMongoQueue extends Queue {
 
 
   //////////////////////////////////////////////
+  // remove by id
+  remove (id, callback) {
+    var query;
+
+    try {
+      query =  {
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
+        _q: this._name,
+        reserved: {$exists: false}
+      };
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as remove id: ' + e);
+    }
+
+    this._col.deleteOne (query, {}, (err, result) => {
+      if (err) return callback (err);
+      callback (null, result && (result.deletedCount == 1));
+    });
+  }
+
+
+  //////////////////////////////////////////////
   _embed_update_for_payload (dst, src) {
     _.each (src, (v, k) => {
       if (k.startsWith ('$')) {

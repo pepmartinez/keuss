@@ -209,6 +209,34 @@ class PersistentMongoQueue extends Queue {
   }
 
 
+  //////////////////////////////////////////////
+  // remove by id
+  remove (id, callback) {
+    var query;
+
+    try {
+      query =  {
+        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
+        reserved: {$exists: false}
+      };
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as remove id: ' + e);
+    }
+
+    var updt = {
+      $set:   {processed: new Date (), removed: true},
+    };
+
+    var opts = {};
+
+    this._col.updateOne (query, updt, opts, (err, result) => {
+      if (err) return callback (err);
+      callback (null, result && (result.modifiedCount == 1));
+    });
+  }
+
+
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
