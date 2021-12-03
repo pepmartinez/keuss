@@ -160,7 +160,8 @@ class Factory extends QFactory_MongoDB_defaults {
     return {
       sched:    true,
       reserve:  true,
-      pipeline: true
+      pipeline: true,
+      remove:   true
     };
   }
 
