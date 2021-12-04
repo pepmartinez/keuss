@@ -11,7 +11,8 @@ const _s_lua_code_push = `
   redis.call ('HSET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], ARGV[1], ARGV[3])
 
   -- insert id+mature in index
-  return redis.call ('ZADD', 'keuss:q:ordered_queue:index:' .. KEYS[1], ARGV[2], ARGV[1])
+  redis.call ('ZADD', 'keuss:q:ordered_queue:index:' .. KEYS[1], ARGV[2], ARGV[1])
+  return ARGV[1]
 `;
 
 const _s_lua_code_pop = `
