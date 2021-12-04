@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkkeuss_docusaurus=self.webpackChunkkeuss_docusaurus||[]).push([[124],{704:function(s){s.exports=JSON.parse('{"allTagsPath":"/keuss/blog/tags","slug":"/keuss/blog/tags/docusaurus","name":"docusaurus","count":1,"permalink":"/keuss/blog/tags/docusaurus"}')}}]);
