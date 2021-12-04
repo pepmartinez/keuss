@@ -87,7 +87,7 @@ const _s_lua_code_commit = `
   local id = ARGV[1]
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
 
-  if (val == nil) then
+  if (not(val)) then
     return nil
   end
 
@@ -114,7 +114,7 @@ const _s_lua_code_rollback = `
   local id = ARGV[1]
   local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
 
-  if (val==false) then
+  if (not(val)) then
     return nil
   end
 
@@ -136,6 +136,31 @@ const _s_lua_code_rollback = `
   return id
 `;
 
+const _s_lua_code_remove = `
+  -- qname in KEYS[1]
+  -- id in ARGV[1]
+
+  local id = ARGV[1]
+  local val = redis.call ('HGET', 'keuss:q:ordered_queue:hash:' .. KEYS[1], id)
+
+  if (not (val)) then
+    return nil
+  end
+
+  -- check if it was reserved
+  local obj_val = cjson.decode (val)
+
+  if (obj_val.reserved) then
+    -- it is reserved
+    return nil
+  end
+
+  -- delete from index, hash
+  redis.call ('ZREM', 'keuss:q:ordered_queue:index:' .. KEYS[1], id)
+  redis.call ('HDEL', 'keuss:q:ordered_queue:hash:' ..  KEYS[1], id)
+
+  return id
+`;
 
 
 class RedisOrderedQueue {
@@ -165,6 +190,7 @@ class RedisOrderedQueue {
     this._rediscl.roq_push (this._name, pl._id, pl.mature, JSON.stringify (pl), done);
   }
 
+
   //////////////////////////////////
   pop (done) {
   //////////////////////////////////
@@ -184,6 +210,7 @@ class RedisOrderedQueue {
       done (null, obj);
     });
   }
+
 
   //////////////////////////////////
   reserve (incr, done) {
@@ -205,17 +232,20 @@ class RedisOrderedQueue {
     });
   }
 
+
   //////////////////////////////////
   commit (id, done) {
   //////////////////////////////////
     this._rediscl.roq_commit (this._name, id, done);
   }
 
+
   //////////////////////////////////
   rollback (id, next_t, done) {
   //////////////////////////////////
     this._rediscl.roq_rollback (this._name, id, next_t || (new Date().getTime ()), done);
   }
+
 
   //////////////////////////////////
   // queue size including non-mature elements
@@ -224,12 +254,14 @@ class RedisOrderedQueue {
     this._rediscl.zcard ('keuss:q:ordered_queue:index:' + this._name,  callback);
   }
 
+
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
   //////////////////////////////////
     this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, '-inf', new Date().getTime(), callback);
   }
+
 
   //////////////////////////////////
   // queue size of non-mature elements only
@@ -238,11 +270,19 @@ class RedisOrderedQueue {
     this._rediscl.zcount ('keuss:q:ordered_queue:index:' + this._name, new Date().getTime(), '+inf', callback);
   }
 
+
   //////////////////////////////////
   // get first
   peek (callback) {
   //////////////////////////////////
     this._rediscl.zrange ('keuss:q:ordered_queue:index:' + this._name, 0, 0, 'WITHSCORES', callback);
+  }
+
+
+  //////////////////////////////////
+  remove (id, done) {
+  //////////////////////////////////
+    this._rediscl.roq_remove (this._name, id, done);
   }
 }
 
@@ -256,7 +296,9 @@ class Factory {
     this._rediscl.defineCommand('roq_reserve',  {numberOfKeys: 1, lua: _s_lua_code_reserve});
     this._rediscl.defineCommand('roq_commit',   {numberOfKeys: 1, lua: _s_lua_code_commit});
     this._rediscl.defineCommand('roq_rollback', {numberOfKeys: 1, lua: _s_lua_code_rollback});
+    this._rediscl.defineCommand('roq_remove',   {numberOfKeys: 1, lua: _s_lua_code_remove});
   }
+
 
   roq (name) {
     return new RedisOrderedQueue (name, this);

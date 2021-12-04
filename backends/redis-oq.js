@@ -106,6 +106,16 @@ class RedisOQ extends Queue {
       callback (null, new Date (parseInt (res[1])));
     });
   }
+
+
+  //////////////////////////////////////////////
+  // remove by id
+  remove (id, callback) {
+    this._roq.remove (id, (err, res) => {
+      if (err) return callback (err);
+      return callback (null, res != null)
+    });
+  }
 };
 
 
@@ -139,7 +149,8 @@ class Factory extends QFactory {
     return {
       sched:    true,
       reserve:  true,
-      pipeline: false
+      pipeline: false,
+      remove:   true
     };
   }
 }

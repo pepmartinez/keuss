@@ -6,7 +6,7 @@ var LocalSignal = require ('../signal/local');
 var MemStats =    require ('../stats/mem');
 
 const MongoClient = require ('mongodb').MongoClient;
-
+const Redis =       require("ioredis");
 
 function stats (q, cb) {
   async.series ({
@@ -81,9 +81,11 @@ function release_mq_factory (q, factory, cb) {
   {label: 'Simple MongoDB',     mq: require ('../backends/mongo')},
   {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')},
   {label: 'Tape MongoDB',       mq: require ('../backends/ps-mongo')},
-//  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
+  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
   {label: 'MongoDB SafeBucket', mq: require ('../backends/bucket-mongo-safe')}
 ].forEach(function (MQ_item) {
+  var is_redis = (MQ_item.label == 'Redis OrderedQueue');
+
   describe('remove operations on ' + MQ_item.label + ' queue backend', () => {
     const MQ = MQ_item.mq;
 
@@ -96,11 +98,25 @@ function release_mq_factory (q, factory, cb) {
       cb => MongoClient.connect ('mongodb://localhost/keuss_test_backends_remove', (err, cl) => {
         if (err) return done (err);
         cl.db().dropDatabase (() => cl.close (cb))
-      })
+      }),
+      cb => {
+        const redis = new Redis();
+        redis.keys ('*', (err, keys) => {
+          const tasks = [];
+          _.each (keys, k => tasks.push (cb => redis.del (k, cb))); 
+          async.series (tasks, (err, res) => {
+            redis.disconnect();
+            cb (err, res);
+          });
+        });
+      }
     ], done));
 
 
     it('fails on invalid id', done => {
+      // skip if redis
+      if (is_redis) return done();
+
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
         (factory, cb) => {
@@ -149,7 +165,7 @@ function release_mq_factory (q, factory, cb) {
           res[2].should.eql ({
             stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
             tsize: 1,
-            rsize: 0
+            rsize: is_redis ? null : 0
           })
           cb (err, q, factory);
         }),
@@ -167,7 +183,7 @@ function release_mq_factory (q, factory, cb) {
           res[0].should.eql ({
             stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
             tsize: 0,
-            rsize: 0
+            rsize: is_redis ? null : 0
           });
           cb (err, q, factory);
         }),
@@ -214,7 +230,7 @@ function release_mq_factory (q, factory, cb) {
           res[0].should.eql ({
             stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 0 },
             tsize: 1,
-            rsize: 1
+            rsize: is_redis ? null : 1
           });
           cb (err, q, factory);
         }),
@@ -268,7 +284,7 @@ function release_mq_factory (q, factory, cb) {
           res[0].should.eql ({
             stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 1 },
             tsize: 0,
-            rsize: 0
+            rsize: is_redis ? null : 0
           });
           cb (err, q, factory);
         }),
