@@ -581,7 +581,7 @@ class BucketMongoSafeQueue extends Queue {
       __h: (entry.hdrs || {})
     });
 
-    var id = this._insert_bucket._id.toString () + ':' + this._insert_bucket.b.length;
+    var id = this._insert_bucket._id.toString () + ':' + (this._insert_bucket.b.length - 1);
     debug ('added to bucket, %s', id);
 
     if (this._insert_bucket.b.length >= this._bucket_max_size) {
@@ -734,6 +734,41 @@ class BucketMongoSafeQueue extends Queue {
       if (err) return callback (err);
       debug ('obtaining next_t: got %o', result && result.mature);
       callback (null, result && result.mature);
+    });
+  }
+
+
+
+  //////////////////////////////////////////////
+  // remove by id
+  remove (id, callback) {
+    try {
+      var aid = id.split (':');
+      var bucket_id =  new mongo.ObjectID (aid[0]);
+      var bucket_idx = parseInt(aid[1]);
+    }
+    catch (e) {
+      return callback ('id [' + id + '] can not be used as remove id: ' + e);
+    }
+
+    var upd = {
+      $set: {},
+      $inc: {n: -1}
+    };
+
+    upd.$set['b.' + bucket_idx] = null;
+
+    var q = {
+      _id: bucket_id,
+      reserved: {$exists: false},
+    };
+
+    q['b.' + bucket_idx] = {$type: 3}; // b.N is an object
+
+    debug ('update on bucket: q is %o, upd is %o', q, upd);
+    this._col.updateOne (q, upd, (err, result) => {
+      if (err) return callback (err);
+      callback (null, result && (result.modifiedCount == 1));
     });
   }
 
@@ -907,7 +942,8 @@ class Factory extends QFactory_MongoDB_defaults {
     return {
       sched:    false,
       reserve:  true,
-      pipeline: false
+      pipeline: false,
+      remove:   true
     };
   }
 }

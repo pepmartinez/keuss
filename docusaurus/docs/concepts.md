@@ -13,6 +13,7 @@ A **Queue** is more of an interface, a definition of what it can do. Keuss queue
 * Get an element, and block for some specified time if no element is available.
 * Reserve an element, and block for some specified time if no element is available.
 * Commit (remove) or rollback (return back) a previously reserved element.
+* Remove an element by its id (which was returned in the insertion)
 * Get element count (it will not include the elements scheduled in the future).
 * Get element count whose not-before datetime is in the future (scheduled elements).
 * Get usage stats: elements inserted, elements extracted.
@@ -54,15 +55,15 @@ As mentioned before, persistence and High Availability (HA) depends exclusively 
 
 The following table shows the capabilities of each backend:
 
-backend           | delay/schedule | reserve/commit | pipelining | history | throughput |
-------------------|:--------------:|:--------------:|:----------:|:-------:|:-----:|
-redis-list        | - | - | - | - | ++++
-redis-oq          | x | x | - | - | +++
-mongo             | x | x | - | - | ++
-pl-mongo          | x | x | x | - | +
-ps-mongo          | x | x | - | x | ++
-bucket-mongo      | - | - | - | - | +++++
-bucket-mongo-safe | x | x | - | - | +++++
+backend           | delay/schedule | reserve/commit | pipelining | history | remove | throughput |
+------------------|:--------------:|:--------------:|:----------:|:-------:|:------:|:----------:|
+redis-list        | - | - | - | - | - | ++++
+redis-oq          | x | x | - | - | x | +++
+mongo             | x | x | - | - | x | ++
+pl-mongo          | x | x | x | - | x | +
+ps-mongo          | x | x | - | x | x | ++
+bucket-mongo      | - | - | - | - | - | +++++
+bucket-mongo-safe | x | x | - | - | x | +++++
 
 ## Signaller
 
