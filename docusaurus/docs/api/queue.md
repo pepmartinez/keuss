@@ -217,6 +217,20 @@ var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
 You must pass the entire `res` object for the [deadletter](../api/factory#dead-letter) feature to work; even if activated at the factory, `ko()` will not honor deadletter if you only pass the `res._id` as `id`.
 :::
 
+### `remove`: Delete elements from queue by id
+
+```javascript
+q.remove (id, (err, res) => {
+  ...
+})
+```
+
+Remvoes an element from a queue, by using the id returned at insertion time (backends supporting `remove` will return an in upon insertion). A reserved element can not be removed, and will be considered as nonexistent
+
+the `res` param of the callback can take the following values:
+* `true` if all went ok and the element was removed
+* *nullish* if the element does not exist in the queue
+
 ### `drain`: Drain queue
 
 ```javascript
