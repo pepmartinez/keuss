@@ -3,7 +3,9 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
-* v.1.6.8
+* v1.6.9
+  * fix glitch in remove item on tape mongo (ps-mongo)
+* v1.6.8
   * added remove-by-id support 
 * v1.6.7
   * small fix on deadetter signalling   

@@ -19,39 +19,6 @@ function stats (q, cb) {
   });
 }
 
-function pop (q, stage, cb) {
-  q.pop('c1', { reserve: true }, (err, res) => {
-    stage.obj = res;
-//    console.log('reserved element %o', res);
-    cb(err);
-  });
-}
-
-function reject (q, stage, cb) {
-  var next_t = new Date().getTime() + 2000;
-
-  q.ko (stage.obj, next_t, (err, res) => {
-    if (err) {
-//      console.error ('error in rollback of %s: %j', stage.obj._id, err);
-      return cb (err);
-    }
-
-//    console.log('rolled back element %s: %o', stage.obj._id, res);
-    cb();
-  });
-}
-
-function accept (q, stage, cb) {
-  q.ok (stage.obj, (err, res) => {
-    if (err) {
-//      console.error ('error in rollback of %s: %j', stage.obj._id, err);
-      return cb (err);
-    }
-
-//    console.log('commited element %s: %j', stage.obj._id, res);
-    cb();
-  });
-}
 
 function get_mq_factory (MQ, opts, cb) {
   const common_opts = {
@@ -283,6 +250,60 @@ function release_mq_factory (q, factory, cb) {
         ], (err, res) => {
           res[0].should.eql ({
             stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 1 },
+            tsize: 0,
+            rsize: is_redis ? null : 0
+          });
+          cb (err, q, factory);
+        }),
+        (q, factory, cb) => {
+          release_mq_factory (q, factory, cb);
+        }
+      ], done);
+    });
+
+
+    it('does fail trying to delete an already-deleted element', done => {
+      const ctx = {};
+      async.waterfall ([
+        cb => get_mq_factory (MQ, {}, cb),
+        (factory, cb) => {
+          const q = factory.queue('test_queue_remove', {});
+          cb (null, q, factory);
+        },
+        (q, factory, cb) => async.series ([
+          cb => q.push ({a: 1, b: 'oo'}, cb),
+          cb => setTimeout (cb, 1000),
+          cb => stats (q, cb)
+        ], (err, res) => {
+          ctx.id = res[0];
+          ctx.id.should.not.be.null();
+          res[2].should.eql ({
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
+            tsize: 1,
+            rsize: is_redis ? null : 0
+          })
+          cb (err, q, factory);
+        }),
+        (q, factory, cb) => {
+          q.remove (ctx.id, (err, res) => {
+            should (err).be.null();
+            res.should.be.true();
+            cb (err, q, factory);
+          });
+        },
+        (q, factory, cb) => {
+          q.remove (ctx.id, (err, res) => {
+            should (err).be.null();
+            res.should.be.false();
+            cb (err, q, factory);
+          });
+        },
+        (q, factory, cb) => async.series ([
+          cb => stats (q, cb),
+          cb => setTimeout (cb, 1000),
+        ], (err, res) => {
+          res[0].should.eql ({
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
             tsize: 0,
             rsize: is_redis ? null : 0
           });

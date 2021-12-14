@@ -217,6 +217,7 @@ class PersistentMongoQueue extends Queue {
     try {
       query =  {
         _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
+        processed: {$exists: false},
         reserved: {$exists: false}
       };
     }
