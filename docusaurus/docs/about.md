@@ -2,6 +2,7 @@
 id: about
 title: About
 sidebar_label: About
+slug: /
 ---
 
 Keuss is an attempt or experiment to provide a serverless, persistent and high-available queue middleware supporting delays/schedule, using mongodb and redis to provide most of the backend needs. As of now, it has evolved into a rather capable and complete queue middleware.
