@@ -3,6 +3,9 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.6.10
+  * updated deps
+  * add 'deadletter' to stats, for elements moved to deadletter queue
 * v1.6.9
   * fix glitch in remove item on tape mongo (ps-mongo)
 * v1.6.8
