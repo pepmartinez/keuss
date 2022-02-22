@@ -27,10 +27,10 @@
   "license": "GPL-3.0",
   "dependencies": {
     "@nodebb/mubsub": "~1.7.1",
-    "async": "~3.2.1",
-    "async-lock": "~1.3.0",
-    "debug": "~4.3.2",
-    "ioredis": "~4.27.10",
+    "async": "~3.2.3",
+    "async-lock": "~1.3.1",
+    "debug": "~4.3.3",
+    "ioredis": "~4.28.5",
     "lodash": "~4.17.21",
     "mitt": "~3.0.0",
     "mongodb": "~3.6.12",
@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "chance": "~1.1.8",
-    "mocha": "~9.1.2",
+    "mocha": "~9.2.1",
     "should": "~13.2.3"
   },
   "scripts": {
