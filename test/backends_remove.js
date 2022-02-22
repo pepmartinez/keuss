@@ -130,7 +130,7 @@ function release_mq_factory (q, factory, cb) {
           ctx.id = res[0];
           ctx.id.should.not.be.null();
           res[2].should.eql ({
-            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0, deadletter: 0 },
             tsize: 1,
             rsize: is_redis ? null : 0
           })
@@ -148,7 +148,7 @@ function release_mq_factory (q, factory, cb) {
           cb => setTimeout (cb, 1000),
         ], (err, res) => {
           res[0].should.eql ({
-            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0, deadletter: 0 },
             tsize: 0,
             rsize: is_redis ? null : 0
           });
@@ -195,7 +195,7 @@ function release_mq_factory (q, factory, cb) {
           cb => setTimeout (cb, 1000),
         ], (err, res) => {
           res[0].should.eql ({
-            stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 0 },
+            stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 0, deadletter: 0 },
             tsize: 1,
             rsize: is_redis ? null : 1
           });
@@ -249,7 +249,7 @@ function release_mq_factory (q, factory, cb) {
           cb => setTimeout (cb, 1000),
         ], (err, res) => {
           res[0].should.eql ({
-            stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 1 },
+            stats: { get: 0, put: 1, reserve: 1, commit: 0, rollback: 1, deadletter: 0 },
             tsize: 0,
             rsize: is_redis ? null : 0
           });
@@ -278,7 +278,7 @@ function release_mq_factory (q, factory, cb) {
           ctx.id = res[0];
           ctx.id.should.not.be.null();
           res[2].should.eql ({
-            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0, deadletter: 0 },
             tsize: 1,
             rsize: is_redis ? null : 0
           })
@@ -303,7 +303,7 @@ function release_mq_factory (q, factory, cb) {
           cb => setTimeout (cb, 1000),
         ], (err, res) => {
           res[0].should.eql ({
-            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0 },
+            stats: { get: 0, put: 1, reserve: 0, commit: 0, rollback: 0, deadletter: 0 },
             tsize: 0,
             rsize: is_redis ? null : 0
           });

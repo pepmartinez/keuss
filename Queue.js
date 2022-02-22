@@ -46,6 +46,7 @@ class Queue {
       this._stats.incr ('reserve', 0);
       this._stats.incr ('commit', 0);
       this._stats.incr ('rollback', 0);
+      this._stats.incr ('deadletter', 0);
     }
 
     // if true, queue is being drained just before shutdown
@@ -724,6 +725,7 @@ class Queue {
         }
         else {
           debug ('moved %s to deadletter with _id %s', obj._id, res);
+          this._stats.incr ('deadletter');
           return cb (null, 'deadletter');
         }
       });

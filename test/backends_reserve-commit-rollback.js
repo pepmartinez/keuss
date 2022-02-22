@@ -59,7 +59,8 @@ var factory = null;
           put: 0,
           reserve: 0,
           commit: 0,
-          rollback: 0
+          rollback: 0, 
+          deadletter: 0
         }, 0, 0, 0, null]);
         done();
       });
@@ -83,7 +84,8 @@ var factory = null;
             put: 2,
             reserve: 0,
             commit: 0,
-            rollback: 0
+            rollback: 0, 
+            deadletter: 0
           });
           cb();
         }),
@@ -102,7 +104,8 @@ var factory = null;
             put: 2,
             reserve: 0,
             commit: 0,
-            rollback: 0
+            rollback: 0,
+            deadletter: 0
           });
           cb();
         }),
@@ -120,7 +123,8 @@ var factory = null;
             put: 2,
             reserve: 0,
             commit: 0,
-            rollback: 0
+            rollback: 0,
+            deadletter: 0
           });
           cb();
         }),
@@ -171,7 +175,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -204,7 +209,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           });
@@ -237,7 +243,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -291,7 +298,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -317,7 +325,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -343,7 +352,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -383,7 +393,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -463,7 +474,8 @@ var factory = null;
               put: 2,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -519,7 +531,8 @@ var factory = null;
               put: 3,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -576,7 +589,8 @@ var factory = null;
               put: 3,
               reserve: 0,
               commit: 0,
-              rollback: 0
+              rollback: 0,
+              deadletter: 0
             });
             cb();
           })
@@ -849,7 +863,8 @@ var factory = null;
             put: 1,
             reserve: 1,
             commit: 1,
-            rollback: 0
+            rollback: 0,
+            deadletter: 0
           });
           cb();
         }),
@@ -986,7 +1001,8 @@ var factory = null;
             put: 1,
             reserve: 3,
             commit: 1,
-            rollback: 2
+            rollback: 2,
+            deadletter: 0
           });
           cb();
         }),
