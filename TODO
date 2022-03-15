@@ -1,5 +1,6 @@
 bugs
 -------------------------------------------------------------
+* deadlettering on all backend but mongo-pipeline does not preserve hdrs
 
 prio 1
 -------------------------------------------------------------
