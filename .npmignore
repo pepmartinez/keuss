@@ -1,3 +1,5 @@
 wrk-put.lua
 .vscode/
-
+docusaurus
+coverage
+.nyc_output
