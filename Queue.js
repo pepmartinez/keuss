@@ -433,14 +433,14 @@ class Queue {
     let id = (obj._id ? obj._id : obj);
 
     if (
-      (obj.tries) &&
-      (this._factory.deadletter_queue ()) &&
-      (this._factory.max_ko ()) &&
-      (obj.tries > this._factory.max_ko ())
+      (obj.tries) &&                            // only if we got tries
+      (this._factory.deadletter_queue ()) &&    // AND the factory has a deadletter queue
+      (this._factory.max_ko ()) &&              // AND thee's a max ko attempts 
+      (obj.tries > this._factory.max_ko ()) &&  // AND we got enough tries
+      (this.name () != '__deadletter__')        // and this queue is not deadletter already
     ) {
       debug ('%s: too many retries (%d), moving to deadletter', obj._id, obj.tries);
       this._move_to_deadletter (obj, cb);
-      // TODO add from-what-queue to deadletter elements
     }
     else {
       this.rollback (id, next_t, (err, res) => {
@@ -710,15 +710,23 @@ class Queue {
   /////////////////////////////////////////////
   _move_to_deadletter (obj, cb) {
     // commit and move to deadletter
-    // ALSO NOT IN deadletter queue (to void loop)
     // commit element in origin queue, push in deadletter afterwards
+    const opts = {
+      hdrs: _.clone (obj.hdrs || {})
+    };
+
+    // add some extra x-dl-* headers
+    opts.hdrs['x-dl-from-queue'] = this.name ();
+    opts.hdrs['x-dl-t'] = new Date().toISOString ();
+    opts.hdrs['x-dl-tries'] = obj.tries;
+
     this.commit (obj._id, err => {
       if (err) {
         debug ('while committing %s prior to moving to deadletter: %j', obj._id, err);
         return cb (err);
       }
 
-      this._factory.deadletter_queue ().push (obj.payload, (err, res) => {
+      this._factory.deadletter_queue ().push (obj.payload, opts, (err, res) => {
         if (err) {
           debug ('while moving %s to deadletter: %j', obj._id, err);
           return cb (err, 'deadletter');

@@ -167,6 +167,10 @@ class PipelinedMongoQueue extends Queue {
       this._embed_update_for_payload (upd, opts.update);
     }
 
+    if (opts.hdrs) {
+      _.each (opts.hdrs, (v, k) => upd.$set['hdrs.' + k] = v);
+    }
+
     this._col.updateOne (q, upd, {}, (err, result) => {
       if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
@@ -274,9 +278,15 @@ class PipelinedMongoQueue extends Queue {
 
 
   //////////////////////////////////////////////
-  // redefnition
+  // redefinition from Queue
   _move_to_deadletter (obj, cb) {
-    this.pl_step (obj._id, this._factory.deadletter_queue (), {}, (err, res) => {
+    const hdrs = {
+      'x-dl-from-queue': this.name (),
+      'x-dl-t': new Date().toISOString (),
+      'x-dl-tries': obj.tries
+    };
+
+    this.pl_step (obj._id, this._factory.deadletter_queue (), {hdrs}, (err, res) => {
       if (err) return cb (err);
       this._stats.incr ('get');
       this._factory.deadletter_queue ()._stats.incr ('put');

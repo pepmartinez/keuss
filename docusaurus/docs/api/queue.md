@@ -225,7 +225,7 @@ q.remove (id, (err, res) => {
 })
 ```
 
-Remvoes an element from a queue, by using the id returned at insertion time (backends supporting `remove` will return an in upon insertion). A reserved element can not be removed, and will be considered as nonexistent
+Removes an element from a queue, by using the id returned at insertion time (backends supporting `remove` will return an in upon insertion). A reserved element can not be removed, and will be considered as nonexistent
 
 the `res` param of the callback can take the following values:
 * `true` if all went ok and the element was removed

@@ -111,6 +111,8 @@ function release_mq_factory (q, factory, cb) {
         pl: 'twetrwte'
       };
 
+      const hdrs = {aaa: 'qw', bbb: '666'};
+
       async.waterfall ([
         cb => get_mq_factory (MQ, factory_opts, cb),
         (factory, cb) => {
@@ -120,7 +122,7 @@ function release_mq_factory (q, factory, cb) {
 
           async.race ([
             cb => async.series([
-              cb => q.push (pl, cb),
+              cb => q.push (pl, {hdrs}, cb),
               cb => pop (q, stage, cb),
               cb => reject (q, stage, (err) => {tries++;cb()}),
               cb => pop (q, stage, cb),
@@ -139,6 +141,13 @@ function release_mq_factory (q, factory, cb) {
             }),
             cb => factory.deadletter_queue().pop('c2', (err, res) => {
               res.payload.should.eql (pl);
+              res.hdrs.should.match ({
+                aaa: "qw",
+                bbb: "666",
+                'x-dl-from-queue': "test_queue_deadletter",
+                'x-dl-t': /.+/,
+                'x-dl-tries': 4
+              });
               tries.should.equal (5);
               cb (err);
             })

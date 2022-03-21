@@ -74,6 +74,11 @@ This object must not be empty, and can contain the following keys:
 All storage backends support deadletter. In `ps-mongo` the move-to-deadletter (as it is the case with other move-to-queue operations) is atomic; in the rest, the element is first committed in the original queue and then pushed inside deadletter.
 :::
 
+When an element is moved to deadletter, the original headers are kept, and others are added:
+* `x-dl-from-queue`: name of the queue the message was in
+* `x-dl-t`: ISO timestamp of the move-to-deadletter operation
+* `x-dl-tries`: number of tries at the moment of move-to-deadletter
+
 ## `queue`: Queue creation
 
 ```javascript

@@ -106,13 +106,21 @@ pl_step (id, next_queue, opts, callback)
 ```
 
 * `id` is a previously reserved Id
-* `next_queue` is the queue to (atomically) move the item to
-* `opts` are extra options for the operation:
-  * `mature`: Date instance with the not-before timestamp for the item, to be used when inserted into `next_queue`. Defaults to `now()`
-  * `tries`: number of tries for the item, to be used when inserted into next_queue. Defaults to `0`
-  * `payload`: if specified, use this as item's payload when moving to next_queue. This totally substitutes the previous payload
-  * `update`: Optional object containing [mongodb update operations](https://docs.mongodb.com/manual/reference/operator/update/). Those are mapped to be applied to the message's `payload`. For example, in the example above:
 
+* `next_queue` is the queue to (atomically) move the item to
+
+* `opts` are extra options for the operation:
+  
+  * `mature`: Date instance with the not-before timestamp for the item, to be used when inserted into `next_queue`. Defaults to `now()`
+  
+  * `tries`: number of tries for the item, to be used when inserted into next_queue. Defaults to `0`
+  
+  * `payload`: if specified, use this as item's payload when moving to next_queue. This totally substitutes the previous payload
+  
+  * `hdrs`: a key-value object containing extra headers to set on the message. Headers can only be set, not unset or removed
+  
+  * `update`: Optional object containing [mongodb update operations](https://docs.mongodb.com/manual/reference/operator/update/). Those are mapped to be applied to the message's `payload`. For example, in the example above:
+    
     ```javascript
     done (null, {
       update: {
@@ -120,8 +128,8 @@ pl_step (id, next_queue, opts, callback)
       }
     });
     ```
-
-    the '`update` parameter of the second argument to `done()` is passed internally to `pl_step()` as `opts.update`: this would cause the message's `payload.passed` to be set to `true` even if there's no explicit mention of `payload`
+    
+    the `update` parameter of the second argument to `done()` is passed internally to `pl_step()` as `opts.update`: this would cause the message's `payload.passed` to be set to `true` even if there's no explicit mention of `payload`
 
 The whole `pl_step()` operation is guaranteed to be atomic; this includes applying of `opts.payload` or `opts.update` if present
 
