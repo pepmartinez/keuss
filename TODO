@@ -1,6 +1,5 @@
 bugs
 -------------------------------------------------------------
-* deadlettering on all backend but mongo-pipeline does not preserve hdrs
 
 prio 1
 -------------------------------------------------------------
@@ -9,7 +8,6 @@ prio 1
 * pipelines
   + add some commonplace transforms (etl-like)
   + create a server for that, allow processor code defined externally
-
 
 prio 0
 -----------------------------------------------------------------
