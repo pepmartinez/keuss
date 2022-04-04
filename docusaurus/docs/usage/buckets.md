@@ -16,7 +16,6 @@ In addition to the general options, the factory accepts the following extra opti
 
 * `bucket_max_size`: maximum number of elements in a bucket, defaults to 1024
 * `bucket_max_wait`: milliseconds to wait before flushing a push bucket: pushes are buffered in a push bucket, which are flushed when they're full (reach `bucket_max_size` elements). If this amount of millisecs go by and the push bucket is not yet full, it is flushed as is. Defaults to 500.
-* `reserve_delay`: number of seconds a bucket keeps its 'reserved' status when read from mongodb. Defaults to 30.
 * `state_flush_period`: changes in state on each active/read bucket are flushed to mongodb every those milliseconds. Defaults to 500.
 * `reject_delta_base`, `reject_delta_factor`: if no call to `ko` provide a `next_t`, the backend will set one using a simple grade-1 polynom, in the form of `reject_delta_factor * tries + reject_delta_base`, in millisecs. They default to `10000` and `((reserve_delay * 1000) || 30000)` respectively
 * `reject_timeout_grace`: number of seconds to wait since a bucket is reserved/read until it is considered timed out; after this, what is left of the bucket is rejected/retried. Defaults to (`reserve_delay` * `0.8`)

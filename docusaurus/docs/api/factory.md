@@ -19,6 +19,7 @@ MQ (opts, (err, factory) => {
 where `opts` is an object containing initialization options. Common properties to all backends are:
 
 * `name`: Name for the factory, defaults to 'N'.
+* `reserve_delay`: number of seconds to keep 'reserved' status after a reserve operation. Defaults to 120.
 * `stats`:
   * `provider`: stats backend to use, as result of `require ('keuss/stats/<provider>')`. Defaults to `require ('keuss/stats/mem')`.
   * `opts`: options for the provider.
@@ -90,7 +91,8 @@ Where:
 
 * `name`: string to be used as queue name. Queues with the same name are in fact the same queue if they're backed in the same factory type using the same initialization data (mongodb url or redis conn-data).
 * `options`: the options passed at backend initialization are used as default values:
-  * pollInterval: rearm or poll period in millisecs for get operations, defaults to 15000 (see [Working with no signallers](../usage/no-signaller)).
+  * `pollInterval`: rearm or poll period in millisecs for get operations, defaults to 15000 (see [Working with no signallers](../usage/no-signaller)).
+  * `reserve_delay`: number of seconds to keep 'reserved' status after a reserve operation. Defaults to 120.
   * `signaller`: signaller to use for the queue.
     * `provider`: signaller factory.
     * `opts`: options for the signaller factory (see [Signaler](signal)).
