@@ -52,6 +52,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       function (cb) {q.totalSize (cb)},
       function (cb) {q.next_t (cb)},
     ], function(err, results) {
+      if (err) return done (err);
       results.should.eql ([{get: 0, put: 0, reserve: 0, commit: 0, rollback: 0, deadletter: 0}, 0, 0, null])
       done();
     });
@@ -67,15 +68,15 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       function (cb) {setTimeout (cb, 1111)},
       function (cb) {q.size (function (err, size) {
         size.should.equal (2);
-        cb();
+        cb(err);
       })},
       function (cb) {q.stats (function (err, res) {
         res.should.eql ({get: 0, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0});
-        cb();
+        cb(err);
       })},
       function (cb) {q.next_t (function (err, res) {
         res.getTime().should.be.approximately(new Date().getTime(), 2000);
-        cb();
+        cb(err);
       })},
       function (cb) {q.pop ('c1', function (err, ret) {
         ret.payload.should.eql ({elem:1, pl:'twetrwte'});
@@ -83,11 +84,11 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       })},
       function (cb) {q.size (function (err, size) {
         size.should.equal (0);
-        cb();
+        cb(err);
       })},
       function (cb) {q.stats (function (err, res) {
         res.should.eql ({get: 1, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0});
-        cb();
+        cb(err);
       })},
       function (cb) {q.pop ('c2', function (err, ret) {
         ret.payload.should.eql ({elem:2, pl:'twetrwte'});
@@ -95,13 +96,14 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       })},
       function (cb) {q.size (function (err, size) {
         size.should.equal (0);
-        cb();
+        cb(err);
       })},
       function (cb) {q.stats (function (err, res) {
         res.should.eql ({get: 2, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0});
-        cb();
+        cb(err);
       })},
     ], function(err, results) {
+      if (err) return done (err);
       q.drain();
       done();
     });
@@ -136,13 +138,14 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       })},
       function (cb) {q.size (function (err, size) {
         size.should.equal (0);
-        cb();
+        cb(err);
       })},
       function (cb) {q.stats (function (err, res) {
         res.should.eql ({get: 2, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0});
-        cb();
+        cb(err);
       })},
     ], function(err, results) {
+      if (err) return done (err);
       q.drain();
       done();
     });
@@ -159,18 +162,18 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => q.push ({elem:4, pl:'twetrwte'}, cb),
       (cb) => setTimeout (cb, 666),
 
-      (cb) => q.size ((err, size) => {size.should.equal (4); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 4, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (4); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 4, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
 
       (cb) => q.push ({elem:5, pl:'twetrwte'}, cb),
       (cb) => q.push ({elem:6, pl:'twetrwte'}, cb),
       (cb) => q.push ({elem:7, pl:'twetrwte'}, cb),
       (cb) => setTimeout (cb, 666),
 
-      (cb) => q.size ((err, size) => {size.should.equal (7); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (7); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
 
-      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime(), 2000); cb(); }),
+      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime(), 2000); cb(err); }),
 
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:1, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:2, pl:'twetrwte'}); cb (err); })},
@@ -180,9 +183,10 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:6, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:7, pl:'twetrwte'}); cb (err); })},
 
-      (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (0); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
     ], function(err, results) {
+      if (err) return done (err);
       q.drain();
       done();
     });
@@ -199,19 +203,19 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => q.push ({elem:4, pl:'twetrwte'}, {delay: 4}, cb),
       (cb) => setTimeout (cb, 700),
 
-      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 3300, 100); cb(); }),
+      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 3300, 100); cb(err); }),
 
       (cb) => q.push ({elem:5, pl:'twetrwte'}, {delay: 2}, cb),
       (cb) => q.push ({elem:6, pl:'twetrwte'}, {delay: 1}, cb),
       (cb) => q.push ({elem:7, pl:'twetrwte'}, {delay: 2}, cb),
       (cb) => setTimeout (cb, 700),
 
-      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 1300, 100); cb(); }),
+      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 1300, 100); cb(err); }),
 
-      (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.totalSize ((err, size) => {size.should.equal (7); cb(); }),
-      (cb) => q.schedSize ((err, size) => {size.should.equal (7); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (0); cb(err); }),
+      (cb) => q.totalSize ((err, size) => {size.should.equal (7); cb(err); }),
+      (cb) => q.schedSize ((err, size) => {size.should.equal (7); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
 
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:5, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:6, pl:'twetrwte'}); cb (err); })},
@@ -221,9 +225,10 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:3, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:4, pl:'twetrwte'}); cb (err); })},
 
-      (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (0); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 7, put: 7, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
     ], function(err, results) {
+      if (err) return done (err);
       q.drain();
       done();
     });
@@ -238,19 +243,20 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
       (cb) => q.push ({elem:2, pl:'twetrwte'}, cb),
       (cb) => setTimeout (cb, 700),
 
-      (cb) => q.size ((err, size) => {size.should.equal (2); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (2); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 2, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
 
       (cb) => q.push ({elem:3, pl:'twetrwte'}, cb),
       (cb) => setTimeout (cb, 700),
 
-      (cb) => q.size ((err, size) => {size.should.equal (3); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 3, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (3); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 0, put: 3, reserve: 0, commit: 0, rollback: 0, deadletter: 0}); cb(err); }),
 
-      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() - 1400, 100); cb(); }),
+      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() - 1400, 100); cb(err); }),
 
       (cb) => {
         q.pop ('c1', {reserve: true}, (err, ret) => {
+          if (err) return cb (err);
           ret.payload.should.eql ({elem:1, pl:'twetrwte'});
           q.ko (ret._id, (new Date().getTime() + 5000 ), (err, res) => {
             should (res).equal (true);
@@ -263,6 +269,7 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
 
       (cb) => {
         q.pop ('c1', {reserve: true}, (err, ret) => {
+          if (err) return cb (err);
           ret.payload.should.eql ({elem:3, pl:'twetrwte'});
           q.ko (ret._id, (new Date().getTime() + 3000 ), (err, res) => {
             should (res).equal (true);
@@ -273,18 +280,19 @@ describe ('bucket-at-least-once with ' + MQ_item.label + ' queue backend', funct
 
       (cb) => setTimeout (cb, 700),
 
-      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 2500, 500); cb(); }),
+      (cb) => q.next_t ((err, res) => {res.getTime().should.be.approximately(new Date().getTime() + 2500, 500); cb(err); }),
 
-      (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.totalSize ((err, size) => {size.should.equal (2); cb(); }),
-      (cb) => q.schedSize ((err, size) => {size.should.equal (2); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (0); cb(err); }),
+      (cb) => q.totalSize ((err, size) => {size.should.equal (2); cb(err); }),
+      (cb) => q.schedSize ((err, size) => {size.should.equal (2); cb(err); }),
 
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:3, pl:'twetrwte'}); cb (err); })},
       (cb) => {q.pop ('c1', (err, ret) => {ret.payload.should.eql ({elem:1, pl:'twetrwte'}); cb (err); })},
 
-      (cb) => q.size ((err, size) => {size.should.equal (0); cb(); }),
-      (cb) => q.stats ((err, res) => {res.should.eql ({get: 3, put: 3, reserve: 2, commit: 0, rollback: 2, deadletter: 0}); cb(); }),
+      (cb) => q.size ((err, size) => {size.should.equal (0); cb(err); }),
+      (cb) => q.stats ((err, res) => {res.should.eql ({get: 3, put: 3, reserve: 2, commit: 0, rollback: 2, deadletter: 0}); cb(err); }),
     ], function(err, results) {
+      if (err) return done (err);
       q.drain();
       done();
     });
