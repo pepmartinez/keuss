@@ -133,11 +133,13 @@ class Bucket {
         q: q
       });
 
-      if ((res && res.result && res.result.n) != 1) return cb({
-        err: 'Bucket flush: exactly one must be deleted',
-        e: err,
-        q: q
-      });
+      if ((res && res.deletedCount) != 1) {
+        return cb({
+          err: 'Bucket flush: exactly one must be deleted',
+          e: err,
+          q: q
+        });
+      }
 
       debug ('Bucket: deleted whole bucket %o', q);
       cb (null, null);
@@ -216,7 +218,7 @@ class Bucket {
           q: q
         });
 
-        if ((res && res.result && res.result.nModified) != 1) return cb({
+        if (res && (res.modifiedCount != 1)) return cb({
           err: 'Bucket flush: exactly one must be updated',
           e: err,
           q: q,
@@ -650,17 +652,15 @@ class BucketMongoSafeQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-    this._col.aggregate ([
+    const cursor = this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], (err, cursor) => {
-      if (err) return callback (err);
+    ]);
 
-      cursor.toArray ((err, res) => {
-        debug ('calculating totalSize: aggregation pipeline returns %o', res);
-        if (err) return callback (err);
-        if (res.length == 0) return callback (null, 0);
-        callback (null, res[0].v);
-      });
+    cursor.toArray ((err, res) => {
+      debug ('calculating totalSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
 
@@ -668,18 +668,16 @@ class BucketMongoSafeQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-    this._col.aggregate ([
+    const cursor = this._col.aggregate ([
       {$match: {mature: {$lte: Queue.now ()}}},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], (err, cursor) => {
-      if (err) return callback (err);
+    ]);
 
-      cursor.toArray ((err, res) => {
-        debug ('calculating size: aggregation pipeline returns %o', res);
-        if (err) return callback (err);
-        if (res.length == 0) return callback (null, 0);
-        callback (null, res[0].v);
-      });
+    cursor.toArray ((err, res) => {
+      debug ('calculating size: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
 
@@ -687,42 +685,39 @@ class BucketMongoSafeQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-    this._col.aggregate ([
+    const cursor = this._col.aggregate ([
       {$match: {
         mature: {$gt: Queue.now ()},
         reserved: {$exists: false}
       }},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], (err, cursor) => {
-      if (err) return callback (err);
+    ]);
 
-      cursor.toArray ((err, res) => {
-        debug ('calculating schedSize: aggregation pipeline returns %o', res);
-        if (err) return callback (err);
-        if (res.length == 0) return callback (null, 0);
-        callback (null, res[0].v);
-      });
+    cursor.toArray ((err, res) => {
+      debug ('calculating schedSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
+
 
   //////////////////////////////////
   // queue size of non-mature elements only
   resvSize (callback) {
-    this._col.aggregate ([
+    const cursor = this._col.aggregate ([
       {$match: {
         mature: {$gt: Queue.now ()},
         reserved: {$exists: true}
       }},
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], (err, cursor) => {
-      if (err) return callback (err);
+    ]);
 
-      cursor.toArray ((err, res) => {
-        debug ('calculating resvSize: aggregation pipeline returns %o', res);
-        if (err) return callback (err);
-        if (res.length == 0) return callback (null, 0);
-        callback (null, res[0].v);
-      });
+    cursor.toArray ((err, res) => {
+      debug ('calculating resvSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
 
@@ -730,13 +725,16 @@ class BucketMongoSafeQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
-    this._col.find ({}).limit(1).sort ({mature:1}).project ({mature:1}).next ((err, result) => {
+    this._col.findOne ({}, {
+      sort:       {mature:1},
+      projection: {mature: 1}
+    },
+    (err, result) => {
       if (err) return callback (err);
       debug ('obtaining next_t: got %o', result && result.mature);
       callback (null, result && result.mature);
     });
   }
-
 
 
   //////////////////////////////////////////////

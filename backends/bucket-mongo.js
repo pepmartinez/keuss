@@ -205,16 +205,14 @@ class BucketMongoQueue extends Queue {
   // queue size including non-mature elements
   totalSize (callback) {
   //////////////////////////////////
-    this._col.aggregate ([
+    const cursor = this._col.aggregate ([
       {$group:{_id:'t', v: {$sum: '$n'}}}
-    ], (err, cursor) => {
-      if (err) return callback (err);
+    ]);
 
-      cursor.toArray ((err, res) => {
-        if (err) return callback (err);
-        if (res.length == 0) return callback (null, 0);
-        callback (null, res[0].v);
-      });
+    cursor.toArray ((err, res) => {
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
     });
   }
 

@@ -3,6 +3,9 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.6.12:
+  * use mongodb driver v4 (v4.5.0), which forced a small number of internal changes
+  * use ioredis v5
 * v1.6.11
   * better hdrs management on passing messages to deadletter
 * v1.6.10
