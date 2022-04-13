@@ -26,10 +26,10 @@ var factory_opts = {
 };
 
 // test dimensions: elems to produce and consume, number of consumers, number of producers
-const num_elems = 10000000;
+const num_elems = 1000000;
 const num_producers = 3;
 const num_consumers = 7;
-const commit_likelihood = 95;
+const commit_likelihood = 75;
 
 // stats holder
 var selfs = {
@@ -223,12 +223,12 @@ MQ (factory_opts, function (err, factory) {
   var q = factory.queue ('test_queue_456', q_opts);
 
   var timer = setInterval (() => {
-    console.log ('**** state: %j', _.map (shareds, (v, k) => {return {cnt: v.push_count || v.pop_count, max: v.push_max || v.pop_max }}));
+    console.log ('**** state: %o', _.map (shareds, (v, k) => {return {cnt: v.push_count || v.pop_count, max: v.push_max || v.pop_max }}));
    
     console.log ('das pop %d, ko %d, ok %d', das_pop, das_ko, das_ok);
 
     q.status ((err ,res) => {
-      console.log ('**** status: %j', res);
+      console.log ('**** status: %o', res);
     });
   }, 2000);
 
@@ -263,7 +263,7 @@ MQ (factory_opts, function (err, factory) {
     clearInterval (timer);
     
     q.status ((err ,res) => {
-      console.log ('**** status: %j', res);
+      console.log ('**** status: %o', res);
       q.drain (() => factory.close ());
     });
   });

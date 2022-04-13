@@ -537,13 +537,15 @@ class Queue {
   //////////////////////////////////
     async.parallel ({
       type:          cb => cb (null, this.type()),
+      capabilities:  cb => cb (null, this.capabilities ()),
+      factory:       cb => cb (null, this._factory.to_descriptor_obj ()),
       stats:         cb => this.stats (cb),
       paused:        cb => this.paused (cb),
       next_mature_t: cb => this.next_t (cb),
       size:          cb => this.size (cb),
       totalSize:     cb => this.totalSize (cb),
       schedSize:     cb => this.schedSize (cb),
-      resvSize:      cb => this.resvSize (cb)
+      resvSize:      cb => this.resvSize (cb)     
     }, cb);
   }
 
