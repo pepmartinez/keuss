@@ -150,6 +150,7 @@ class Factory extends QFactory {
       sched:    true,
       reserve:  true,
       pipeline: false,
+      tape:     false,
       remove:   true
     };
   }

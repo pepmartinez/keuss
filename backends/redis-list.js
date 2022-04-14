@@ -127,7 +127,9 @@ class Factory extends QFactory {
     return {
       sched:    false,
       reserve:  false,
-      pipeline: false
+      pipeline: false,
+      tape:     false,
+      remove:   true
     };
   }
 }

@@ -938,9 +938,10 @@ class Factory extends QFactory_MongoDB_defaults {
 
   capabilities () {
     return {
-      sched:    false,
+      sched:    true,
       reserve:  true,
       pipeline: false,
+      tape:     false,
       remove:   true
     };
   }

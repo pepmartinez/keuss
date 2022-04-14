@@ -161,6 +161,7 @@ class Factory extends QFactory_MongoDB_defaults {
       sched:    true,
       reserve:  true,
       pipeline: true,
+      tape:     false,
       remove:   true
     };
   }

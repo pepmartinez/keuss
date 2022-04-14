@@ -340,7 +340,9 @@ class Factory extends QFactory_MongoDB_defaults {
     return {
       sched:    false,
       reserve:  false,
-      pipeline: false
+      pipeline: false,
+      tape:     false,
+      remove:   true
     };
   }
 }
