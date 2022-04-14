@@ -87,7 +87,7 @@ class RPSSignalFactory {
   }
 
   static Type () {return 'signal:redis-pubsub'}
-  type () {return Type ()}
+  type () {return RPSSignalFactory.Type ()}
 
   signal (channel, opts) {
     debug ('creating redis-pubsub signaller with opts %o', opts);
