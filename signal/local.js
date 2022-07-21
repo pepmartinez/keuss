@@ -50,12 +50,38 @@ class LocalSignal extends Signal {
     debug ('got paused event [%d], relay on local mitt', paused);
     this._factory._emitter.emit (this._channel, `p ${paused}`);
   }
+
+
+  subscribe_extra (topic, on_cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    debug ('subscribing to %s', t);
+
+    const s = {
+      t: t,
+      f: (msg => on_cb (msg))
+    };
+
+    this._factory._emitter.on (s.t, s.f); 
+    return s;
+  }
+
+  unsubscribe_extra (s) {
+    this._factory._emitter.off (s.t, s.f); 
+    debug ('unsubscribed on %s', s.t);
+  }
+
+  emit_extra (topic, ev, cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    debug ('emit extra on topic [%s], value [%j]', t, ev);
+    this._factory._emitter.emit (t, ev);
+  }
 }
 
 
 class LocalSignalFactory {
   constructor (opts) {
     this._emitter = mitt();
+    debug ('created local factory');
   }
 
   static Type () {return 'signal:local'}

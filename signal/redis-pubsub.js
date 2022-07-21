@@ -69,6 +69,34 @@ class RPSSignal extends Signal {
     debug ('got insertion event on ch [%s], mature is %s, calling master.emitInsertion()', this._channel, mature);
     this._master.signalInsertion (new Date (mature));
   }
+
+
+  subscribe_extra (topic, on_cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    debug ('subscribing to %s', t);
+
+    const s = {
+      t: t,
+      f: (msg => on_cb (JSON.parse (msg)))
+    };
+
+    this._factory._emitter.on (s.t, s.f);
+    this._rediscl_sub.subscribe (s.t);
+    return s;
+  }
+
+  unsubscribe_extra (subscr) {
+    this._rediscl_sub.unsubscribe (subscr.t);
+    this._factory._emitter.off (subscr.t, subscr.f); 
+    debug ('unsubscribed on %j', subscr);
+  }
+
+  emit_extra (topic, ev, cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    const v = JSON.stringify(ev);
+    debug ('emit extra on topic [%s], value [%s]', t, v);
+    this._rediscl_pub.publish (t, v);
+  }
 }
 
 class RPSSignalFactory {

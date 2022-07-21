@@ -61,6 +61,24 @@ class MCSignal extends Signal {
     debug ('got insertion event on ch [%s], mature is %s, calling master.emitInsertion()', this._channel, mature);
     this._master.signalInsertion (new Date (mature));
   }
+
+
+  subscribe_extra (topic, on_cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    debug ('subscribing to %s', t);
+    return this._factory._channel.subscribe (t, on_cb);
+  }
+
+  unsubscribe_extra (subscr) {
+    subscr.unsubscribe ();
+    debug ('unsubscribed on %j', subscr);
+  }
+
+  emit_extra (topic, ev, cb) {
+    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
+    debug ('emit extra on topic [%s], value [%j]', t, ev);
+    this._factory._channel.publish (t, ev);
+  }
 }
 
 class MCSignalFactory {

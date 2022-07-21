@@ -73,6 +73,12 @@ class Signal {
   }
 
 
+  // to be extended: generic pubsub service
+  subscribe_extra (topic, on_cb) {return false}
+  unsubscribe_extra (subscr) {}
+  emit_extra (topic, ev, cb) {if (cb) cb ();}
+
+
   static _hrtimeAsMSecs (hrtime) {
     return (hrtime[0] * 1000) + (hrtime[1] / 1e6);
   }
