@@ -10,7 +10,7 @@ const Mongo = require ('../signal/mongo-capped');
 
 const MongoClient = require ('mongodb').MongoClient;
 
-//setTimeout (() => whyIsNodeRunning(), 9000)
+// setTimeout (() => whyIsNodeRunning(), 9000)
 
 _.forEach ({
   Local, 

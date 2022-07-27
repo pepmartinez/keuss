@@ -5,7 +5,7 @@ var Signal = require ('../Signal');
 
 var debug = require('debug')('keuss:Signal:MongoCapped');
 
-
+//////////////////////////////////////////////////////////////////////
 class MCSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
@@ -45,42 +45,52 @@ class MCSignal extends Signal {
     debug ('created mongo-capped signaller for topic %s with opts %o', this._topic_name, opts);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   type () {return MCSignalFactory.Type ()}
 
+
+  //////////////////////////////////////////////////////////////////////
   emitInsertion (mature, cb) {
     debug ('emit insertion on topic [%s] value [%d])', this._topic_name, mature);
     this._factory._channel.publish (this._topic_name, mature.getTime());
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   emitPaused (paused, cb) {
     debug ('emit paused on topic [%s], value [%b]', this._topic_name, paused);
     this._factory._channel.publish (this._topic_name, `p ${paused}`);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   _insertionEvent (mature) {
     debug ('got insertion event on ch [%s], mature is %s, calling master.emitInsertion()', this._channel, mature);
     this._master.signalInsertion (new Date (mature));
   }
 
 
+  //////////////////////////////////////////////////////////////////////
   subscribe_extra (topic, on_cb) {
-    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
-    debug ('subscribing to %s', t);
-    return this._factory._channel.subscribe (t, on_cb);
+    return this._factory.subscribe_extra (this._master.ns (), topic, on_cb);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   unsubscribe_extra (subscr) {
-    subscr.unsubscribe ();
-    debug ('unsubscribed on %j', subscr);
+    this._factory.unsubscribe_extra (subscr);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   emit_extra (topic, ev, cb) {
-    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
-    debug ('emit extra on topic [%s], value [%j]', t, ev);
-    this._factory._channel.publish (t, ev);
+    this._factory.emit_extra (this._master.ns (), topic, ev, cb);
   }
 }
 
+
+//////////////////////////////////////////////////////////////////////
 class MCSignalFactory {
   constructor (opts) {
     var defaults = {
@@ -97,19 +107,56 @@ class MCSignalFactory {
     debug ('created mongo-capped factory with opts %o', opts);
   }
 
-  static Type () {return 'signal:mongo-capped'}
-  type () {return MCSignalFactory.Type ()}
 
+  //////////////////////////////////////////////////////////////////////
+  static Type () {
+    return 'signal:mongo-capped';
+  }
+  
+
+  //////////////////////////////////////////////////////////////////////
+  type () {
+    return MCSignalFactory.Type ();
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
   signal (channel, opts) {
     return new MCSignal (channel, this, opts);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
+  subscribe_extra (ns, topic, on_cb) {
+    const t = `keuss:signal:${ns}:extra:${topic}`;
+    debug ('subscribing to ns [%s], topic [%s]', ns, t);
+    return this._channel.subscribe (t, on_cb);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
+  unsubscribe_extra (subscr) {
+    subscr.unsubscribe ();
+    debug ('unsubscribed on %j', subscr);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
+  emit_extra (ns, topic, ev, cb) {
+    const t = `keuss:signal:${ns}:extra:${topic}`;
+    debug ('emit extra on ns [%s], topic [%s], value [%j]', ns, t, ev);
+    this._channel.publish (t, ev);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
   close (cb) {
     this._mubsub.close (cb);
   }
 }
 
 
+//////////////////////////////////////////////////////////////////////
 function creator (opts, cb) {
   return cb (null, new MCSignalFactory (opts));
 }

@@ -4,6 +4,7 @@ var Signal = require ('../Signal');
 var debug = require('debug')('keuss:Signal:local');
 
 
+//////////////////////////////////////////////////////////////////////
 class LocalSignal extends Signal {
   constructor (queue, factory, opts) {
     super (queue, opts);
@@ -39,64 +40,110 @@ class LocalSignal extends Signal {
     debug ('created LocalSignal for channel %s', this._channel);
   }
 
-  type () {return LocalSignalFactory.Type ()}
 
+  //////////////////////////////////////////////////////////////////////
+  type () {
+    return LocalSignalFactory.Type ();
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
   emitInsertion (mature, cb) {
     debug ('got insertion event [%o], relay on local mitt', mature);
     this._factory._emitter.emit (this._channel, mature.getTime () + '');
   }
 
+  //////////////////////////////////////////////////////////////////////
   emitPaused (paused, cb) {
     debug ('got paused event [%d], relay on local mitt', paused);
     this._factory._emitter.emit (this._channel, `p ${paused}`);
   }
 
 
+  //////////////////////////////////////////////////////////////////////
   subscribe_extra (topic, on_cb) {
-    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
-    debug ('subscribing to %s', t);
-
-    const s = {
-      t: t,
-      f: (msg => on_cb (msg))
-    };
-
-    this._factory._emitter.on (s.t, s.f); 
-    return s;
+    return this._factory.subscribe_extra (this._master.ns (), topic, on_cb);
   }
 
-  unsubscribe_extra (s) {
-    this._factory._emitter.off (s.t, s.f); 
-    debug ('unsubscribed on %s', s.t);
+
+  //////////////////////////////////////////////////////////////////////
+  unsubscribe_extra (subscr) {
+    this._factory.unsubscribe_extra (subscr);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
   emit_extra (topic, ev, cb) {
-    const t = `keuss:signal:${this._master.ns ()}:extra:${topic}`;
-    debug ('emit extra on topic [%s], value [%j]', t, ev);
-    this._factory._emitter.emit (t, ev);
+    this._factory.emit_extra (this._master.ns (), topic, ev, cb);
   }
 }
 
 
+//////////////////////////////////////////////////////////////////////
 class LocalSignalFactory {
   constructor (opts) {
     this._emitter = mitt();
     debug ('created local factory');
   }
 
-  static Type () {return 'signal:local'}
-  type () {return LocalSignalFactory.Type ()}
 
+  //////////////////////////////////////////////////////////////////////
+  static Type () {
+    return 'signal:local';
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
+  type () {
+    return LocalSignalFactory.Type ();
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
   signal (queue, opts) {
     return new LocalSignal (queue, this, opts);
   }
 
+
+  //////////////////////////////////////////////////////////////////////
+  subscribe_extra (ns, topic, on_cb) {
+    const t = `keuss:signal:${ns}:extra:${topic}`;
+    debug ('subscribing to ns [%s], topic [%s]', ns, t);
+
+    const s = {
+      n: ns,
+      t: t,
+      f: (msg => on_cb (msg))
+    };
+
+    this._emitter.on (s.t, s.f); 
+    return s;
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
+  unsubscribe_extra (s) {
+    this._emitter.off (s.t, s.f); 
+    debug ('unsubscribed on %s', s.t);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
+  emit_extra (ns, topic, ev, cb) {
+    const t = `keuss:signal:${ns}:extra:${topic}`;
+    debug ('emit extra on topic [%s], value [%j]', t, ev);
+    this._emitter.emit (t, ev);
+  }
+
+
+  //////////////////////////////////////////////////////////////////////
   close (cb) {
     cb ();
   }
 }
 
 
+//////////////////////////////////////////////////////////////////////
 function creator (opts, cb) {
   return cb (null, new LocalSignalFactory (opts));
 }
