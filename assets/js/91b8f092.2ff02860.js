@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmy_website=self.webpackChunkmy_website||[]).push([[642],{1240:s=>{s.exports=JSON.parse('{"label":"keuss","permalink":"/keuss/blog/tags/keuss","allTagsPath":"/keuss/blog/tags","count":1}')}}]);
