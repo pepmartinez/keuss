@@ -40,6 +40,41 @@ _.forEach ({
         setTimeout (() => factory.close(done), 500);
       });
     });
+    
+
+    it ('signals insertion ok', done => {
+      CL ({}, (err, factory) => {
+        if (err) return done(err);
+        const q = {
+          ns() {return 'the-ns'}, 
+          name () {return 'the-queue'},
+          signalInsertion (d) {
+            d.getTime().should.equal (1234567890);
+            factory.close(done);
+          }
+        };
+
+        const signal = factory.signal (q, {});
+        setTimeout (() => signal.emitInsertion (new Date(1234567890)), 500);
+      });
+    });
+
+    it ('signals pause ok', done => {
+      CL ({}, (err, factory) => {
+        if (err) return done(err);
+        const q = {
+          ns() {return 'the-ns'}, 
+          name () {return 'the-queue'},
+          signalPaused(d) {
+            d.should.equal (true);
+            factory.close(done);
+          }
+        };
+
+        const signal = factory.signal (q, {});
+        setTimeout (() => signal.emitPaused (true), 500);
+      });
+    });
 
 
     describe (`extra/generic pubsub`, () => {
