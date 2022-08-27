@@ -336,7 +336,7 @@ class Factory extends QFactory_MongoDB_defaults {
       reserve:  true,
       pipeline: false,
       tape:     true,
-      remove:   true,
+      remove:   false,
       stream:   true
     };
   }
