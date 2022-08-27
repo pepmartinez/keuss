@@ -264,36 +264,6 @@ class StreamMongoQueue extends Queue {
   }
 
 
-  //////////////////////////////////////////////
-  // remove by id
-  // TODO
-  remove (id, callback) {
-    let query;
-
-    try {
-      query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
-        processed: {$exists: false},
-        reserved: {$exists: false}
-      };
-    }
-    catch (e) {
-      return callback ('id [' + id + '] can not be used as remove id: ' + e);
-    }
-
-    const updt = {
-      $set:   {processed: new Date (), removed: true},
-    };
-
-    const opts = {};
-
-    this._col.updateOne (query, updt, opts, (err, result) => {
-      if (err) return callback (err);
-      callback (null, result && (result.modifiedCount == 1));
-    });
-  }
-
-
   /////////////////////////////////////////
   // get element from queue
   next_t (callback) {
