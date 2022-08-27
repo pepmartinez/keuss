@@ -15,6 +15,8 @@ class StreamMongoQueue extends Queue {
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
 
+    if (!this._opts.ttl) this._opts.ttl = 3600;
+
     this._factory = factory;
     this._col = factory._db.collection (name);
     this._gid = this._opts.group || 'a';
@@ -67,6 +69,7 @@ class StreamMongoQueue extends Queue {
       $set: {}
     };
     updt.$set[`processed.${gid}`] = new Date ();
+    updt.$set[`mature.${gid}`] = Queue.nowPlusSecs (100 * this._opts.ttl);
 
     const opts = {
       sort: {}
@@ -151,6 +154,7 @@ class StreamMongoQueue extends Queue {
       $unset: {}
     };
     updt.$set[`processed.${gid}`] = new Date ();
+    updt.$set[`mature.${gid}`] = Queue.nowPlusSecs (100 * this._opts.ttl);
     updt.$unset[`reserved.${gid}`] = '';
 
     const opts = {};
@@ -206,6 +210,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
+    // TODO
     const q = {
       processed: {$exists: false}
     };
@@ -218,6 +223,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
+    // TODO
     const q = {
       processed: {$exists: false},
       mature : {$lte : Queue.now ()}
@@ -231,6 +237,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
+    // TODO
     const q = {
       mature : {$gt : Queue.now ()},
       processed: {$exists: false},
@@ -245,6 +252,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of reserved elements only
   resvSize (callback) {
+    // TODO
     const q = {
       mature : {$gt : Queue.now ()},
       processed: {$exists: false},
@@ -258,6 +266,7 @@ class StreamMongoQueue extends Queue {
 
   //////////////////////////////////////////////
   // remove by id
+  // TODO
   remove (id, callback) {
     let query;
 
@@ -313,8 +322,11 @@ class StreamMongoQueue extends Queue {
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
     async.series ([
-      cb => this._col.createIndex ({"mature.$**" : 1}, cb),
-      cb => this._col.createIndex ({t: 1}, {expireAfterSeconds: this._opts.ttl || 3600}, cb),
+      cb => this._col.createIndex ({"mature.a" : 1}, cb),
+      cb => this._col.createIndex ({"mature.b" : 1}, cb),
+      cb => this._col.createIndex ({"mature.c" : 1}, cb),
+      cb => this._col.createIndex ({"mature.d" : 1}, cb),
+      cb => this._col.createIndex ({t: 1}, {expireAfterSeconds: this._opts.ttl}, cb),
     ], cb);
   }
 }
