@@ -210,9 +210,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size including non-mature elements
   totalSize (callback) {
-    // TODO
     const q = {
-      processed: {$exists: false}
     };
 
     const opts = {};
@@ -223,10 +221,7 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-    // TODO
     const q = {
-      processed: {$exists: false},
-      mature : {$lte : Queue.now ()}
     };
 
     const opts = {};
@@ -237,30 +232,14 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-    // TODO
-    const q = {
-      mature : {$gt : Queue.now ()},
-      processed: {$exists: false},
-      reserved: {$exists: false}
-    };
-
-    const opts = {};
-    this._col.countDocuments (q, opts, callback);
+    callback (null, 0);
   }
 
 
   //////////////////////////////////
   // queue size of reserved elements only
   resvSize (callback) {
-    // TODO
-    const q = {
-      mature : {$gt : Queue.now ()},
-      processed: {$exists: false},
-      reserved: {$exists: true}
-    };
-
-    const opts = {};
-    this._col.countDocuments (q, opts, callback);
+    callback (null, 0);
   }
 
 
