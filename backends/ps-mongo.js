@@ -14,6 +14,8 @@ class PersistentMongoQueue extends Queue {
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
 
+    if (!this._opts.ttl) this._opts.ttl = 3600;
+
     this._factory = factory;
     this._col = factory._db.collection (name);
     this.ensureIndexes (function (err) {});
@@ -50,7 +52,10 @@ class PersistentMongoQueue extends Queue {
     };
 
     var updt = {
-      $set: {processed: new Date ()}
+      $set: {
+        processed: new Date (),
+        mature: Queue.nowPlusSecs (100 * this._opts.ttl)
+      }
     };
 
     var opts = {
@@ -78,7 +83,10 @@ class PersistentMongoQueue extends Queue {
     };
 
     var update = {
-      $set: {mature: Queue.nowPlusSecs (delay), reserved: new Date ()},
+      $set: {
+        mature: Queue.nowPlusSecs (delay), 
+        reserved: new Date ()
+      },
       $inc: {tries: 1}
     };
 
@@ -113,7 +121,10 @@ class PersistentMongoQueue extends Queue {
     }
 
     var updt = {
-      $set:   {processed: new Date ()},
+      $set:   {
+        processed: new Date (),
+        mature: Queue.nowPlusSecs (100 * this._opts.ttl)
+      },
       $unset: {reserved: ''}
     };
 
@@ -226,7 +237,11 @@ class PersistentMongoQueue extends Queue {
     }
 
     var updt = {
-      $set:   {processed: new Date (), removed: true},
+      $set:   {
+        processed: new Date (),
+        mature: Queue.nowPlusSecs (100 * this._opts.ttl),
+        removed: true
+      },
     };
 
     var opts = {};
@@ -261,7 +276,7 @@ class PersistentMongoQueue extends Queue {
   ensureIndexes (cb) {
     this._col.createIndex ({mature : 1}, err => {
       if (err) return cb (err);
-      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl || 3600}, err => cb (err));
+      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl}, err => cb (err));
     });
   }
 }
