@@ -106,4 +106,4 @@ Where:
 factory.close (err => {...});
 ```
 
-Frees up resources on the factory. Queues created with the factory will become unusable afterwards. See ['Shutdown process'](../usage/shutdown.md) for more info.
+Frees up resources on the factory. Queues created with the factory will become unusable afterwards. See ['Shutdown process'](/docs/usage/shutdown) for more info.

@@ -71,7 +71,7 @@ MQ (factory_opts, (err, factory) => {
 
 ```
 
-See [Processors](processors.md) for all the available options and features (such as processing functions and error management)
+See [Processors](processors) for all the available options and features (such as processing functions and error management)
 
 ## Creation with a `PipelineBuilder`
 
