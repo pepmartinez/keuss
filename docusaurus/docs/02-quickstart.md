@@ -112,7 +112,7 @@ MQ ({
 
 ## Backend interchangeability
 
-This example works with any definition of `MQ` that supports reserve/commit (that is, any except `redis-list` and `bucket-mongo`); you just need to specify the chosen backend. For example, to use the `bucket-mongo-safe` backend:
+This example works with any definition of `MQ` that supports reserve/commit (that is, any except `redis-list`); you just need to specify the chosen backend. For example, to use the `bucket-mongo-safe` backend:
 
 ```js
 const MQ = require ('keuss/backends/bucket-mongo-safe');

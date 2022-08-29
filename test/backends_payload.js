@@ -13,7 +13,6 @@ var factory = null;
   {label: 'Simple MongoDB',         mq: require ('../backends/mongo')},
   {label: 'Pipelined MongoDB',      mq: require ('../backends/pl-mongo')},
   {label: 'Tape MongoDB',           mq: require ('../backends/ps-mongo')},
-  {label: 'Simple MongoDB Buckets', mq: require ('../backends/bucket-mongo')},
   {label: 'Safe MongoDB Buckets',   mq: require ('../backends/bucket-mongo-safe')},
   {label: 'Redis List',             mq: require ('../backends/redis-list')},
   {label: 'Redis OrderedQueue',     mq: require ('../backends/redis-oq')},

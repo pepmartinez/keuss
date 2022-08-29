@@ -10,6 +10,8 @@ Starting with v1.5.2 keuss includes 2 backends that do not share this limitation
 
 Two bucked-based backends were added, both based on mongodb: [bucket-mongo](#bucket-mongo) and [bucket-mongo-safe](#bucket-mongo-safe). Both are usable, but there is little gain on using fhe first over the second: `bucket-mongo` was used as a prototyping area, and although perfectly usable, it turned out `bucket-mongo-safe` is better in almost every aspect: it provides better guarantees and more features, at about the same performance.
 
+Starting with v1.7.0, `bucket-mongo` has been removed: it provided virtually no benefit over `bucket-mongo-safe` and had some clear disadvantages; as a consequence, it was deemed unneeded and redundant
+
 ### bucket-mongo-safe
 
 In addition to the general options, the factory accepts the following extra options:
@@ -39,4 +41,4 @@ Scheduling on `bucket-mongo-safe` is perfectly possible, but with a twist: the e
 
 This is a simpler version of buckets-on-mongodb, and for all purposes `bucket-mongo-safe` should be preferred; it does not provide reserve, nor schedule. It is however a tad faster and lighter on I/O.
 
-It is provided only for historical and educational purposes.
+As of v1.7.0 it has been removed

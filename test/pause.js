@@ -12,7 +12,6 @@ var factory = null;
   {label: 'pipeline MongoDB',    backend: require ('../backends/pl-mongo')},
   {label: 'persistent MongoDB',  backend: require ('../backends/ps-mongo')},
   {label: 'plain MongoDB',       backend: require ('../backends/mongo')},
-  {label: 'MongoDB Bucket',      backend: require ('../backends/bucket-mongo')},
   {label: 'Safe MongoDB Bucket', backend: require ('../backends/bucket-mongo-safe')},
 ].forEach (backend_item => {
   [

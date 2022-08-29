@@ -48,8 +48,7 @@ The **Storage** or **Backend** provides almost-complete queue primitives, fully 
 * *`redis-list`*, backed using a redis list. Does not offer reserve-commit-rollback nor the ability to schedule, but is much faster than redis-oq
 * *`pl-mongo`*, a version of the *`mongo`* backend that provides pipelining capabilities (the queues it produces are also pipelines).
 * *`ps-mongo`*, a version of the *`mongo`* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index.
-* *`bucket-mongo`*, a first attepmt on storing more than one element on each mongodb record in order to break past mongodb I/O limitations. It is very simple, lacking schedule and reserve support. However, it has staggering throughput on a reasonable durability.
-* *`bucket-mongo-safe`*, an evolution of *`bucket-mongo`*, provides both scheduling and reserve support with a performance only a bit below *`bucket-mongo`*.
+* *`bucket-mongo-safe`*, an approach to storing more than one element on each mongodb record in order to break past mongodb I/O limitations, provides both scheduling and reserve support with staggering performance on a reasonable durability.
 
 As mentioned before, persistence and High Availability (HA) depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases.
 
@@ -62,7 +61,6 @@ redis-oq          | x | x | - | - | x | +++
 mongo             | x | x | - | - | x | ++
 pl-mongo          | x | x | x | - | x | +
 ps-mongo          | x | x | - | x | x | ++
-bucket-mongo      | - | - | - | - | - | +++++
 bucket-mongo-safe | x | x | - | - | x | +++++
 
 ## Signaller
