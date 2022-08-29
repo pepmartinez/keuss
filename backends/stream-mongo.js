@@ -19,8 +19,20 @@ class StreamMongoQueue extends Queue {
 
     this._factory = factory;
     this._col = factory._db.collection (name);
-    this._gid = this._opts.group || 'a';
-    this.ensureIndexes (function (err) {});
+    this._gid = this._opts.group || 'A';
+    this._groups_str = this._opts.groups || 'A,B:C';
+    this._groups_vector = this._groups_str.split (/[:,;.-]/);
+
+    this.ensureIndexes (err => {
+      if (err) {
+        console.error ('keuss:Queue:StreamMongo: index creation failed, queues performance will be severely impacted:', err);
+      }
+      else {
+        debug ('indexes created');
+      }
+    });
+
+    debug ('created with groups %j and gid %s (used for pop/reserve only)', this._groups_vector, this._gid);
   }
 
 
@@ -37,14 +49,22 @@ class StreamMongoQueue extends Queue {
 
 
   /////////////////////////////////////////
+  _vector (item) {
+    const r = {};
+    this._groups_vector.forEach (i => r[i] = item);
+    return r;
+  }
+
+
+  /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
     const mtr = entry.mature;
-    const tr = entry.tries;
+    const tr =  entry.tries;
 
-    entry.tries = {a: tr, b: tr, c: tr, d: tr};
-    entry.mature = {a: mtr, b: mtr, c: mtr, d: mtr};
-    entry.processed = {a: false, b: false, c: false, d: false};
+    entry.tries =     this._vector (tr);
+    entry.mature =    this._vector (mtr);
+    entry.processed = this._vector (false);
     
     entry.t = new Date();
 
@@ -270,13 +290,15 @@ class StreamMongoQueue extends Queue {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-    async.series ([
-      cb => this._col.createIndex ({"mature.a" : 1}, cb),
-      cb => this._col.createIndex ({"mature.b" : 1}, cb),
-      cb => this._col.createIndex ({"mature.c" : 1}, cb),
-      cb => this._col.createIndex ({"mature.d" : 1}, cb),
-      cb => this._col.createIndex ({t: 1}, {expireAfterSeconds: this._opts.ttl}, cb),
-    ], cb);
+    const tasks = [];
+
+    this._groups_vector.forEach (i => {
+      const idx = {};
+      idx[`mature.${i}`] = 1;
+      tasks.push (cb => this._col.createIndex (idx, cb));
+    });
+    tasks.push (cb => this._col.createIndex ({t: 1}, {expireAfterSeconds: this._opts.ttl}, cb));
+    async.series (tasks, cb);
   }
 }
 
