@@ -11,6 +11,7 @@ var factory = null;
   {label: 'redis OrderedQueue',  backend: require ('../backends/redis-oq')},
   {label: 'pipeline MongoDB',    backend: require ('../backends/pl-mongo')},
   {label: 'persistent MongoDB',  backend: require ('../backends/ps-mongo')},
+  {label: 'Stream MongoDB',      backend: require ('../backends/stream-mongo')},
   {label: 'plain MongoDB',       backend: require ('../backends/mongo')},
   {label: 'Safe MongoDB Bucket', backend: require ('../backends/bucket-mongo-safe')},
 ].forEach (backend_item => {

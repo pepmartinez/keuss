@@ -19,9 +19,9 @@ class StreamMongoQueue extends Queue {
 
     this._factory = factory;
     this._col = factory._db.collection (name);
-    this._gid = this._opts.group || 'A';
     this._groups_str = this._opts.groups || 'A,B:C';
     this._groups_vector = this._groups_str.split (/[:,;.-]/);
+    this._gid = this._opts.group || this._groups_vector[0];
 
     this.ensureIndexes (err => {
       if (err) {
@@ -229,9 +229,11 @@ class StreamMongoQueue extends Queue {
 
   //////////////////////////////////
   // queue size including non-mature elements
-  totalSize (callback) {
-    const q = {
-    };
+  totalSize (callback, gid) {
+    const gr = gid || this._gid;
+
+    const q = {};
+    q[`processed.${gr}`] = false;
 
     const opts = {};
     this._col.countDocuments (q, opts, callback);
@@ -240,9 +242,12 @@ class StreamMongoQueue extends Queue {
 
   //////////////////////////////////
   // queue size NOT including non-mature elements
-  size (callback) {
-    const q = {
-    };
+  size (callback, gid) {
+    const gr = gid || this._gid;
+
+    const q = {};
+    q[`processed.${gr}`] = false;
+    q[`mature.${gr}`] = {$lte: Queue.now()};
 
     const opts = {};
     this._col.countDocuments (q, opts, callback);
@@ -251,26 +256,45 @@ class StreamMongoQueue extends Queue {
 
   //////////////////////////////////
   // queue size of non-mature elements only
-  schedSize (callback) {
-    callback (null, 0);
+  schedSize (callback, gid) {
+    const gr = gid || this._gid;
+
+    const q = {};
+    q[`reserved.${gr}`] = {$exists: false};
+    q[`processed.${gr}`] = false;
+    q[`mature.${gr}`] = {$gt: Queue.now()};
+
+    const opts = {};
+    this._col.countDocuments (q, opts, callback);
   }
 
 
   //////////////////////////////////
   // queue size of reserved elements only
-  resvSize (callback) {
-    callback (null, 0);
+  resvSize (callback, gid) {
+    const gr = gid || this._gid;
+
+    const q = {};
+    q[`reserved.${gr}`] = {$exists: true};
+    q[`processed.${gr}`] = false;
+    q[`mature.${gr}`] = {$gt: Queue.now()};
+
+    const opts = {};
+    this._col.countDocuments (q, opts, callback);
   }
 
 
   /////////////////////////////////////////
   // get element from queue
-  next_t (callback) {
-    const gid = this._gid;
+  next_t (callback, gid) {
+    const gr = gid || this._gid;
+    
     const q = {};
+    q[`processed.${gr}`] = false;
+
     const sort = {};
-    q[`processed.${gid}`] = false;
-    sort[`mature.${gid}`] = 1;
+    sort[`mature.${gr}`] = 1;
+
     this._col
     .find (q)
     .limit(1)
@@ -278,8 +302,8 @@ class StreamMongoQueue extends Queue {
     .project ({mature:1})
     .next ((err, result) => {
       if (err) return callback (err);
-      debug ('next_t with git %s: got %o', gid, result);
-      callback (null, result && result.mature && result.mature[gid]);
+      debug ('next_t with git %s: got %o', gr, result);
+      callback (null, result && result.mature && result.mature[gr]);
     });
   }
 
