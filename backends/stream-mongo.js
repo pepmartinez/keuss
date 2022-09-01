@@ -72,6 +72,7 @@ class StreamMongoQueue extends Queue {
       if (err) return callback (err);
       // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
+      this._groups_vector.forEach (i => this._stats.incr (`stream.${i}.put`));
     });
   }
 
@@ -108,6 +109,7 @@ class StreamMongoQueue extends Queue {
       delete v.processed;
       delete v.t;
       callback (null, v);
+      this._stats.incr (`stream.${gid}.get`);
     });
   }
 
@@ -149,6 +151,7 @@ class StreamMongoQueue extends Queue {
       delete v.processed;
       delete v.t;
       callback (null, v);
+      this._stats.incr (`stream.${gid}.reserve`);
     });
   }
 
@@ -184,6 +187,7 @@ class StreamMongoQueue extends Queue {
     this._col.updateOne (q, updt, opts, (err, result) => {
       if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
+      this._stats.incr (`stream.${gid}.commit`);
     });
   }
 
@@ -223,6 +227,7 @@ class StreamMongoQueue extends Queue {
     this._col.updateOne (q, updt, opts, (err, result) => {
       if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
+      this._stats.incr (`stream.${gid}.rollback`);
     });
   }
 

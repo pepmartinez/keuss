@@ -36,15 +36,12 @@ class MemStats extends Stats {
   }
 
   incr (v, delta, cb) {
-    if (!this._s.counters[v]) {
-      this._s.counters[v] = 0;
-    }
-    
     if ((delta == null) || (delta == undefined)) delta = 1;
-    var old_v = this._s.counters[v]
-    debug ('incr %s by %d: %d --> %d', v, delta, old_v, this._s.counters[v]);
-    this._s.counters[v] = this._s.counters[v] + delta;
-    if (cb) cb(null, this._s.counters[v]);
+    const old_v = _.get (this._s.counters, v, 0);
+    _.set (this._s.counters, v, old_v + delta);
+    const new_v = _.get (this._s.counters, v);
+    debug ('incr %s by %d: %d --> %d', v, delta, old_v, new_v);
+    if (cb) cb(null, new_v);
   }
 
   decr (v, delta, cb) {

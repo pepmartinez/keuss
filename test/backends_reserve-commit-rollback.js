@@ -10,12 +10,12 @@ var MongoClient = require ('mongodb').MongoClient;
 var factory = null;
 
 [
-//  {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
-//  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo')},
-//  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
+  {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo')},
+  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
   {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo')},
  // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
-//  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')}
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')}
 ].forEach(function (MQ_item) {
   describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
     var MQ = MQ_item.mq;
@@ -80,7 +80,7 @@ var factory = null;
           })
         },
         cb => q.stats((err, res) => {
-          res.should.eql({
+          res.should.match({
             get: 0,
             put: 2,
             reserve: 0,
@@ -100,7 +100,7 @@ var factory = null;
           cb();
         }),
         cb => q.stats((err, res) => {
-          res.should.eql({
+          res.should.match({
             get: 1,
             put: 2,
             reserve: 0,
@@ -119,7 +119,7 @@ var factory = null;
         },
         cb => setTimeout (cb, 1000),
         cb => q.stats((err, res) => {
-          res.should.eql({
+          res.should.match({
             get: 2,
             put: 2,
             reserve: 0,
@@ -171,7 +171,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 0,
               put: 2,
               reserve: 0,
@@ -205,7 +205,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 1,
               put: 2,
               reserve: 0,
@@ -239,7 +239,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 2,
               put: 2,
               reserve: 0,
@@ -294,7 +294,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 0,
               put: 2,
               reserve: 0,
@@ -321,7 +321,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 0,
               put: 2,
               reserve: 0,
@@ -348,7 +348,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 0,
               put: 2,
               reserve: 0,
@@ -389,7 +389,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 2,
               put: 2,
               reserve: 0,
@@ -470,7 +470,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 2,
               put: 2,
               reserve: 0,
@@ -527,7 +527,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 0,
               put: 3,
               reserve: 0,
@@ -585,7 +585,7 @@ var factory = null;
         },
         function (cb) {
           q.stats(function (err, res) {
-            res.should.eql({
+            res.should.match({
               get: 3,
               put: 3,
               reserve: 0,
@@ -859,7 +859,7 @@ var factory = null;
         },
         cb => setTimeout (cb, 1000),
         cb => q.stats((err, res) => {
-          res.should.eql({
+          res.should.match({
             get: 0,
             put: 1,
             reserve: 1,
@@ -997,7 +997,7 @@ var factory = null;
         cb => q.ok (state.reserved_obj, cb),
         cb => setTimeout (cb, 1000),
         cb => q.stats((err, res) => {
-          res.should.eql({
+          res.should.match({
             get: 0,
             put: 1,
             reserve: 3,

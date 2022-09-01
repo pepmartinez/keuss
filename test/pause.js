@@ -102,7 +102,7 @@ var factory = null;
 
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.eql ({ put: 6, get: 6 });
+            res[4].should.match ({ put: 6, get: 6 });
             res[5].should.equal (0);
             q.nConsumers().should.equal (0);
 
@@ -131,7 +131,7 @@ var factory = null;
             cb => q._stats.clear (cb),
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.eql ({ put: 1, get: 1 });
+            res[4].should.match ({ put: 1, get: 1 });
             res[5].should.equal (0);
             q.nConsumers().should.equal (0);
 
@@ -165,7 +165,7 @@ var factory = null;
             cb => q._stats.clear (cb)
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.eql ({ put: 1 });
+            res[4].should.match ({ put: 1 });
             res[5].should.equal (1);
             res[2][0].timeout.should.eql (true);
             res[7].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
@@ -201,7 +201,7 @@ var factory = null;
             cb => q._stats.clear (cb)
           ], (err, res) => {
             if (err) return done (err);
-            res[6].should.eql ({ put: 1 });
+            res[6].should.match ({ put: 1 });
             res[7].should.equal (1);
             res[4].timeout.should.eql (true);
             res[9].payload.should.eql ({q:0, a: 'ryetyeryre 0'});

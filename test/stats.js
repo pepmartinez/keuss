@@ -39,9 +39,14 @@ _.forEach ({
       CL ((err, ftry) => {
         if (err) return done(err);
         var mem = ftry.stats (ns, name);
-        mem.values (function (err, vals) {
-          vals.should.eql ({});
-          ftry.close(done);
+
+        async.series([
+          cb => mem.clear (cb),
+        ], () => {
+          mem.values (function (err, vals) {
+            vals.should.eql ({});
+            ftry.close(done);
+          });
         });
       });
     });
@@ -52,6 +57,7 @@ _.forEach ({
         var mem = ftry.stats (ns, name);
 
         async.series([
+          cb => mem.clear (cb),
           cb => mem.incr ('v1', 1, cb),
           cb => mem.incr ('v2', 1, cb),
           cb => mem.incr ('v3', 1, cb)
@@ -251,5 +257,40 @@ _.forEach ({
         });
       });
     });
+
+
+    it ('managed hierarchy (dotted keys) ok', done => {
+      CL ((err, ftry) => {
+        if (err) return done(err);
+        var mem = ftry.stats (ns, name);
+
+        async.series([
+          cb => mem.clear (cb),
+          cb => mem.incr ('l1.l2.c', -1, cb),
+          cb => mem.incr ('l1.l2.b', 1, cb),
+          cb => mem.incr ('l1.l3.a', 7, cb),
+          cb => mem.incr ('v1', 3, cb),
+        ], (err, results) => {
+          setTimeout ( () => mem.values ((err, vals) => {
+            vals.should.eql ({
+              l1: {
+                l2: {
+                  b: 1,
+                  c: -1
+                },
+                l3: {
+                  a: 7
+                }
+              },
+              v1: 3
+            });
+            
+            ftry.close(done);
+          }), 200);
+        });
+      });
+    });
+
+
   });
 });

@@ -37,12 +37,26 @@ class RedisStats extends Stats {
       var ret = {};
       for (let k in v) {
         // filter counters
-        if (k.startsWith ('counter_')) ret[k.substr (8)] = parseInt(v[k]);
+        if (k.startsWith ('counter_')) _.set (ret, k.substring (8), parseInt(v[k]));
       }
 
       cb (null, ret);
     });
   }
+
+  
+  _raw_values (cb) {
+    this._rediscl.hgetall (this._id, (err, v) => {
+      if (err) return cb(err);
+      var ret = {};
+      for (let k in v) {
+        if (k.startsWith ('counter_')) ret[k.substring (8)] = v[k];
+      }
+
+      cb (null, ret);
+    });
+  }
+
 
   paused (val, cb) {
     if (!cb) {
@@ -144,7 +158,7 @@ class RedisStats extends Stats {
       cb => this._rediscl.hdel (this._id, 'opts', cb)
     ];
 
-    this.values ((err, vals) => {
+    this._raw_values ((err, vals) => {
       _.forEach (vals, (v, k) => {
         tasks.push (cb => this._rediscl.hdel (this._id, 'counter_' + k, cb));
       });
