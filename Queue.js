@@ -98,6 +98,9 @@ class Queue {
   // remove (and return if possible) by id
   remove (id, callback) {callback(null, null);}
 
+  // extra information & status
+  extra_info (cb) {cb (null, {});}
+
   // end of expected redefinitions on subclasses
   ////////////////////////////////////////////////////////////////////////////
 
@@ -112,6 +115,29 @@ class Queue {
   // capabilities
   capabilities () {
     return this._factory.capabilities ();
+  }
+  
+  
+  info (cb) {
+    async.parallel ({
+      size:      cb => this.size (cb),
+      totalSize: cb => this.totalSize (cb),
+      schedSize: cb => this.schedSize (cb),
+      resvSize:  cb => this.resvSize (cb),
+      next_t:    cb => this.next_t (cb),
+      stats:     cb => this.stats (cb),
+      paused:    cb => this.paused (cb),
+      extra:     cb => this.extra_info (cb),
+    }, (err, res) => {
+      if (err) return cb (err);
+
+      res.name =         this.name();
+      res.ns =           this.ns();
+      res.type =         this.type();
+      res.capabilities = this.capabilities();
+
+      cb (null, res);
+    });
   }
 
   // T of next mature
