@@ -265,8 +265,8 @@ class StreamMongoQueue extends Queue {
     const gr = gid || this._gid;
 
     const q = {};
-    q[`reserved.${gr}`] = {$exists: false};
     q[`processed.${gr}`] = false;
+    q[`reserved.${gr}`] = {$exists: false};
     q[`mature.${gr}`] = {$gt: Queue.now()};
 
     const opts = {};
@@ -280,8 +280,8 @@ class StreamMongoQueue extends Queue {
     const gr = gid || this._gid;
 
     const q = {};
-    q[`reserved.${gr}`] = {$exists: true};
     q[`processed.${gr}`] = false;
+    q[`reserved.${gr}`] = {$exists: true};
     q[`mature.${gr}`] = {$gt: Queue.now()};
 
     const opts = {};
@@ -311,6 +311,91 @@ class StreamMongoQueue extends Queue {
       callback (null, result && result.mature && result.mature[gr]);
     });
   }
+
+
+  //////////////////////////////////
+  // queue size of non-mature elements only.
+  // COMMENTED OUT: takes 1 sec per each 100K elements in collection
+  /*
+  extra_info (callback) {
+    const cursor = this._col.aggregate ([
+      {
+        $group : {
+          _id : "v",
+          r: {
+            $accumulator: {
+              init: `function() { 
+                return { size: {}, totalSize: {}, resvSize: {}, schedSize: {}, processed: {} }
+              }`,
+              accumulate: `function(state, mature, reserved, processed) { 
+                for (const gr in mature) {
+                  if (!state.size[gr])      state.size[gr] = 0;
+                  if (!state.totalSize[gr]) state.totalSize[gr] = 0;
+                  if (!state.resvSize[gr])  state.resvSize[gr] = 0;
+                  if (!state.schedSize[gr]) state.schedSize[gr] = 0;
+                  if (!state.processed[gr]) state.processed[gr] = 0;
+
+                  const mtr = (mature[gr].getTime() < new Date().getTime());
+                  const rsv = (reserved && ((reserved[gr] != null) && (reserved[gr] != undefined)));
+                  const prc = processed[gr];
+
+                  if (prc) {
+                    state.processed[gr]++;
+                  }
+                  else {
+                    state.totalSize[gr]++;
+
+                    if (mtr) {
+                      state.size[gr]++;
+                    }
+                    else {
+                      if (rsv) state.resvSize[gr]++;
+                      else     state.schedSize[gr]++;
+                    }
+                  }
+                }
+
+                return state;
+              }`,
+              accumulateArgs: ['$mature', '$reserved', '$processed'],  
+              merge: `function(state1, state2) { 
+                const res = { size: {}, totalSize: {}, resvSize: {}, schedSize: {} }
+                for (const gr in state1) {
+                  res.size[gr] =      state1.size[gr] +      (state2.size[gr] || 0)
+                  res.totalSize[gr] = state1.totalSize[gr] + (state2.totalSize[gr] || 0)
+                  res.resvSize[gr] =  state1.resvSize[gr] +  (state2.resvSize[gr] || 0)
+                  res.schedSize[gr] = state1.schedSize[gr] + (state2.schedSize[gr] || 0)
+                  res.processed[gr] = state1.processed[gr] + (state2.processed[gr] || 0)
+                }
+                for (const gr in state2) {
+                  if (!state1.size[gr])      res.size[gr] =      state2.size[gr]
+                  if (!state1.totalSize[gr]) res.totalSize[gr] = state2.totalSize[gr]
+                  if (!state1.schedSize[gr]) res.schedSize[gr] = state2.schedSize[gr]
+                  if (!state1.resvSize[gr])  res.resvSize[gr] =  state2.resvSize[gr]
+                  if (!state1.processed[gr]) res.processed[gr] = state2.processed[gr]
+                }
+                return res
+              }`,
+              lang: "js"
+            }
+          }
+        }
+      }
+
+    ]);
+
+
+
+
+    cursor.toArray ((err, res) => {
+      debug ('calculating resvSize: aggregation pipeline returns %o', err);
+      debug ('calculating resvSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].r);
+    });
+  }
+*/
 
 
   ///////////////////////////////////////////////////////////////////////////////
