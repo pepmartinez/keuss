@@ -20,7 +20,7 @@ class StreamMongoQueue extends Queue {
     this._factory = factory;
     this._col = factory._db.collection (name);
     this._groups_str = this._opts.groups || 'A,B:C';
-    this._groups_vector = this._groups_str.split (/[:,;.-]/);
+    this._groups_vector = this._groups_str.split (/[:,;.-]/).map (i => i.trim());
     this._gid = this._opts.group || this._groups_vector[0];
 
     this.ensureIndexes (err => {
