@@ -32,12 +32,15 @@ where `opts` is an object containing initialization options. Common properties t
 
 The following are backend-dependent values:
 
-* backends *mongo*, *pl-mongo* and *ps-mongo*.
+* backends *mongo*, *pl-mongo* and *ps-mongo*
   * `url`: mongodb url to use, defaults to `mongodb://localhost:27017/keuss`.
-* backends *redis-list* and *redis-oq*.
+* backends *redis-list* and *redis-oq*
   * `redis`: data to create a redis connection to the Redis acting as backend, see below.
-* backend *ps-mongo*.
+* backends *ps-mongo*, *stream-mongo*
   * `ttl`: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs.
+* backend *stream-mongo*
+  * `groups`: string, comma-separated list of possible consumer groups to be used on push operations. Defaults to `A,B,C`
+  * `group`: string, consumer group to be used on pop/reserve operations. Defaults to first element of `groups`
 
 ### MongoDB defaults
 

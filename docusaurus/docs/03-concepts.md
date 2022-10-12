@@ -49,19 +49,23 @@ The **Storage** or **Backend** provides almost-complete queue primitives, fully 
 * *`pl-mongo`*, a version of the *`mongo`* backend that provides pipelining capabilities (the queues it produces are also pipelines).
 * *`ps-mongo`*, a version of the *`mongo`* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index.
 * *`bucket-mongo-safe`*, an approach to storing more than one element on each mongodb record in order to break past mongodb I/O limitations, provides both scheduling and reserve support with staggering performance on a reasonable durability.
+* *`stream-mongo`*, a simple yet effective approximation to event streaming by adding more than one possible consumer to each
+  element in queue. This provides a good approximation to a real event streamer such as `kafka` or `nats-jetstream`, at a 
+  fraction fo the complexity
 
 As mentioned before, persistence and High Availability (HA) depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases.
 
 The following table shows the capabilities of each backend:
 
-backend           | delay/schedule | reserve/commit | pipelining | history | remove | throughput |
-------------------|:--------------:|:--------------:|:----------:|:-------:|:------:|:----------:|
-redis-list        | - | - | - | - | - | ++++
-redis-oq          | x | x | - | - | x | +++
-mongo             | x | x | - | - | x | ++
-pl-mongo          | x | x | x | - | x | +
-ps-mongo          | x | x | - | x | x | ++
-bucket-mongo-safe | x | x | - | - | x | +++++
+backend           | delay/schedule | reserve/commit | pipelining | history | remove | streaming | throughput |
+------------------|:--------------:|:--------------:|:----------:|:-------:|:------:|:----------:|:---------:|
+redis-list        | - | - | - | - | - | - | ++++
+redis-oq          | x | x | - | - | x | - | +++
+mongo             | x | x | - | - | x | - | ++
+pl-mongo          | x | x | x | - | x | - | +
+ps-mongo          | x | x | - | x | x | - | ++
+bucket-mongo-safe | x | x | - | - | x | - | +++++
+stream-mongo      | x | x | - | x | - | x | ++
 
 ## Signaller
 
