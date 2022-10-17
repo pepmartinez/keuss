@@ -1,6 +1,6 @@
 {
   "name": "keuss-docusaurus",
-  "version": "1.6.15",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",

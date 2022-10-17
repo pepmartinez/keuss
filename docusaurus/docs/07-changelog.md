@@ -3,6 +3,8 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.7.0:
+  * added stream-mongo
 * v1.6.14:
   * fixed typo bug at redis-pubsub signaller introspection
 * v1.6.13:
