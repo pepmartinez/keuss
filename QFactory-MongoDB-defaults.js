@@ -11,7 +11,7 @@ class QFactory_MongoDB_defaults extends QFactory {
     super (opts);
 
     if (!this._opts.url) {
-      this._opts.url = 'http://localhost:27017/keuss';
+      this._opts.url = 'mongodb://localhost:27017/keuss';
       debug ('added url default to %s: %o', this._name, this._opts.url);
     }
 
