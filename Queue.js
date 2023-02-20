@@ -443,7 +443,7 @@ class Queue {
       }
 
       cb (err, res);
-    });
+    }, obj);
   }
 
 
