@@ -108,10 +108,12 @@ class IntraOrderedQueue extends Queue {
       if (err) return callback (err);
       const v = result && result.value;
       if (!v) return callback ();
+
+      // construct the real object to return
       const vq = v.q[0];
-      vq._id = v._id;
+      vq._id = v._id;  // use the whole obj's _id
       vq.tries = v.tries
-      vq._env = v;
+      vq._env = v; // pass along the whole obj too
       if (vq.payload._bsontype == 'Binary') vq.payload = vq.payload.buffer;
       callback (null, vq);
     });
@@ -175,9 +177,11 @@ class IntraOrderedQueue extends Queue {
       next_t = null;
     }
 
+    let q;
+
     try {
-      var query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
+      q =  {
+        _id: (_.isString(id) ? new mongo.ObjectId (id) : id),
         reserved: {$exists: true}
       };
     }
@@ -185,12 +189,15 @@ class IntraOrderedQueue extends Queue {
       return callback ('id [' + id + '] can not be used as rollback id: ' + e);
     }
 
-    var update = {
+    const upd = {
       $set:   {mature: (next_t ? new Date (next_t) : Queue.now ())},
       $unset: {reserved: ''}
     };
 
-    this._col.updateOne (query, update, {}, (err, result) => {
+    const opts = {};
+
+    this._col.updateOne (q, upd, opts, (err, result) => {
+      debug ('rollback: updateOne (%j, %j, %j) => (%j, %j)', q, upd, opts, err, result);
       if (err) return callback (err);
       callback (null, result && (result.modifiedCount == 1));
     });
