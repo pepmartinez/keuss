@@ -15,7 +15,8 @@ var factory = null;
   {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
   {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo')},
  // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
-  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')}
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')},
+  {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder')},
 ].forEach(function (MQ_item) {
   describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
     var MQ = MQ_item.mq;
@@ -130,7 +131,9 @@ var factory = null;
           cb();
         }),
         cb => q.next_t((err, res) => {
-          should.equal(res, null);
+          if (q.type () !=  'mongo:intraorder') {
+            should.equal(res, null);
+          }
           cb();
         })
       ], (err, results) => {
@@ -252,7 +255,9 @@ var factory = null;
         },
         function (cb) {
           q.next_t(function (err, res) {
-            should.equal(res, null);
+            if (q.type () !=  'mongo:intraorder') {
+              should.equal(res, null);
+            }
             cb();
           });
         }
@@ -604,6 +609,7 @@ var factory = null;
     it('should do raw reserve & commit as expected', function (done) {
       var q = factory.queue('test_queue_7');
       var id = null;
+      var obj = null;
 
       async.series([
         cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
@@ -617,6 +623,7 @@ var factory = null;
         }),
         cb => q.reserve((err, res) => {
           id = res._id;
+          obj = res;
           res.payload.should.eql({
             elem: 1,
             pl: 'twetrwte'
@@ -639,7 +646,7 @@ var factory = null;
         cb => q.commit(id, (err, res) => {
           res.should.equal(true);
           cb();
-        }),
+        }, obj),
         cb => q.size((err, size) => {
           size.should.equal(0);
           cb();
@@ -649,17 +656,20 @@ var factory = null;
           cb();
         }),
         cb => q.next_t((err, res) => {
-          should.equal(res, null);
+          if (q.type () !=  'mongo:intraorder') {
+            should.equal(res, null);
+          }
           cb();
         }),
       ], (err, results) => {
-        done();
+        done(err);
       });
     });
 
     it('should do raw reserve & rollback as expected', function (done) {
       var q = factory.queue('test_queue_8');
       var id = null;
+      var obj = null;
 
       async.series([
         function (cb) {
@@ -683,6 +693,7 @@ var factory = null;
         function (cb) {
           q.reserve(function (err, res) {
             id = res._id;
+            obj = res;
             res.payload.should.eql({
               elem: 1,
               pl: 'twetrwte'
@@ -737,7 +748,7 @@ var factory = null;
           q.commit(id, function (err, res) {
             res.should.equal(false);
             cb();
-          })
+          }, obj)
         },
         function (cb) {
           q.size(function (err, size) {
@@ -782,7 +793,9 @@ var factory = null;
         },
         function (cb) {
           q.next_t(function (err, res) {
-            should.equal(res, null);
+            if (q.type () !=  'mongo:intraorder') {
+              should.equal(res, null);
+            }
             cb();
           })
         },
@@ -794,6 +807,7 @@ var factory = null;
     it('should do get.reserve & ok as expected', function (done) {
       var q = factory.queue('test_queue_9');
       var id = null;
+      var obj = null;
 
       async.series([
         function (cb) {
@@ -807,6 +821,7 @@ var factory = null;
             reserve: true
           }, function (err, res) {
             id = res._id;
+            obj = res;
             res.payload.should.eql({
               elem: 1,
               pl: 'twetrwte'
@@ -834,7 +849,7 @@ var factory = null;
           })
         },
         function (cb) {
-          q.ok(id, function (err, res) {
+          q.ok(obj, function (err, res) {
             res.should.equal(true);
             cb();
           })
@@ -853,7 +868,9 @@ var factory = null;
         },
         function (cb) {
           q.next_t(function (err, res) {
-            should.equal(res, null);
+            if (q.type () !=  'mongo:intraorder') {
+              should.equal(res, null);
+            }
             cb();
           })
         },
@@ -875,9 +892,10 @@ var factory = null;
     });
 
     it('should manage rollback on invalid id as expected', function (done) {
-      if (MQ_item.label == 'Redis OrderedQueue') return done ();
-
       var q = factory.queue('test_queue_10');
+
+      if (q.type () ==  'redis:oq') return done ();
+      if (q.type () ==  'mongo:intraorder') return done ();
 
       async.series([
         function (cb) {
@@ -924,10 +942,11 @@ var factory = null;
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
           state.reserved_id = res._id;
+          state.reserved_obj = res;
           cb (null, res._id);
         }),
         cb => _get_all_sizes (q, cb),
-        cb => q.ok (state.reserved_id, cb),
+        cb => q.ok (state.reserved_id, cb, state.reserved_obj),
         cb => _get_all_sizes (q, cb),
         cb => q.pop ('me', cb),
         cb => q.pop ('me', cb),

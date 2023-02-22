@@ -1,5 +1,6 @@
-const _ = require ('lodash');
-const uuid = require ('uuid');
+const _ =     require ('lodash');
+const async = require ('async');
+const uuid =  require ('uuid');
 
 const MongoClient = require ('mongodb').MongoClient;
 const mongo =       require ('mongodb');
@@ -33,14 +34,15 @@ class IntraOrderedQueue extends Queue {
     return 'mongo:intraorder';
   }
 
+
   /////////////////////////////////////////
   // add element to queue
   insert (entry, callback) {
-    const q = { iid: entry.payload.iid || uuid.v4 () };
+    const q = { _id: entry.payload.iid || uuid.v4 () };
     const upd = { 
       $push: { q: entry }, 
       $inc: { qcnt: 1 },
-      $set: {mature: entry.mature, tries: entry.tries},
+      $set: { mature: entry.mature, tries: entry.tries },
     };
     const opts = { upsert: true };
 
@@ -48,7 +50,7 @@ class IntraOrderedQueue extends Queue {
       debug ('insert: updateOne (%j, %j, %j) => (%j, %j)', q, upd, opts, err, result);
       if (err) return callback (err);
       // TODO result.insertedCount must be 1
-      callback (null, result.upsertedId);
+      callback (null, result.upsertedId || q._id);
     });
   }
 
@@ -56,27 +58,19 @@ class IntraOrderedQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   get (callback) {
-    const q = {
-      mature: {$lte: Queue.nowPlusSecs (0)},
-    };
+    // actually, a reserve followed by a commit
+    this.reserve ((err, elem) => {
+      if (err)   return callback (err);
+      if (!elem) return callback ();
 
-    const updt = [{
-      $set: {
-        mature: Queue.nowPlusSecs (100 * this._opts.ttl)
-      }
-    }];
+      this.commit (elem._id, (err, res) => {
+        if (err) return callback (err);
 
-    const opts = {
-      sort: {mature : 1}
-    };
-
-    this._col.findOneAndUpdate (q, updt, opts, (err, result) => {
-      if (err) return callback (err);
-      const v = result && result.value;
-      if (!v) return callback ();
-      if (v.payload._bsontype == 'Binary') v.payload = v.payload.buffer;
-      callback (null, v);
-    });
+        // clear _env: not needed here
+        delete elem._env;
+        callback (null, elem);
+      }, elem);
+    })
   }
 
 
@@ -123,40 +117,37 @@ class IntraOrderedQueue extends Queue {
   //////////////////////////////////
   // commit previous reserve, by p.id
   commit (id, callback, obj) {
-    if (!(obj || obj._id)) {
+    if (!(obj || (obj && obj._id))) {
       // full obj must be passed to commit
       return callback ('full obj must be passed to commit');
     }
 
-    let q;
-
-    try {
-      q =  {
-        _id: (_.isString(id) ? new mongo.ObjectId (id) : id),
-        reserved: {$exists: true}
-      };
-    }
-    catch (e) {
-      return callback ('id [' + id + '] can not be used as rollback id: ' + e);
-    }
-
+    const q  =  {
+      _id: id,
+      reserved: {$exists: true}
+    };
+    
     const upd = {
-      $set:   {
-        mature: Queue.nowPlusSecs (100 * this._opts.ttl)
-      },
+// do not alter mature on commit: leave it be
+//      $set:   {
+//        mature: Queue.nowPlusSecs (100 * this._opts.ttl)
+//      },
       $pop: {q: -1},  // pop entry from queue
       $inc: { qcnt: -1 }, // one less element
       $unset: {reserved: ''}
     };
 
-    if (obj._env.qcnt > 1) {
+    if ((obj._env && obj._env.qcnt) > 1) {
       debug ('it is certain there are still entries in the intraqueue: set mature and tries');
-      upd.$set.mature = obj._env.q[1].mature;
-      upd.$set.tries = obj._env.q[1].tries;
+      upd.$set = {
+        mature: obj._env.q[1].mature,
+        tries: obj._env.q[1].tries,
+      }
     }
     else {
       // last in queue: set mature to distant future to get it out of the way while it's GCed
-      upd.$set.mature = Queue.nowPlusSecs (60*60*24*1000);
+// not really, it'd impact if there were an insert in between
+//      upd.$set.mature = Queue.nowPlusSecs (60*60*24*1000);
     }
 
     const opts = {};
@@ -177,17 +168,10 @@ class IntraOrderedQueue extends Queue {
       next_t = null;
     }
 
-    let q;
-
-    try {
-      q =  {
-        _id: (_.isString(id) ? new mongo.ObjectId (id) : id),
-        reserved: {$exists: true}
-      };
-    }
-    catch (e) {
-      return callback ('id [' + id + '] can not be used as rollback id: ' + e);
-    }
+    const q =  {
+      _id: id,
+      reserved: {$exists: true}
+    };
 
     const upd = {
       $set:   {mature: (next_t ? new Date (next_t) : Queue.now ())},
@@ -205,87 +189,101 @@ class IntraOrderedQueue extends Queue {
 
 
   //////////////////////////////////
-  // queue size including non-mature elements
+  // queue size of non-mature elements only
   totalSize (callback) {
-    var q = {
-      processed: {$exists: false}
-    };
+    const cursor = this._col.aggregate ([
+      {$match: {
+        qcnt: {$gt: 0}
+      }},
+      {$group:{_id:'t', v: {$sum: '$qcnt'}}}
+    ]);
 
-    var opts = {};
-    this._col.countDocuments (q, opts, callback);
+    cursor.toArray ((err, res) => {
+      debug ('calculating schedSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
 
 
   //////////////////////////////////
   // queue size NOT including non-mature elements
   size (callback) {
-    var q = {
-      processed: {$exists: false},
-      mature : {$lte : Queue.now ()}
-    };
+    const cursor = this._col.aggregate ([
+      {$match: {
+        mature: {$lte: Queue.now ()},
+        qcnt: {$gt: 0}
+      }},
+      {$group:{_id:'t', v: {$sum: '$qcnt'}}}
+    ]);
 
-    var opts = {};
-    this._col.countDocuments (q, opts, callback);
+    cursor.toArray ((err, res) => {
+      debug ('calculating schedSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
 
 
   //////////////////////////////////
   // queue size of non-mature elements only
   schedSize (callback) {
-    var q = {
-      mature : {$gt : Queue.now ()},
-      processed: {$exists: false},
-      reserved: {$exists: false}
-    };
+    const cursor = this._col.aggregate ([
+      {$match: {
+        mature: {$gt: Queue.now ()},
+        reserved: {$exists: false},
+        qcnt: {$gt: 0}
+      }},
+      {$group:{_id:'t', v: {$sum: '$qcnt'}}}
+    ]);
 
-    var opts = {};
-    this._col.countDocuments (q, opts, callback);
+    cursor.toArray ((err, res) => {
+      debug ('calculating schedSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
 
 
   //////////////////////////////////
   // queue size of reserved elements only
   resvSize (callback) {
-    var q = {
-      mature : {$gt : Queue.now ()},
-      processed: {$exists: false},
-      reserved: {$exists: true}
-    };
+    const cursor = this._col.aggregate ([
+      {$match: {
+        mature: {$gt: Queue.now ()},
+        reserved: {$exists: true},
+        qcnt: {$gt: 0}
+      }},
+      {$group:{_id:'t', v: {$sum: '$qcnt'}}}
+    ]);
 
-    var opts = {};
-    this._col.countDocuments (q, opts, callback);
+    cursor.toArray ((err, res) => {
+      debug ('calculating schedSize: aggregation pipeline returns %o', res);
+      if (err) return callback (err);
+      if (res.length == 0) return callback (null, 0);
+      callback (null, res[0].v);
+    });
   }
 
 
   //////////////////////////////////////////////
   // remove by id
   remove (id, callback) {
-    var query;
-
-    try {
-      query =  {
-        _id: (_.isString(id) ? new mongo.ObjectID (id) : id),
-        processed: {$exists: false},
-        reserved: {$exists: false}
-      };
-    }
-    catch (e) {
-      return callback ('id [' + id + '] can not be used as remove id: ' + e);
-    }
-
-    var updt = {
-      $set:   {
-        processed: new Date (),
-        mature: Queue.nowPlusSecs (100 * this._opts.ttl),
-        removed: true
-      },
+    const q =  {
+      _id: id,
+      qcnt: { $eq: 1 },  // allow deletion ONLY if it has just one element in the intraqueue
+      reserved: {$exists: false}
     };
 
-    var opts = {};
+    const opts = {};
 
-    this._col.updateOne (query, updt, opts, (err, result) => {
+    this._col.deleteOne (q, opts, (err, result) => {
+      debug ('remove: deleteOne (%j, %j) => (%j, %j)', q, opts, err, result);
       if (err) return callback (err);
-      callback (null, result && (result.modifiedCount == 1));
+      callback (null, result && (result.deletedCount == 1));
     });
   }
 
@@ -311,10 +309,9 @@ class IntraOrderedQueue extends Queue {
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
   ensureIndexes (cb) {
-    this._col.createIndex ({mature : 1}, err => {
-      if (err) return cb (err);
-      cb (err);
-    });
+    async.series ([
+      cb => this._col.createIndex ({mature : 1, qcnt: 1}, cb),
+    ], cb);
   }
 }
 
@@ -353,7 +350,7 @@ class Factory extends QFactory_MongoDB_defaults {
       reserve:  true,
       pipeline: false,
       tape:     false,
-      remove:   true
+      remove:   false
     };
   }
 }
