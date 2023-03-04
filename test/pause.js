@@ -14,6 +14,7 @@ var factory = null;
   {label: 'Stream MongoDB',      backend: require ('../backends/stream-mongo')},
   {label: 'plain MongoDB',       backend: require ('../backends/mongo')},
   {label: 'Safe MongoDB Bucket', backend: require ('../backends/bucket-mongo-safe')},
+  {label: 'Mongo IntraOrder',    backend: require ('../backends/intraorder')},
 ].forEach (backend_item => {
   [
     {label: 'mem',   stats: require('../stats/mem')},

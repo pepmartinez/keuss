@@ -8,6 +8,14 @@ prio 1
 * pipelines
   + add some commonplace transforms (etl-like)
   + create a server for that, allow processor code defined externally
+* documentation
+  + blog entries:
+    - motivations on using mongodb+redis. comparatives, pros&cons
+    - buckets
+    - pipelines
+    - tape
+    - redis-oq
+    - exotic experiments: intraorder
 
 prio 0
 -----------------------------------------------------------------

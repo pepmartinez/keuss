@@ -765,7 +765,7 @@ class Queue {
           return cb (null, 'deadletter');
         }
       });
-    });
+    }, obj);
   }
 }
 
