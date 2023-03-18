@@ -165,7 +165,7 @@ var factory = null;
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('parallel reserve-commit on same iid blocks until commit', done => {
-      const q = factory.queue('test_queue_2');
+      const q = factory.queue('test_queue_3');
       const t0 = process.hrtime();
       const pops = [];
 
@@ -221,8 +221,80 @@ var factory = null;
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('parallel reserve-commit on same iid blocks until rollback');
+    it('parallel reserve-commit on same iid blocks until rollback', done => {
+      const q = factory.queue('test_queue_4');
+      const t0 = process.hrtime();
+      const pops = [];
 
+      async.series([
+        cb => q.push({elem: 1, iid: 'twetrwte', pl: {d: 't-', a: 56}}, cb),
+        cb => q.push({elem: 2, iid: 'twetrwte', pl: {d: 't--', a: 156}}, cb),
+        cb => q.push({elem: 3, iid: 'twetrwte', pl: {d: 't---', a: 256}}, cb),
+
+        cb => async.parallel ([
+          cb => {
+            let elem;
+            async.series ([
+              cb => setTimeout (cb, 500),
+              cb => q.pop('c1', {reserve: true}, (err, res) => {elem = res; pops.push (res); cb (err); }),
+              cb => q.ko (elem, new Date().getTime () + 1000, cb),
+            ], cb);
+          },
+          cb => {
+            let elem;
+            async.series ([
+              cb => setTimeout (cb, 700),
+              cb => q.pop('c1', {reserve: true}, (err, res) => {elem = res; pops.push (res);; cb (err); }),
+              cb => q.ko (elem, new Date().getTime () + 1000, cb),
+            ], cb);
+          },
+          cb => {
+            let elem;
+            async.series ([
+              cb => setTimeout (cb, 1500),
+              cb => q.pop('c1', {reserve: true}, (err, res) => {elem = res; pops.push (res);; cb (err); }),
+              cb => setTimeout (cb, 1500),
+              cb => q.ok (elem, cb),
+            ], cb);
+          },
+          cb => {
+            let elem;
+            async.series ([
+              cb => setTimeout (cb, 2000),
+              cb => q.pop('c1', {reserve: true}, (err, res) => {elem = res; pops.push (res);; cb (err); }),
+              cb => setTimeout (cb, 1500),
+              cb => q.ok (elem, cb),
+            ], cb);
+          },
+          cb => {
+            let elem;
+            async.series ([
+              cb => setTimeout (cb, 2500),
+              cb => q.pop('c1', {reserve: true}, (err, res) => {elem = res; pops.push (res);; cb (err); }),
+              cb => setTimeout (cb, 1500),
+              cb => q.ok (elem, cb),
+            ], cb);
+          },
+        ], cb)
+      ], (err, results) => {
+        if (err) return done (err);
+        
+        pops[0].payload.should.eql ({ elem: 1, iid: 'twetrwte', pl: { d: 't-', a: 56 } });
+        pops[1].payload.should.eql ({ elem: 1, iid: 'twetrwte', pl: { d: 't-', a: 56 } });
+        pops[2].payload.should.eql ({ elem: 1, iid: 'twetrwte', pl: { d: 't-', a: 56 } });
+        pops[3].payload.should.eql ({ elem: 2, iid: 'twetrwte', pl: { d: 't--', a: 156 } });
+        pops[4].payload.should.eql ({ elem: 3, iid: 'twetrwte', pl: { d: 't---', a: 256 } });
+
+        // duration must be about 6 secs
+        const delta = process.hrtime(t0);
+
+        // queue pop won't rearm after commit... so it will timeout after a min and only then rearm again for next pop/reserve
+//        delta[0].should.eql (7);
+        done();
+      });
+    });
+
+    
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('delayed push preserves order', done => {
       const q = factory.queue('test_queue_1');
