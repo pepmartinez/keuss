@@ -443,7 +443,7 @@ class Queue {
       }
 
       cb (err, res);
-    });
+    }, obj);
   }
 
 
@@ -765,7 +765,7 @@ class Queue {
           return cb (null, 'deadletter');
         }
       });
-    });
+    }, obj);
   }
 }
 

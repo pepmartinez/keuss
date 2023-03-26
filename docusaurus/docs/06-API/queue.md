@@ -156,21 +156,26 @@ If no `tr` param is passed, or it is `null`, all pending `pop` operations on the
 ### `ok`: Commit a reserved element
 
 ```javascript
-q.ok (id, (err, res) => {
+q.ok (id|obj, (err, res) => {
   ...
 })
 ```
 
-Commits a reserved element by its id (the id would be assigned to `res._id` on the `res` param of `pop()` operation). This effectively erases the element from the queue.
+Commits a reserved element by its id (the id would be assigned to `res._id` on the `res` param of `pop()` operation) or specifying the entire 
+object (as it was returned by the reserve call). This effectively erases the element from the queue.
 
-Alternatively, you can pass the entire `res` object from the `pop()` operation:
 
 ```javascript
-var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
+const tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
   // do something with res
   ...
 
-  // commit it
+  // alternative 1: commit it by id
+  q.ok (res._id, (err, res) => {
+    ...
+  });
+
+  // alternative 2: commit it by full object
   q.ok (res, (err, res) => {
     ...
   });
@@ -180,22 +185,24 @@ var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
 ### `ko`: Roll back a reserved element
 
 ```javascript
-q.ko (id, next_t, (err, res) => {
+q.ko (id|obj, next_t, (err, res) => {
   ...
 })
 ```
 
-Rolls back a reserved element by its id (the id would be at `res._id` on the `res` param of `pop()` operation). This effectively makes the element available again at the queue, marking it to be mature at `next_t` (`next_t` being a millsec-unixtime). If no `next_t` is specified or a `null` is passed, `now()` is assumed.
+Rolls back a reserved element by its id (the id would be at `res._id` on the `res` param of `pop()` operation) or specifying the entire 
+object (as it was returned by the reserve call). This effectively makes the element available again at the queue, marking it to be 
+mature at `next_t` (`next_t` being a millsec-unixtime). If no `next_t` is specified or a `null` is passed, `now()` is assumed.
 
 the `res` param of the callback can take the following values:
 * `true` if all went ok and an element was in fact rolled back
 * *nullish* if the element does not exist in the queue
 * `'deadletter'` (as string) if the rollback resulted in the element being moved to deadletter 
 
-As with `ok()`, you can use the entire `res` object as `id`:
+As with `ok()`, you can pass the entire reserved object as `id`:
 
 ```javascript
-var tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
+const tr = q.pop ('my-consumer-id', {reserve: true}, (err, res) => {
   // do something with res
   ...
 
