@@ -3,8 +3,10 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.7.1
+  * added intraorder backend
 * v1.7.0:
-  * added stream-mongo
+  * added stream-mongo backend
 * v1.6.14:
   * fixed typo bug at redis-pubsub signaller introspection
 * v1.6.13:
