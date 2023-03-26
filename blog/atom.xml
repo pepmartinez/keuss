@@ -9,7 +9,7 @@
     <icon>https://pepmartinez.github.io/keuss/img/favicon.ico</icon>
     <entry>
         <title type="html"><![CDATA[New website!]]></title>
-        <id>/2020/08/04/welcome</id>
+        <id>https://pepmartinez.github.io/keuss/blog/2020/08/04/welcome</id>
         <link href="https://pepmartinez.github.io/keuss/blog/2020/08/04/welcome"/>
         <updated>2020-08-04T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[We got a brand new site for Keuss, powered by Docusaurus v2. Chances are, if you're reading this, you already found the site...]]></summary>

@@ -11,7 +11,7 @@
         <item>
             <title><![CDATA[New website!]]></title>
             <link>https://pepmartinez.github.io/keuss/blog/2020/08/04/welcome</link>
-            <guid>/2020/08/04/welcome</guid>
+            <guid>https://pepmartinez.github.io/keuss/blog/2020/08/04/welcome</guid>
             <pubDate>Tue, 04 Aug 2020 00:00:00 GMT</pubDate>
             <description><![CDATA[We got a brand new site for Keuss, powered by Docusaurus v2. Chances are, if you're reading this, you already found the site...]]></description>
             <content:encoded><![CDATA[<p>We got a brand new site for Keuss, powered by <a href="https://v2.docusaurus.io" target="_blank" rel="noopener noreferrer">Docusaurus v2</a>. Chances are, if you're reading this, you already found the site...</p><p>Good old README.md, as simple and convenient as it is, was becoming way too big and difficult to navigate. Also, it is not a proper site worth presenting to the world; hence the decision to add a small, simple enough site to Keuss</p>]]></content:encoded>
