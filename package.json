@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "keywords": [
     "queue",
     "persistent",
@@ -24,7 +24,7 @@
     "name": "Jose Luis Martinez Juan",
     "email": "pep.martinez@gmail.com"
   },
-  "license": "GPL-3.0",
+  "license": "MIT",
   "dependencies": {
     "@nodebb/mubsub": "~1.8.0",
     "async": "~3.2.4",
