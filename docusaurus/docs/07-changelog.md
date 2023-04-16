@@ -3,6 +3,8 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v1.7.3
+  * license changed to MIT
 * v1.7.2
   * added intraorder backend
 * v1.7.0:
