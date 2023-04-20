@@ -9,7 +9,38 @@ This is a series of of articles describing the technical details on which `keuss
 queue middleware (`QMW` henceforth) with a quite shallow layer on top of `MongoDB`. The basic approach is well known and understood, but
 `keuss` goes well beyond the basic approach to provide extra functionalities
 
-### Basic building blocks
+## Some nomenclature
+LEt us start establishing some common nomenclature that will appear later on:
+* ***job queue***: A construct where elements can be inserted and extracted, in a FIFO (first in, first out) manner. Elements 
+  extracted are removed from the queue and are no longer available
+* ***push***: action of inserting an element into a queue
+* ***pop***: action of extracting an element from a queue
+* ***reserve/commit/rollback***: operations to provide more control on the extraction of elements: first the element is _reserved_,
+  (making it invisible by other reserve or pop operations, but still present in the queue), then once the element is processed it 
+  is _committed_ (and only then the element is removed from the queue) or _rolledback_ (meaning it is made elligible again for other
+  reserve or pop, possibly after some delay); if none of _commit_ or _rollback_ happen after some time, an automatic _rollback_ is 
+  applied.
+* ***consumer***: an actor performing pop and/or reserve-commit-rollback operations on a queue. A queue can have zero or more concurrent 
+  consumers
+* ***producer***: an actor performing push operations on a queue. A queue can have zero or more concurrent 
+  producers
+* ***at-most-once***: consumer guarantee associated with the `push` operation: since the element is first removed from the queue, and
+  then the consumer proceeds to process it, if the consumer dies or crashes in between the element will be lost. That is, losses are
+  tolerated, but duplications are not
+* ***at-least-once***: consumer guarantee associated with the `reserve-commit-rollback` operations: if the consumer crashes between
+  `reserve` and `commit` the element will eventually be auto-rolledback and be processed again (possibly by another consumer). 
+  Therefore, duplications are tolerated but losses are not
+* ***exactly-once***: theoretical consumer guarantee where no losses and no duplications can happen. It involves the use ot monotonical 
+  identifiers or window-based duplication detection, and is generally extremelly complex to achieve, and almost in all cases with a
+  hefty performance penalty. It is almost never offered out fo the box in any QMW
+* ***deadletter queue***: usually, there is a maximum number of times an element can be rolled back after a reserve, in order to prevent 
+  ill-formed or otherwise incorrect messages to stay forever in queues. Upon rollback, if the element has reached the maximum number of
+  rollbacks it is remove from the queue and pushed into the deadletter queue, which is an otherwise regular queue
+* ***ordered queue***:  
+* ***delay/schedule***: 
+* ***queue middleware (qmw)***:
+
+## Basic building blocks
 Here's whay you need to build a proper QMW:
 
 1. A ***storage subsystem***: Data for the contents of the queus have to be stored somewhere. It has to provide:
@@ -26,8 +57,8 @@ Here's whay you need to build a proper QMW:
    an event, instead of running a poll busy-loop. Another example  of useful event is to signal whether a queue becomes 
    paused (since it must be paused for _all_ clients)
 
-   This event bus can be a _pub/sub_ bus: all connected clients are amde aware of events, but there is no need to save
-   events for clients that may connect later. This simplifies the event bus by a lot, since it can be made stateless 
+   This event bus can be a _pub/sub_ , stateless bus: only connected clients are made aware of events and there is no need to save
+   events for clients that may connect later. This simplifies the event bus by a lot.
 
 The whole idea behind `keuss` is that all those building blocks are already available out there in the form of DataBase
 systems, and all there is to add is a thin layer and a few extras. 
@@ -59,7 +90,7 @@ added to `Redis` by coding them as `lua` extensions, since all operations in `Re
 
 ## Queues with historic data
 
-## Queues fit for ETL pipeliles: moving elements from one queue to the next, atomically
+## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
 
 ## Breaking the throughput barrier of FindAndUpdate: buckets
 
