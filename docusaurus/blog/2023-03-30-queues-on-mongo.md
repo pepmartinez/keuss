@@ -10,9 +10,10 @@ queue middleware (`QMW` henceforth) with a quite shallow layer on top of `MongoD
 `keuss` goes well beyond the basic approach to provide extra functionalities
 
 ## Some nomenclature
-LEt us start establishing some common nomenclature that will appear later on:
+Let us start establishing some common nomenclature that will appear later on:
 * ***job queue***: A construct where elements can be inserted and extracted, in a FIFO (first in, first out) manner. Elements 
   extracted are removed from the queue and are no longer available
+* ***queue middleware (qmw)***: A system that provides queues and means for actors to perform as producers, consumers or both
 * ***push***: action of inserting an element into a queue
 * ***pop***: action of extracting an element from a queue
 * ***reserve/commit/rollback***: operations to provide more control on the extraction of elements: first the element is _reserved_,
@@ -27,18 +28,69 @@ LEt us start establishing some common nomenclature that will appear later on:
 * ***at-most-once***: consumer guarantee associated with the `push` operation: since the element is first removed from the queue, and
   then the consumer proceeds to process it, if the consumer dies or crashes in between the element will be lost. That is, losses are
   tolerated, but duplications are not
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant queue
+    participant consumer
+    consumer->>+queue: pop
+    queue->>-consumer: element
+    activate consumer
+    note left of queue: element is no longer in queue
+    note right of consumer: process element
+    deactivate consumer
+    note right of consumer: element processed, get another
+    consumer->>+queue: pop
+    queue->>-consumer: element
+    
+  ```
 * ***at-least-once***: consumer guarantee associated with the `reserve-commit-rollback` operations: if the consumer crashes between
   `reserve` and `commit` the element will eventually be auto-rolledback and be processed again (possibly by another consumer). 
   Therefore, duplications are tolerated but losses are not
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant queue
+    participant consumer
+    consumer->>+queue: reserve
+    queue->>-consumer: element
+    activate consumer
+    note left of queue: element is still in queue, but not accesible to other consumers
+    note right of consumer: process element
+    consumer->>-queue: commit
+    activate queue
+    queue->>consumer: ack
+    deactivate queue
+    note left of queue: element is no longer in queue
+    note right of consumer: element processed, get another
+    consumer->>+queue: pop
+    queue->>-consumer: element
+  ```  
 * ***exactly-once***: theoretical consumer guarantee where no losses and no duplications can happen. It involves the use ot monotonical 
   identifiers or window-based duplication detection, and is generally extremelly complex to achieve, and almost in all cases with a
   hefty performance penalty. It is almost never offered out fo the box in any QMW
 * ***deadletter queue***: usually, there is a maximum number of times an element can be rolled back after a reserve, in order to prevent 
   ill-formed or otherwise incorrect messages to stay forever in queues. Upon rollback, if the element has reached the maximum number of
   rollbacks it is remove from the queue and pushed into the deadletter queue, which is an otherwise regular queue
-* ***ordered queue***:  
-* ***delay/schedule***: 
-* ***queue middleware (qmw)***:
+* ***ordered queue***:  A non-FIFO queue: insertions are not done at the tail of the queue, but at any point. This means insertions are 
+  no longer _O(1)_: depending on the technology used they can be _O(n_) or better, such as _O(log(n))_ for a btree-based queue; same goes for 
+  push/reserve operations, they are no longer _O(1)_. 
+
+  Using ordered queues on a QMW is key to implement certain operations: not only the more obvious such as delay, schedule or priorities,
+  but also robust and performing reserve/commit/rollback
+  
+  Using a database to implement queues makes ordered queues a bliss: using a regular index is usually all you need to get
+  near-constant-complexity operations
+* ***delay/schedule***: Push operation when the element is marked to not to be elligible for pop or reserve _before_ a certain time. 
+  The presence of delayed elements must not impact in any way the rest of elements (that is, the rest of elements' elligibility must not
+  change) or the queue itself (that is, que presence of delayed elements must not degrade the queue performance or capabilities)
+
+  This feature can be very easily implemented using an ordered queue, where the order is defined by a timestamp representing the 
+  _mature_ time: the time when the element can be popped or reserver, and not before
+
+  Also, the delay/schedule feature can be applied also to rollbacks, since a rollback is conceptually a re-insertion; delays in rollbacks
+  provide a way to implement [exponential backoff](https://en.wikipedia.org/wiki/Exponential_backoff) easily, to prevent busy 
+  reserve-fail-rollback loops when only one element is in the queue, and the element is repeteadly rolled back upon processing
 
 ## Basic building blocks
 Here's whay you need to build a proper QMW:
@@ -72,7 +124,7 @@ on a single record without the possibility of a second modify intefering, changi
 the modify (or after the modify and before the read) 
 
 If the storage system provides such primitives, it is relatively easy and simple to model queues on top of it; also, the 
-overall performance (throughput and latency) will greatly depend on the performance of such operation: most RDBMS can do
+overall performance (throughput and latency) will greatly depend on the performance of such operation: most RDBMs can do
 this by packing the read and the modify inside a _transaction_, but that usually degrades the performance greatly, to a
 point where it is not viable for queue modelling
 
@@ -86,7 +138,12 @@ Arguably, that's a default behaviour: `Redis-Cluster` coupled with proper persis
 However, this series of articles would focus on `MongoDB` only. For now, let us say that atomic operations are very easily
 added to `Redis` by coding them as `lua` extensions, since all operations in `Redis` are atomic by design
 
+In the following sections we will see how the implementations of common QMW operations can be indeed solved elegently using
+atomic operations in the underlying DB/storage
+
 ## Simple approach: good enough queues
+
+## Reserve-commit-rollback
 
 ## Queues with historic data
 
