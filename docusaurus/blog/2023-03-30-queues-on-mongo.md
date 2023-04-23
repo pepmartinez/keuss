@@ -139,11 +139,45 @@ However, this series of articles would focus on `MongoDB` only. For now, let us 
 added to `Redis` by coding them as `lua` extensions, since all operations in `Redis` are atomic by design
 
 In the following sections we will see how the implementations of common QMW operations can be indeed solved elegently using
-atomic operations in the underlying DB/storage
+atomic operations provided by MongoDB as the underlying DB/storage
 
 ## Simple approach: good enough queues
+There is a very simple, very common way to model queues on top of mongoDB collections. This model does not support 
+reserve-commit-rollback, nor it does support delay/schedule. The model can be succintly put as:
 
-## Reserve-commit-rollback
+| operation | implementation base       |
+|:---------:|:-------------------------:|
+| push      | `coll.insertOne (item)`   |
+| pop       | `coll.findOneAndDelete()` |
+
+The key is the use of the atomic operation `findOneAndDelete`, which is the combination of a `findOne` and a `remove`, but 
+run in one single step. Several actors can perform concurrent `findOneAndDelete` operations without issues, and without 
+interfering each other
+
+Actors can perform concurrent `insertOne` operations too, without interference; the same goes for actors performing _both_
+`findOneAndDelete` and `insertOne` operations. The net result is that many consumers and producers can be served concurrently
+without interferences or loss of performance, which is what one expects of any self-respecting qwm
+
+This model provides a very simple but rather capable powerful qmw:
+* queues are _mostly_ strict FIFO (FIFO loses its strict meaning when different producers located in different machines
+  are inserting in the same queue, but in practical terms it usually does not matter)
+* we got very good persistence, as good as mongodb's 
+* we got very good HA: 
+  * both consumers and producers have no state, so they can be replicated without problems
+  * there is a practical 1:1 equivalence between queues and collections, so all the HA guarantees mongodb provides on 
+    collections apply directly to queues
+* we got more than decent performance: 
+  * mongodb is quite performing on insertions, in the range of Khz (ie, thousands per second)
+  * on pop operations, `findOneAndDelete` is less performing than a simple `remove` or a `findOne` but is still able to 
+    reach Khz performance. In practice, `findOneAndDelete` is the bottleneck of this model, because it serializes calls 
+    to `pop` within each queue
+
+
+## Adding delay/schedule
+
+## Adding reserve-commit-rollback
+
+## Adding an event bus
 
 ## Queues with historic data
 
