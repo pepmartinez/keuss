@@ -10,24 +10,22 @@ queue middleware (`QMW` henceforth) with a quite shallow layer on top of `MongoD
 `keuss` goes well beyond the basic approach to provide extra functionalities
 
 ## Some nomenclature
+
 Let us start establishing some common nomenclature that will appear later on:
+
 * ***job queue***: A construct where elements can be inserted and extracted, in a FIFO (first in, first out) manner. Elements 
   extracted are removed from the queue and are no longer available
 * ***queue middleware (qmw)***: A system that provides queues and means for actors to perform as producers, consumers or both
 * ***push***: action of inserting an element into a queue
 * ***pop***: action of extracting an element from a queue
 * ***reserve/commit/rollback***: operations to provide more control on the extraction of elements: first the element is _reserved_,
-  (making it invisible by other reserve or pop operations, but still present in the queue), then once the element is processed it 
-  is _committed_ (and only then the element is removed from the queue) or _rolledback_ (meaning it is made elligible again for other
-  reserve or pop, possibly after some delay); if none of _commit_ or _rollback_ happen after some time, an automatic _rollback_ is 
-  applied.
-* ***consumer***: an actor performing pop and/or reserve-commit-rollback operations on a queue. A queue can have zero or more concurrent 
-  consumers
-* ***producer***: an actor performing push operations on a queue. A queue can have zero or more concurrent 
-  producers
-* ***at-most-once***: consumer guarantee associated with the `push` operation: since the element is first removed from the queue, and
+  (making it invisible by other reserve or pop operations, but still present in the queue), then once the element is processed it is _committed_ (and only then the element is removed from the queue) or _rolledback_ (meaning it is made elligible again for other reserve or pop, possibly after some delay); if none of _commit_ or _rollback_ happen after some time, an automatic _rollback_ is applied.
+* ***consumer***: an actor performing pop and/or reserve-commit-rollback operations on a queue. A queue can have zero or more concurrent consumers
+* ***producer***: an actor performing push operations on a queue. A queue can have zero or more concurrent producers
+* ***at-most-once***: consumer guarantee associated with the `pop` operation: since the element is first removed from the queue, and
   then the consumer proceeds to process it, if the consumer dies or crashes in between the element will be lost. That is, losses are
   tolerated, but duplications are not
+
   ```mermaid
   sequenceDiagram
     autonumber
@@ -44,9 +42,11 @@ Let us start establishing some common nomenclature that will appear later on:
     queue->>-consumer: element
     
   ```
+
 * ***at-least-once***: consumer guarantee associated with the `reserve-commit-rollback` operations: if the consumer crashes between
   `reserve` and `commit` the element will eventually be auto-rolledback and be processed again (possibly by another consumer). 
   Therefore, duplications are tolerated but losses are not
+
   ```mermaid
   sequenceDiagram
     autonumber
@@ -65,7 +65,8 @@ Let us start establishing some common nomenclature that will appear later on:
     note right of consumer: element processed, get another
     consumer->>+queue: pop
     queue->>-consumer: element
-  ```  
+  ```
+
 * ***exactly-once***: theoretical consumer guarantee where no losses and no duplications can happen. It involves the use ot monotonical 
   identifiers or window-based duplication detection, and is generally extremelly complex to achieve, and almost in all cases with a
   hefty performance penalty. It is almost never offered out fo the box in any QMW
@@ -74,7 +75,7 @@ Let us start establishing some common nomenclature that will appear later on:
   rollbacks it is remove from the queue and pushed into the deadletter queue, which is an otherwise regular queue
 * ***ordered queue***:  A non-FIFO queue: insertions are not done at the tail of the queue, but at any point. This means insertions are 
   no longer _O(1)_: depending on the technology used they can be _O(n_) or better, such as _O(log(n))_ for a btree-based queue; same goes for 
-  push/reserve operations, they are no longer _O(1)_. 
+  push/reserve operations, they are no longer _O(1)_.
 
   Using ordered queues on a QMW is key to implement certain operations: not only the more obvious such as delay, schedule or priorities,
   but also robust and performing reserve/commit/rollback
@@ -86,22 +87,23 @@ Let us start establishing some common nomenclature that will appear later on:
   change) or the queue itself (that is, que presence of delayed elements must not degrade the queue performance or capabilities)
 
   This feature can be very easily implemented using an ordered queue, where the order is defined by a timestamp representing the 
-  _mature_ time: the time when the element can be popped or reserver, and not before
+  _mature_ time: the time when the element can be popped or reserved, and not before
 
-  Also, the delay/schedule feature can be applied also to rollbacks, since a rollback is conceptually a re-insertion; delays in rollbacks
+  The delay/schedule feature can be applied also to rollbacks, since a rollback is conceptually a re-insertion; delays in rollbacks
   provide a way to implement [exponential backoff](https://en.wikipedia.org/wiki/Exponential_backoff) easily, to prevent busy 
   reserve-fail-rollback loops when only one element is in the queue, and the element is repeteadly rolled back upon processing
 
 ## Basic building blocks
-Here's whay you need to build a proper QMW:
 
-1. A ***storage subsystem***: Data for the contents of the queus have to be stored somewhere. It has to provide:
-    1. **Persistency**: data must be stored in a permanent manner, realiably. An in-memory QMW has its niche, but we will
+Here's what you need to build a proper QMW:
+
+1. A ***storage subsystem***: Data for the contents of the queues have to be stored somewhere. It has to provide:
+    1. **Persistency**: data must be stored in a permanent manner, realiably. In-memory QMW has its niche, but we will
        focus on _persistent_ QMWs
     2. **High Availability**: we do not want a hardware or network failure to take down the QMW. It should run in a _cluster_ 
        manner, on several machines (possibly in separated geographical locations); if one of the machines fail the rest
-    can cope without (or with minimal) dusruption
-    3. **Sufficient Throughput**: the storage should be able to handle a high number of operations per second 
+    can cope without (or with minimal) disruption
+    3. **Sufficient Throughput**: the storage should be able to handle a high number of operations per second
     4. **Low Latency**: operations should be performed very fast, ideally as independent of throughput as possible
 
 2. An ***event bus***: all QMW clients would need some form of central communication to be aware of certain events in the 
@@ -109,28 +111,29 @@ Here's whay you need to build a proper QMW:
    an event, instead of running a poll busy-loop. Another example  of useful event is to signal whether a queue becomes 
    paused (since it must be paused for _all_ clients)
 
-   This event bus can be a _pub/sub_ , stateless bus: only connected clients are made aware of events and there is no need to save
+   This event bus can be a _pub/sub_, stateless bus: only connected clients are made aware of events and there is no need to save
    events for clients that may connect later. This simplifies the event bus by a lot.
 
 The whole idea behind `keuss` is that all those building blocks are already available out there in the form of DataBase
-systems, and all there is to add is a thin layer and a few extras. 
+systems, and all there is to add is a thin layer and a few extras.
 
 ## The need for atomic operations
+
 However, not just *any* storage (or DB, for that matter) is a good candidate to model queues: there is at least one feature
-that, lest it be absent, modelling queues would be very difficult if not impossible: _atomic modify operations_
+that, lest it be present, renders queue modelling very difficult if not impossible: _atomic modify operations_
 
 An atomic modify operation in the context of a storage system can be defined as the ability to perform a read and a modify 
-on a single record without the possibility of a second modify intefering, changing the record after the read but before 
-the modify (or after the modify and before the read) 
+on a single record without the possibility of a second modify interfering, changing the record after the read but before 
+the modify (or after the modify and before the read)
 
 If the storage system provides such primitives, it is relatively easy and simple to model queues on top of it; also, the 
 overall performance (throughput and latency) will greatly depend on the performance of such operation: most RDBMs can do
 this by packing the read and the modify inside a _transaction_, but that usually degrades the performance greatly, to a
 point where it is not viable for queue modelling
 
-There are 2 major storage systems that provide all the needed blocks, along with atomic modifies: `MongoDB` and `Redis`: 
+There are 2 major storage systems that provide all the needed blocks, along with atomic modifies: `MongoDB` and `Redis`.
 `MongoDB` has turned out to be an almost perfect fit to back a QMW, as we shall see. `MongoDB` provides a set of atomic 
-operations to read and modify, and to read and remove. Those operatiosn guarantee that the elements selected to be read 
+operations to read and modify, and to read and remove. Those operations guarantee that the elements selected to be read 
 and then modified (or removed) will not be read by others until modified (or not read at all if it's removed)
 
 `Redis` is also a good fit, but it does nor provide a good enough storage layer: it is neither persistent nor high available. 
@@ -142,6 +145,7 @@ In the following sections we will see how the implementations of common QMW oper
 atomic operations provided by MongoDB as the underlying DB/storage
 
 ## Simple approach: good enough queues
+
 There is a very simple, very common way to model queues on top of mongoDB collections. This model does not support 
 reserve-commit-rollback, nor it does support delay/schedule. The model can be succintly put as:
 
@@ -156,17 +160,18 @@ interfering each other
 
 Actors can perform concurrent `insertOne` operations too, without interference; the same goes for actors performing _both_
 `findOneAndDelete` and `insertOne` operations. The net result is that many consumers and producers can be served concurrently
-without interferences or loss of performance, which is what one expects of any self-respecting qwm
+without interferences or loss of performance, which is what one expects of any self-respecting QMW
 
-This model provides a very simple but rather capable powerful qmw:
+This model provides a very simple but rather capable powerful QMW:
+
 * queues are _mostly_ strict FIFO (FIFO loses its strict meaning when different producers located in different machines
   are inserting in the same queue, but in practical terms it usually does not matter)
-* we got very good persistence, as good as mongodb's 
-* we got very good HA: 
+* we got very good persistence, as good as mongodb's
+* we got very good HA:
   * both consumers and producers have no state, so they can be replicated without problems
   * there is a practical 1:1 equivalence between queues and collections, so all the HA guarantees mongodb provides on 
     collections apply directly to queues
-* we got more than decent performance: 
+* we got more than decent performance:
   * mongodb is quite performing on insertions, in the range of Khz (ie, thousands per second)
   * on pop operations, `findOneAndDelete` is less performing than a simple `remove` or a `findOne` but is still able to 
     reach Khz performance. In practice, `findOneAndDelete` is the bottleneck of this model, because it serializes calls 
@@ -174,15 +179,16 @@ This model provides a very simple but rather capable powerful qmw:
 
 The main drawback of this model is the fact that the pop/reserve operations can only be performed in a poll loop: they 
 either return an element or return 'no elements in queue' (or return an error), in all cases pretty mich immediately. 
-Therefore, wait state of arbitrary duration must be inserted in the loop if the operation returns 'no elements in queue': 
+Therefore, wait state of arbitrary duration must be inserted in the consumer loop if the operation returns 'no elements in queue': 
 otherwise you will get a busy loop where your pop/reserve call relentlessly return 'no elements', eating the CPU in the
 process (incidentally, this is a text-book case of poll loop)
 
 In some cases, where latencies in the range of seconds or tens of seconds are of no concern, a pool loop can be happily
-used, so this makes a valid, simple and effective model, especially if you already use MongoDB. in cases where latencies
+used, so this makes a valid, simple and effective model, especially if you already use MongoDB. In cases where latencies
 are expected to be near-realtime something better is needed
 
 ## Adding an event bus
+
 At this point, one of the best improvements to the model is to remove the need for poll loops; for that to happen, we 
 need the pop/reserve operations to 'block' if there are no elements, until they are. A naïve way to do so is to add the
 poll loop in the pop/reserve calls, so the caller would have the _illusion_ of blocking:
@@ -226,9 +232,7 @@ consumer _when_ there are new elements in the queue:
     consumer->>queue: pop
     queue->>consumer: element
     consumer->> caller: element
-  ``` 
- 
-
+  ```
 
 ## Adding delay/schedule
 
