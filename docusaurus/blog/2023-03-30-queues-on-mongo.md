@@ -172,12 +172,67 @@ This model provides a very simple but rather capable powerful qmw:
     reach Khz performance. In practice, `findOneAndDelete` is the bottleneck of this model, because it serializes calls 
     to `pop` within each queue
 
+The main drawback of this model is the fact that the pop/reserve operations can only be performed in a poll loop: they 
+either return an element or return 'no elements in queue' (or return an error), in all cases pretty mich immediately. 
+Therefore, wait state of arbitrary duration must be inserted in the loop if the operation returns 'no elements in queue': 
+otherwise you will get a busy loop where your pop/reserve call relentlessly return 'no elements', eating the CPU in the
+process (incidentally, this is a text-book case of poll loop)
+
+In some cases, where latencies in the range of seconds or tens of seconds are of no concern, a pool loop can be happily
+used, so this makes a valid, simple and effective model, especially if you already use MongoDB. in cases where latencies
+are expected to be near-realtime something better is needed
+
+## Adding an event bus
+At this point, one of the best improvements to the model is to remove the need for poll loops; for that to happen, we 
+need the pop/reserve operations to 'block' if there are no elements, until they are. A naïve way to do so is to add the
+poll loop in the pop/reserve calls, so the caller would have the _illusion_ of blocking:
+
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant queue
+    participant consumer
+    participant caller
+    caller->>consumer: pop
+    consumer->>queue: pop
+    queue->>consumer: no elements
+    note right of consumer: wait a fixed period, then try again
+    consumer->>queue: pop
+    queue->>consumer: no elements
+    note right of consumer: wait a fixed period, then try again
+    note left of queue: someone else inserts at least one element
+    consumer->>queue: pop
+    queue->>consumer: element
+    consumer->> caller: element
+  ```  
+
+As mentioned, this simply moves the pool loop inside the pop/reserve implemenation, away from the user's eyes. But it
+is still a poll loop, with all its limitations. To truly remove the poll loop we need the ability to _wake up_ a waiting
+consumer _when_ there are new elements in the queue:
+
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant producer
+    participant queue
+    participant consumer
+    participant caller
+    caller->>consumer: pop
+    consumer->>queue: pop
+    queue->>consumer: no elements
+    note right of consumer: wait until woken up
+    producer->>queue: push
+    queue-->>consumer: wake-up, elements available 
+    consumer->>queue: pop
+    queue->>consumer: element
+    consumer->> caller: element
+  ``` 
+ 
+
 
 ## Adding delay/schedule
 
 ## Adding reserve-commit-rollback
-
-## Adding an event bus
 
 ## Queues with historic data
 
