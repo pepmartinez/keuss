@@ -228,11 +228,43 @@ consumer _when_ there are new elements in the queue:
     queue->>consumer: no elements
     note right of consumer: wait until woken up
     producer->>queue: push
+    note right of queue: now we got elements
     queue-->>consumer: wake-up, elements available 
     consumer->>queue: pop
     queue->>consumer: element
     consumer->> caller: element
-  ```
+  ``` 
+ 
+This way the push-to-pop latencies are reduced to close to the theoretical minimum: any consumer would be blocked only when
+they have to: when there are no elements
+
+### Possible implementations
+
+#### In-memory pub/sub
+
+#### Redis pub/sub
+
+#### MongoDB capped collection
+
+### Practical considerations & improvements
+
+#### Race conditions
+
+#### High cardinality of events
+
+### Final thoughts
+At this point we got a rather decent QMW capable of push/pop with concurrent pubishers and consumers, with persistence and HA, and 
+able to manage operations at Khz frequency with millisec latencies; all this with a quite simple and stateless implementation
+
+This model can already solve a great deal of problems where persistent job queues are needed, especially if you already got MongoDB
+in your mix. Also, it has 2 advantages over tradicional QMWs :
+
+1. _Performance_: This model produces great performance figures when compared with tradicional QMWs with full persistence/HA activated
+2. _Simplicity_: the whole of the implementation is client side, and it is stateless and very thin. 
+3. _Ease of debug_: it is very easy to _open the trunk_, peer inside and see exactly what's in each queue, and it equally easy to tweak
+   and fix whatever problem you find. In some situations this is an invaluable feature
+
+However, we can do better
 
 ## Adding delay/schedule
 
