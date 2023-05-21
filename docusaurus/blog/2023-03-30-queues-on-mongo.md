@@ -239,18 +239,97 @@ This way the push-to-pop latencies are reduced to close to the theoretical minim
 they have to: when there are no elements
 
 ### Possible implementations
+There is an obvious option for the implementation of such an event bus: a pub/sub subsystem. Pub/sub is very well understood, 
+it's stateless and there are a lot of stable implementations. And more importantly, there are stable implementations _on top_
+of we already use for storage of queues.
 
+The main disadvantages of pub/sub in themselves as event bus are:
+* they can not handle duplicates: in an HA setup all the replcias of a given client will get a separated copy of each event
+* they have no history: disconnected clients will miss any event published when they're not connected
+
+But none of those is a real disadvantage for us:
+* each client, whether a replica or not, _must_ receive a copy of each event
+* disconnected clients do not need to receive and react to events, since they're not dealing with queues
+
+Let's see the most viable implementations:
 #### In-memory pub/sub
+This is a very simple, extremely nimbre implementation of a pub/sub that works only within the same (OS) process. It's only 
+meant to be used for testing. It can be also seen as the _canonical_ implementation of the event bus
+
+A very good and very simple implementation for node.js is [mitt](https://www.npmjs.com/package/mitt)
 
 #### Redis pub/sub
+`redis` offers a simple and very efficient [pub/sub implementation](https://redis.io/docs/manual/pubsub/), which can be used 
+as is. If you already use redis it's definitely the way to go
 
-#### MongoDB capped collection
+#### MongoDB capped collection (also a pub/sub)
+Since `mongoDB` is used to back the queues, it would be great if it could also power the rest of the needed subsystems; and it does,
+with a just a little implementation work: it is relatively easy to build a pubsub on top of 
+[mongoDB capped collections](https://www.mongodb.com/docs/upcoming/core/capped-collections/), and there are quite a few 
+implementations readily available. One good example of such implementation in node.js is [mubsub](https://www.npmjs.com/package/@nodebb/mubsub)
+
+Using this implementation has the added appeal of not adding any extra dependency: you can just use the same mongoDB server used for
+the queues
+
+This implementations has the added benefit of _history state_: it operates like a ring buffer, so there is the possibility of 
+accessing past events. However, this is not needed at all here
 
 ### Practical considerations & improvements
+There are a few considerations worth noting about how pubsub fits our purpose, and a few extras we can add to improve matters further
 
 #### Race conditions
+A pubsub bus is asynchronous in nature, so under some conditions you may lose events. Take for example the case of a single client
+that reinserts an element in the same queue it is consuming from: the event fired upon the insertion is produced at about the same time
+the client attempts to pop another element. However, if the pop operation establishes the queue is empty (because the queue size was 
+not yet updated after the insert) but the event arrives before the pop operation starts waiting for them, you lose the event and you 
+risk waiting forever, when the queue has indeed one element
+
+```mermaid
+  sequenceDiagram
+    autonumber
+    participant queue
+    participant consumer
+    consumer->>queue: pop
+    queue->>consumer: element
+    consumer->>queue: push a new element
+    queue-->>consumer: wake-up, elements available 
+    consumer->>queue: pop
+    note right of consumer: it might see the queue empty
+    note right of consumer: it might lose the wake-up event
+    note left of queue: waits indefinitely
+```
+
+Race conditions such as this one are very hard to prevent entirely, if at all possible. For that reason it is recommended to use
+a model in which race conditions do not cause major issues
+
+In a system such as a `QMW` the problems to avoid at all costs are:
+* loss of messages
+* duplication of messages
+* deadlocks and other forms of wait-forever conditions
+
+Race conditions on wake-up events won't cause loss or duplications of messages, since this is guaranteed by the queue model; they can
+however cause deadlocks, where a consumer is left waiting forever for an event that may never arrive
+
+One way to remove this problem is to add a timeout and a poll loop: in the absence of events, the consumer will fallback into a poll
+loop with a rather long period (this period would be the wait-for-events timeout), usually in the range of tens of seconds. With this
+we change deadlocks into poll cycles, or deadlocks into increased latency for some rare cases
+
+The consume pop loop would look like this:
+```
+forever do:
+  msg := pop_msg_from_queue()  // nonblocking operation, either returns a message or null if none available
+  if (!msg) do:
+    await wake_up(insertion) or timeout(period)
+    continue // a wakeup event arrived or the the timeout was reached: next loop either way
+  else
+    return msg
+  done
+done
+```
 
 #### High cardinality of events
+
+#### Adding another pub/sub implementation
 
 ### Final thoughts
 At this point we got a rather decent QMW capable of push/pop with concurrent pubishers and consumers, with persistence and HA, and 
