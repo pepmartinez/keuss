@@ -1,11 +1,11 @@
 ---
-title: Modelling queues on MongoDB
+title: Modelling queues on MongoDB (1/2)
 author: Pep Martinez
 author_url: https://github.com/pepmartinez
 tags: [mongodb, tech]
 ---
 
-This is a series of of articles describing the technical details on which `keuss` is based to build a rather complete
+This is a series of articles describing the technical details on which `keuss` is based to build a rather complete
 queue middleware (`QMW` henceforth) with a quite shallow layer on top of `MongoDB`. The basic approach is well known and understood, but
 `keuss` goes well beyond the basic approach to provide extra functionalities
 
@@ -328,8 +328,30 @@ done
 ```
 
 #### High cardinality of events
+A side effect of having 'insert' events published is that subscribers must be ready to deal with potentially enormous amounts of events;
+if you're inserting messages in queues at, say 1 Khz and you have 50 consumers, you will have 50,000 individual events to deal with. 
+Besides, most of thos events will add no information at all: once a consumer is woken up, it would not be interested in insert events until the queue is empty again; queue consumers jsut ignore events emitted when they are not idle, but the raw amount of events in the
+bus might still need a noticeable amount of compute and I/O (especially on non-local pubsubs)
+
+A simple way to minimize this is to simply ignore events if an equivalent one was emitted already in a short period of time; if that is
+the case, the event is ignored right before the publish, and does not make it to the pubsub at all
+
+Keuss uses exactly this strategy on all the included signal pubsubs, using a window of 50 ms: if the same event was emitted for the same queue within 50 ms in the past, it is ignored
+
+##### Drawbacks
+This strategy has a notable drawback: it introduces an apparent race condition. 
+
+Take a queue with a single consumer; insert a single message in the queue, which would be immediately taken by the consumer. If the 
+consumer rejects the message with a zero delay, the consumer may still see zero elements in the next iteration, so it'll block and 
+wait for insert events. The reject will indeed produce an insert event... which will be dropped because it's equivalene to the first
+insert event, that was emitted about the same millsecond
+
+This will just be a nuisance, since the consumer would time out and rearm itself eventually. But be warned, this can happen on edge 
+cases
 
 #### Adding another pub/sub implementation
+The interface for pubsub in Keuss is very simple, so adding new or different implementations would be quite easy. For example, if
+you already use `mqtt`, it makes sense to reuse it to power the event pubsub. This is however out of scope
 
 ### Final thoughts
 At this point we got a rather decent QMW capable of push/pop with concurrent pubishers and consumers, with persistence and HA, and 
@@ -348,15 +370,3 @@ However, we can do better
 ## Adding delay/schedule
 
 ## Adding reserve-commit-rollback
-
-## Queues with historic data
-
-## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
-
-## Breaking the throughput barrier of FindAndUpdate: buckets
-
-## Experiments, round 1: data streams
-
-## Experiments, round 2: map of strict-ordered queues
-
-
