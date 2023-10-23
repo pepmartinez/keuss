@@ -362,7 +362,7 @@ in your mix. Also, it has 2 advantages over tradicional QMWs :
 
 1. _Performance_: This model produces great performance figures when compared with tradicional QMWs with full persistence/HA activated
 2. _Simplicity_: the whole of the implementation is client side, and it is stateless and very thin. 
-3. _Ease of debug_: it is very easy to _open the trunk_, peer inside and see exactly what's in each queue, and it equally easy to tweak
+3. _Ease of debug_: it is very easy to _open the trunk_, peek inside and see exactly what's in each queue, and it equally easy to tweak
    and fix whatever problem you find. In some situations this is an invaluable feature
 
 However, we can do better
