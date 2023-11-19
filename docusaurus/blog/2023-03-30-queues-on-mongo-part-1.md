@@ -1,5 +1,5 @@
 ---
-title: Modelling queues on MongoDB (1/2)
+title: Modelling queues on MongoDB - I
 author: Pep Martinez
 author_url: https://github.com/pepmartinez
 tags: [mongodb, tech]
@@ -244,7 +244,7 @@ it's stateless and there are a lot of stable implementations. And more important
 of we already use for storage of queues.
 
 The main disadvantages of pub/sub in themselves as event bus are:
-* they can not handle duplicates: in an HA setup all the replcias of a given client will get a separated copy of each event
+* they can not handle duplicates: in an HA setup all the replicas of a given client will get a separated copy of each event
 * they have no history: disconnected clients will miss any event published when they're not connected
 
 But none of those is a real disadvantage for us:
@@ -365,8 +365,4 @@ in your mix. Also, it has 2 advantages over tradicional QMWs :
 3. _Ease of debug_: it is very easy to _open the trunk_, peek inside and see exactly what's in each queue, and it equally easy to tweak
    and fix whatever problem you find. In some situations this is an invaluable feature
 
-However, we can do better
-
-## Adding delay/schedule
-
-## Adding reserve-commit-rollback
+However, we can do better...
