@@ -461,7 +461,7 @@ class Queue {
     if (
       (obj.tries) &&                            // only if we got tries
       (this._factory.deadletter_queue ()) &&    // AND the factory has a deadletter queue
-      (this._factory.max_ko ()) &&              // AND thee's a max ko attempts 
+      (this._factory.max_ko ()) &&              // AND there's a max ko attempts 
       (obj.tries > this._factory.max_ko ()) &&  // AND we got enough tries
       (this.name () != '__deadletter__')        // and this queue is not deadletter already
     ) {
