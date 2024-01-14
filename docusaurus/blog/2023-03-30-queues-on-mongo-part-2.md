@@ -93,7 +93,7 @@ the model above:
 | operation | implementation base                                                                                         |
 |:---------:|:-----------------------------------------------------------------------------------------------------------:|
 | push      | `coll.insertOne ({payload: item, when: params.when OR now(), retries: 0, reserved: false})`                 |
-| pop       | `coll.findOneAndDelete({when < now(), processed: $nonexistent}).payload`                                    |
+| pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INF}).payload`    |
 | reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + timeout), reserved: true})` | 
 | commit    | `coll.update({_id: reserved._id}, {processed: now(), when: $INF})`                                          | 
 | rollback  | `coll.findOneAndUpdate({_id: reserved._id}, {when: (now() + delay), reserved: false, retries: $inc})`       |
@@ -101,6 +101,13 @@ the model above:
 Then, we need to add a [TTL index](https://www.mongodb.com/docs/manual/core/index-ttl/) on the new field `processed`, with 
 some long-enough expiration time
 
+The main difference is the addition of a `processed` field that marks both whether the item was processed (that is _deleted_,
+_no more_, _gone to meet its maker_) and if so, when that happened. This field is also used to delete old entries, once some
+fixed time has elapsed. This means those queues can potentially grow very big, cause the condition to remove old entries is 
+age, and not size
+
+Note that, in order to improve performance a bit, when an element is processed (after either _pop_ or _commit_) its _when_ is
+set to some time far in the future, to move is 'away' of the _get_/_reserve_ query
 
 ## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
 
