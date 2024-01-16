@@ -107,9 +107,69 @@ fixed time has elapsed. This means those queues can potentially grow very big, c
 age, and not size
 
 Note that, in order to improve performance a bit, when an element is processed (after either _pop_ or _commit_) its _when_ is
-set to some time far in the future, to move is 'away' of the _get_/_reserve_ query
+set to some time far in the future, to move it 'away' of the _get_/_reserve_ query
 
 ## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
+
+Htis is an interesting concept: one of the common uses of job queues is to build what's known as ELT pipelines: a set of 
+computing stations where items are transformed or otherwise processed, connected with queues. A common example would be 
+a POSIX shell pipeline, where several commands are tied together so the output of one becomes the input of the next; a 
+ETL pipeline can have also forks and loops, so the topology can be generalized to a graph, not just a linear pipeline
+
+Let us assume for a moment that messages are never created or duplicated in any station: in other words, an item entering 
+a station will produce zero or one items as output. In this scenario, oen of the reliability problems that arise is that, 
+usually, moving items from one (input) queue to the next (output) queue is not an atomic operation. This may lead to either item loss or item duplication in the case of station
+ malfunction, even if we use `reserve-commit`
+
+If we push to output after committing on input, we incur on risk of loss:
+
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant input-queue
+    participant station
+    participant output-queue
+    station->>+input-queue: reserve
+    input-queue->>-station: element
+    activate station
+    note right of station: process element
+    station->>-input-queue: commit
+    activate input-queue
+    input-queue->>station: ack
+    deactivate input-queue
+    note left of input-queue: element is no longer in queue
+    note right of station: potential to item loss here
+    station->>+output-queue: push
+  ```
+
+whereas if we push to output _before_ commit on input, we risk duplication:
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant input-queue
+    participant station
+    participant output-queue
+    station->>+input-queue: reserve
+    input-queue->>-station: element
+    activate station
+    note right of station: process element
+    note left of input-queue: element is still in queue
+    station->>+output-queue: push
+    note right of station: potential to item duplication here
+    station->>-input-queue: commit
+    activate input-queue
+    input-queue->>station: ack
+    deactivate input-queue
+    station->>+output-queue: push
+  ```
+
+So, the _commit-in-input_ and _push-on-output_ operations must be done atomically; and it turns out it is quite simple 
+to extend the model to accomodate that as a new, atomic _move-to-queue_ operation (although it comes at a price, as we 
+will see)
+
+This new operation requires that _all_ queues of a given pipeline have to be hosted in the same mongodb collection; so, 
+our item envelope grows to contain an extra field, `q`. Then, the new operation
+
 
 ## Breaking the throughput barrier of FindAndUpdate: buckets
 
