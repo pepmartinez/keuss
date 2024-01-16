@@ -37,7 +37,7 @@ and capabilities of the _good enough queues_ depicted before. The model can be e
 
 | operation | implementation base                                             |
 |:---------:|:---------------------------------------------------------------:|
-| push      | `coll.insertOne ({payload: item, when: params.when OR now()})`  |
+| push      | `coll.insertOne ({payload: params.item, when: params.when OR now()})`  |
 | pop       | `coll.findOneAndDelete({when < now()}).payload`                 |
 
 One of the obvious changes is, we no longer insert the item as is: we encapsulate it inside an _envelope_ where we put extra information; in this case, a timestamp stating when the object should start being elligible for a `pop` operation. Thus, the `pop` will only affect items whose `when` timestamp lies in the past, and ignore those with the timestamp still in the future
@@ -62,11 +62,11 @@ _delay/schedule_ model above :
 
 | operation | implementation base                                                                                   |
 |:---------:|:-----------------------------------------------------------------------------------------------------:|
-| push      | `coll.insertOne ({payload: item, when: params.when OR now(), retries: 0, reserved: false})`           |
+| push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`           |
 | pop       | `coll.findOneAndDelete({when < now()}).payload`                                                       |
-| reserve   | `coll.findOneAndUpdate({when < now()}, {when: (now() + timeout), reserved: true})`                    | 
-| commit    | `coll.delete({_id: reserved._id})`                                                                    | 
-| rollback  | `coll.findOneAndUpdate({_id: reserved._id}, {when: (now() + delay), reserved: false, retries: $inc})` |
+| reserve   | `coll.findOneAndUpdate({when < now()}, {when: (now() + params.timeout), reserved: true})`                    | 
+| commit    | `coll.delete({_id: params.reserved._id})`                                                                    | 
+| rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
 
 The general idea is to leverage the existing scheduling fature: to reserve an element is just to set its `when`
 time ahead in the future, by a fixed `timeout` amount; if the consumer is unable to process the element in this 
@@ -92,11 +92,11 @@ the model above:
 
 | operation | implementation base                                                                                         |
 |:---------:|:-----------------------------------------------------------------------------------------------------------:|
-| push      | `coll.insertOne ({payload: item, when: params.when OR now(), retries: 0, reserved: false})`                 |
+| push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`                 |
 | pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INF}).payload`    |
-| reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + timeout), reserved: true})` | 
-| commit    | `coll.update({_id: reserved._id}, {processed: now(), when: $INF})`                                          | 
-| rollback  | `coll.findOneAndUpdate({_id: reserved._id}, {when: (now() + delay), reserved: false, retries: $inc})`       |
+| reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + params.timeout), reserved: true})` | 
+| commit    | `coll.update({_id: params.reserved._id}, {processed: now(), when: $INF})`                                          | 
+| rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})`       |
 
 Then, we need to add a [TTL index](https://www.mongodb.com/docs/manual/core/index-ttl/) on the new field `processed`, with 
 some long-enough expiration time
@@ -168,7 +168,23 @@ to extend the model to accomodate that as a new, atomic _move-to-queue_ operatio
 will see)
 
 This new operation requires that _all_ queues of a given pipeline have to be hosted in the same mongodb collection; so, 
-our item envelope grows to contain an extra field, `q`. Then, the new operation
+our item envelope grows to contain an extra field, `q`. Then, all operations are augmented to use this new field:
+
+| operation | implementation base                                                                                   |
+|:---------:|:-----------------------------------------------------------------------------------------------------:|
+| push      | `coll.insertOne ({q: params.qname, payload: params.item, when: params.when OR now(), retries: 0, reserved: false})` |
+| pop       | `coll.findOneAndDelete({q: params.qname, when < now()}).payload`                                             |
+| reserve   | `coll.findOneAndUpdate({q: params.qname, when < now()}, {when: (now() + params.timeout), reserved: true})`          | 
+| commit    | `coll.delete({_id: params.reserved._id})`                                                                    | 
+| rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
+
+The new operation _move-to-queue_ is expected to act upon a reserved item, and can be modelled as:
+
+| operation | implementation base                                                                                   |
+|:---------:|:-----------------------------------------------------------------------------------------------------:|
+| moveToQ   | `coll.findOneAndUpdate({_id: params.reserved._id}, {q: params.new_qname, reserved: false, retries: 0})`  |
+
+The operation is rather similar to a rollback, and it is definitely atomic
 
 
 ## Breaking the throughput barrier of FindAndUpdate: buckets
