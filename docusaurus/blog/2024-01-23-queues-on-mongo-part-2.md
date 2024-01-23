@@ -3,10 +3,9 @@ title: Modelling queues on MongoDB - II
 author: Pep Martinez
 author_url: https://github.com/pepmartinez
 tags: [mongodb, tech]
-draft: true
 ---
 
-This is a continuation of [Modelling queues on MongoDB - I](/blog/2023/03/30/queues-on-mongo-part-1), where
+This is a continuation of [Modelling queues on MongoDB - I](/blog/2024/01/23/queues-on-mongo-part-1), where
 we explained the technological basis on how to build a rather decent queue middleware by leveraging on preexisting
 DB technologies, and adding very little more
 
@@ -185,12 +184,5 @@ The new operation _move-to-queue_ is expected to act upon a reserved item, and c
 | moveToQ   | `coll.findOneAndUpdate({_id: params.reserved._id}, {q: params.new_qname, reserved: false, retries: 0})`  |
 
 The operation is rather similar to a rollback, and it is definitely atomic
-
-
-## Breaking the throughput barrier of FindAndUpdate: buckets
-
-## Experiments, round 1: data streams
-
-## Experiments, round 2: map of strict-ordered queues
 
 
