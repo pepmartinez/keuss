@@ -5,7 +5,7 @@ author_url: https://github.com/pepmartinez
 tags: [mongodb, tech]
 ---
 
-This is a continuation of [Modelling queues on MongoDB - I](/blog/2024/01/23/queues-on-mongo-part-1), where
+This is a continuation of [Modelling queues on MongoDB - I](/blog/2024/01/22/queues-on-mongo-part-1), where
 we explained the technological basis on how to build a rather decent queue middleware by leveraging on preexisting
 DB technologies, and adding very little more
 
