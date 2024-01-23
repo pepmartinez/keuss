@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkkeuss_docusaurus=self.webpackChunkkeuss_docusaurus||[]).push([[1040],{9510:s=>{s.exports=JSON.parse('{"label":"mongodb","permalink":"/keuss/blog/tags/mongodb","allTagsPath":"/keuss/blog/tags","count":2}')}}]);
