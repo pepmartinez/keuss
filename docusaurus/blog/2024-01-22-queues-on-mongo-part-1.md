@@ -334,7 +334,7 @@ the case, the event is ignored right before the publish, and does not make it to
 Keuss uses exactly this strategy on all the included signal pubsubs, using a window of 50 ms: if the same event was emitted for the same queue within 50 ms in the past, it is ignored
 
 ##### Drawbacks
-This strategy has a notable drawback: it introduces an apparent race condition. 
+This strategy has a notable drawback: it introduces an apparent race condition.
 
 Take a queue with a single consumer; insert a single message in the queue, which would be immediately taken by the consumer. If the 
 consumer rejects the message with a zero delay, the consumer may still see zero elements in the next iteration, so it'll block and 
@@ -356,7 +356,7 @@ This model can already solve a great deal of problems where persistent job queue
 in your mix. Also, it has 2 advantages over traditional QMWs :
 
 1. _Performance_: This model produces great performance figures when compared with traditional QMWs with full persistence/HA activated
-2. _Simplicity_: the whole of the implementation is client side, and it is stateless and very thin. 
+2. _Simplicity_: the whole of the implementation is client side, and it is stateless and very thin.
 3. _Ease of debug_: it is very easy to _open the trunk_, peek inside and see exactly what's in each queue, and it equally easy to tweak
    and fix whatever problem you find. In some situations this is an invaluable feature
 
