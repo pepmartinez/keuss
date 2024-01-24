@@ -19,11 +19,11 @@ Let us start establishing some common nomenclature that will appear later on:
 * ***push***: action of inserting an element into a queue
 * ***pop***: action of extracting an element from a queue
 * ***reserve/commit/rollback***: operations to provide more control on the extraction of elements: first the element is _reserved_,
-  (making it invisible by other reserve or pop operations, but still present in the queue), then once the element is processed it is _committed_ (and only then the element is removed from the queue) or _rolledback_ (meaning it is made elligible again for other reserve or pop, possibly after some delay); if none of _commit_ or _rollback_ happen after some time, an automatic _rollback_ is applied.
-* ***consumer***: an actor performing pop and/or reserve-commit-rollback operations on a queue. A queue can have zero or more concurrent consumers
-* ***producer***: an actor performing push operations on a queue. A queue can have zero or more concurrent producers
+  (making it invisible by other _reserve_ or _pop_ operations, but still present in the queue), then once the element is processed it is _committed_ (and only then the element is removed from the queue) or _rolledback_ (meaning it is made eligible again for other `reserve` or `pop`, possibly after some delay); if neither `commit` or `rollback` happen after some time, an automatic `rollback` is applied
+* ***consumer***: an actor performing `pop` and/or `reserve-commit-rollback` operations on a queue. A queue can have zero or more concurrent consumers
+* ***producer***: an actor performing `push` operations on a queue. A queue can have zero or more concurrent producers
 * ***at-most-once***: consumer guarantee associated with the `pop` operation: since the element is first removed from the queue, and
-  then the consumer proceeds to process it, if the consumer dies or crashes in between the element will be lost. That is, losses are
+  then the consumer proceeds to process it, if the consumer dies or crashes in between, the element will be lost. That is, losses are
   tolerated, but duplications are not
 
   ```mermaid
@@ -67,52 +67,47 @@ Let us start establishing some common nomenclature that will appear later on:
     queue->>-consumer: element
   ```
 
-* ***exactly-once***: theoretical consumer guarantee where no losses and no duplications can happen. It involves the use ot monotonical 
-  identifiers or window-based duplication detection, and is generally extremelly complex to achieve, and almost in all cases with a
-  hefty performance penalty. It is almost never offered out fo the box in any QMW
-* ***deadletter queue***: usually, there is a maximum number of times an element can be rolled back after a reserve, in order to prevent 
-  ill-formed or otherwise incorrect messages to stay forever in queues. Upon rollback, if the element has reached the maximum number of
-  rollbacks it is remove from the queue and pushed into the deadletter queue, which is an otherwise regular queue
-* ***ordered queue***:  A non-FIFO queue: insertions are not done at the tail of the queue, but at any point. This means insertions are 
-  no longer _O(1)_: depending on the technology used they can be _O(n_) or better, such as _O(log(n))_ for a btree-based queue; same goes for 
-  push/reserve operations, they are no longer _O(1)_.
+* ***exactly-once***: theoretical consumer guarantee where no losses and no duplications can happen. It involves the use of monotonical 
+  identifiers or window-based duplication detection, and is generally extremely complex to achieve, and almost in all cases with a
+  hefty performance penalty. It is almost never offered out of the box in any QMW
+* ***deadletter queue***: usually, there is a maximum number of times an element can be rolled back after a reserve, in order to prevent ill-formed or otherwise incorrect messages to stay forever in queues. Upon rollback, if the element has reached the maximum number of rollbacks it is removed from the queue and pushed into the deadletter queue, which is an otherwise regular queue
+* ***ordered queue***:  A non-FIFO queue: insertions are not done at the tail of the queue, but at any point. This means insertions are
+  no longer _O(1)_: depending on the technology used they can be _O(n)_ or better, such as _O(log(n))_ for a btree-based queue; same goes for push/reserve operations, they are no longer _O(1)_
 
   Using ordered queues on a QMW is key to implement certain operations: not only the more obvious such as delay, schedule or priorities,
   but also robust and performing reserve/commit/rollback
   
   Using a database to implement queues makes ordered queues a bliss: using a regular index is usually all you need to get
   near-constant-complexity operations
-* ***delay/schedule***: Push operation when the element is marked to not to be elligible for pop or reserve _before_ a certain time. 
-  The presence of delayed elements must not impact in any way the rest of elements (that is, the rest of elements' elligibility must not
-  change) or the queue itself (that is, que presence of delayed elements must not degrade the queue performance or capabilities)
+* ***delay/schedule***: Push operation when the element is marked not to be eligible for `pop` or `reserve` _before_ a certain time. 
+  The presence of delayed elements must not impact in any way the rest of elements (that is, the rest of elements' eligibility must not
+  change) or the queue itself (that is, the presence of delayed elements must not degrade the queue performance or capabilities)
 
   This feature can be very easily implemented using an ordered queue, where the order is defined by a timestamp representing the 
   _mature_ time: the time when the element can be popped or reserved, and not before
 
-  The delay/schedule feature can be applied also to rollbacks, since a rollback is conceptually a re-insertion; delays in rollbacks
-  provide a way to implement [exponential backoff](https://en.wikipedia.org/wiki/Exponential_backoff) easily, to prevent busy 
-  reserve-fail-rollback loops when only one element is in the queue, and the element is repeteadly rolled back upon processing
+  The delay/schedule feature can be applied also to rollbacks, since a `rollback` is conceptually a re-insertion; delays in rollbacks
+  provide a way to implement [exponential backoff](https://en.wikipedia.org/wiki/Exponential_backoff) easily, to prevent busy   reserve-fail-rollback loops, when one element in the queue is repeatedly rolled back upon processing
 
 ## Basic building blocks
 
 Here's what you need to build a proper QMW:
 
 1. A ***storage subsystem***: Data for the contents of the queues have to be stored somewhere. It has to provide:
-    1. **Persistency**: data must be stored in a permanent manner, realiably. In-memory QMW has its niche, but we will
+    1. **Persistency**: data must be stored in a permanent manner, reliably. In-memory QMW has its niche, but we will
        focus on _persistent_ QMWs
-    2. **High Availability**: we do not want a hardware or network failure to take down the QMW. It should run in a _cluster_ 
+    2. **High Availability**: we do not want a hardware or network failure to take down the QMW. It should run in a _cluster_
        manner, on several machines (possibly in separated geographical locations); if one of the machines fail the rest
     can cope without (or with minimal) disruption
     3. **Sufficient Throughput**: the storage should be able to handle a high number of operations per second
     4. **Low Latency**: operations should be performed very fast, ideally as independent of throughput as possible
 
-2. An ***event bus***: all QMW clients would need some form of central communication to be aware of certain events in the 
+2. An ***event bus***: all QMW clients would need some form of central communication to be aware of certain events in the
    QWM. For example, if a client is waiting for data to become available in a queue, it should be able to simply await for
-   an event, instead of running a poll busy-loop. Another example  of useful event is to signal whether a queue becomes 
+   an event, instead of running a poll busy-loop. Another example  of useful event is to signal whether a queue becomes
    paused (since it must be paused for _all_ clients)
 
-   This event bus can be a _pub/sub_, stateless bus: only connected clients are made aware of events and there is no need to save
-   events for clients that may connect later. This simplifies the event bus by a lot.
+   This event bus can be a _pub/sub_, stateless bus: only connected clients are made aware of events and there is no need to save events for clients that may connect later. This simplifies the event bus by a lot
 
 The whole idea behind `keuss` is that all those building blocks are already available out there in the form of DataBase
 systems, and all there is to add is a thin layer and a few extras.
@@ -137,17 +132,17 @@ operations to read and modify, and to read and remove. Those operations guarante
 and then modified (or removed) will not be read by others until modified (or not read at all if it's removed)
 
 `Redis` is also a good fit, but it does nor provide a good enough storage layer: it is neither persistent nor high available. 
-Arguably, that's a default behaviour: `Redis-Cluster` coupled with proper persistency should in theory be up to the task. 
+Arguably, that's a default behaviour: `Redis-Cluster` coupled with proper persistence should in theory be up to the task. 
 However, this series of articles would focus on `MongoDB` only. For now, let us say that atomic operations are very easily
 added to `Redis` by coding them as `lua` extensions, since all operations in `Redis` are atomic by design
 
-In the following sections we will see how the implementations of common QMW operations can be indeed solved elegently using
+In the following sections we will see how the implementations of common QMW operations can be indeed solved elegantly using
 atomic operations provided by MongoDB as the underlying DB/storage
 
 ## Simple approach: good enough queues
 
 There is a very simple, very common way to model queues on top of mongoDB collections. This model does not support 
-reserve-commit-rollback, nor it does support delay/schedule. The model can be succintly put as:
+reserve-commit-rollback, nor it does support delay/schedule. The model can be succinctly put as:
 
 | operation | implementation base       |
 |:---------:|:-------------------------:|
@@ -178,7 +173,7 @@ This model provides a very simple but rather capable powerful QMW:
     to `pop` within each queue
 
 The main drawback of this model is the fact that the pop/reserve operations can only be performed in a poll loop: they 
-either return an element or return 'no elements in queue' (or return an error), in all cases pretty mich immediately. 
+either return an element or return 'no elements in queue' (or return an error), in all cases pretty much immediately. 
 Therefore, wait state of arbitrary duration must be inserted in the consumer loop if the operation returns 'no elements in queue': 
 otherwise you will get a busy loop where your pop/reserve call relentlessly return 'no elements', eating the CPU in the
 process (incidentally, this is a text-book case of poll loop)
@@ -212,7 +207,7 @@ poll loop in the pop/reserve calls, so the caller would have the _illusion_ of b
     consumer->> caller: element
   ```  
 
-As mentioned, this simply moves the pool loop inside the pop/reserve implemenation, away from the user's eyes. But it
+As mentioned, this simply moves the pool loop inside the pop/reserve implementation, away from the user's eyes. But it
 is still a poll loop, with all its limitations. To truly remove the poll loop we need the ability to _wake up_ a waiting
 consumer _when_ there are new elements in the queue:
 
@@ -253,7 +248,7 @@ But none of those is a real disadvantage for us:
 
 Let's see the most viable implementations:
 #### In-memory pub/sub
-This is a very simple, extremely nimbre implementation of a pub/sub that works only within the same (OS) process. It's only 
+This is a very simple, extremely nimble implementation of a pub/sub that works only within the same (OS) process. It's only 
 meant to be used for testing. It can be also seen as the _canonical_ implementation of the event bus
 
 A very good and very simple implementation for node.js is [mitt](https://www.npmjs.com/package/mitt)
@@ -307,7 +302,7 @@ In a system such as a `QMW` the problems to avoid at all costs are:
 * duplication of messages
 * deadlocks and other forms of wait-forever conditions
 
-Race conditions on wake-up events won't cause loss or duplications of messages, since this is guaranteed by the queue model; they can
+Race conditions on wake-up events won't cause loss or duplication of messages, since this is guaranteed by the queue model; they can
 however cause deadlocks, where a consumer is left waiting forever for an event that may never arrive
 
 One way to remove this problem is to add a timeout and a poll loop: in the absence of events, the consumer will fallback into a poll
@@ -330,7 +325,7 @@ done
 #### High cardinality of events
 A side effect of having 'insert' events published is that subscribers must be ready to deal with potentially enormous amounts of events;
 if you're inserting messages in queues at, say 1 Khz and you have 50 consumers, you will have 50,000 individual events to deal with. 
-Besides, most of thos events will add no information at all: once a consumer is woken up, it would not be interested in insert events until the queue is empty again; queue consumers jsut ignore events emitted when they are not idle, but the raw amount of events in the
+Besides, most of those events will add no information at all: once a consumer is woken up, it would not be interested in insert events until the queue is empty again; queue consumers just ignore events emitted when they are not idle, but the raw amount of events in the
 bus might still need a noticeable amount of compute and I/O (especially on non-local pubsubs)
 
 A simple way to minimize this is to simply ignore events if an equivalent one was emitted already in a short period of time; if that is
@@ -343,8 +338,8 @@ This strategy has a notable drawback: it introduces an apparent race condition.
 
 Take a queue with a single consumer; insert a single message in the queue, which would be immediately taken by the consumer. If the 
 consumer rejects the message with a zero delay, the consumer may still see zero elements in the next iteration, so it'll block and 
-wait for insert events. The reject will indeed produce an insert event... which will be dropped because it's equivalene to the first
-insert event, that was emitted about the same millsecond
+wait for insert events. The reject will indeed produce an insert event... which will be dropped because it's equivalent to the first
+insert event, that was emitted about the same millisecond
 
 This will just be a nuisance, since the consumer would time out and rearm itself eventually. But be warned, this can happen on edge 
 cases
@@ -354,13 +349,13 @@ The interface for pubsub in Keuss is very simple, so adding new or different imp
 you already use `mqtt`, it makes sense to reuse it to power the event pubsub. This is however out of scope
 
 ### Final thoughts
-At this point we got a rather decent QMW capable of push/pop with concurrent pubishers and consumers, with persistence and HA, and 
+At this point we got a rather decent QMW capable of push/pop with concurrent publishers and consumers, with persistence and HA, and 
 able to manage operations at Khz frequency with millisec latencies; all this with a quite simple and stateless implementation
 
 This model can already solve a great deal of problems where persistent job queues are needed, especially if you already got MongoDB
-in your mix. Also, it has 2 advantages over tradicional QMWs :
+in your mix. Also, it has 2 advantages over traditional QMWs :
 
-1. _Performance_: This model produces great performance figures when compared with tradicional QMWs with full persistence/HA activated
+1. _Performance_: This model produces great performance figures when compared with traditional QMWs with full persistence/HA activated
 2. _Simplicity_: the whole of the implementation is client side, and it is stateless and very thin. 
 3. _Ease of debug_: it is very easy to _open the trunk_, peek inside and see exactly what's in each queue, and it equally easy to tweak
    and fix whatever problem you find. In some situations this is an invaluable feature

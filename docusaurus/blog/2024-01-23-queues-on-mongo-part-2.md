@@ -39,24 +39,24 @@ and capabilities of the _good enough queues_ depicted before. The model can be e
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now()})`  |
 | pop       | `coll.findOneAndDelete({when < now()}).payload`                 |
 
-One of the obvious changes is, we no longer insert the item as is: we encapsulate it inside an _envelope_ where we put extra information; in this case, a timestamp stating when the object should start being elligible for a `pop` operation. Thus, the `pop` will only affect items whose `when` timestamp lies in the past, and ignore those with the timestamp still in the future
+One of the obvious changes is, we no longer insert the item as is: we encapsulate it inside an _envelope_ where we put extra information; in this case, a timestamp stating when the object should start being eligible for a `pop` operation. Thus, the `pop` will only affect items whose `when` timestamp lies in the past, and ignore those with the timestamp still in the future
 
 Then, in order to keep the performance close to `O(1)` we must be sure the collection has an index on `when`; moreover, it would be advisable to also order the `findOneAndDelete` operation by `when`, descending: this way we will add best-effort ordering, where elements with a longer-due timestamp are popped first
 
 ## Adding reserve-commit-rollback
-A feture that should be offered on every decent QMW is the 
+A feature that should be offered on every decent QMW is the 
 ability to reserve an item, then process it and commit it once 
 done, or rollback it if something fails and we want it to be 
 retried later (or by other consumer)
 
-This allows for what's known as _at-least-once_ semmantics: 
+This allows for what's known as _at-least-once_ semantics: 
 every item in the queue is guaranteed to be treated at least 
-once even in the event of consumer failure. IT _does not_ 
+once even in the event of consumer failure. It _does not_ 
 guarantee lack of duplications, though. By contrast, the simple _pop_ model provides _at_most_once_ semantics: duplications are 
 guaranteed to not to happen, but at the cost of risk of item 
 loss if a consumer malfunctions
 
-Reserve-commit-rollback model cam be expressed as the following extension of the 
+Reserve-commit-rollback model can be expressed as the following extension of the 
 _delay/schedule_ model above :
 
 | operation | implementation base                                                                                   |
@@ -67,24 +67,24 @@ _delay/schedule_ model above :
 | commit    | `coll.delete({_id: params.reserved._id})`                                                                    | 
 | rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
 
-The general idea is to leverage the existing scheduling fature: to reserve an element is just to set its `when`
+The general idea is to leverage the existing scheduling feature: to reserve an element is just to set its `when`
 time ahead in the future, by a fixed `timeout` amount; if the consumer is unable to process the element in this 
-time, the item will become elligible again for other consumers.
+time, the item will become eligible again for other consumers.
 
 The `commit` operation simply deletes the entry by using the `_id` of the element returned by 
 `reserve`; and the `rollback` is a bit more complex: it modifies it to remove the `reserved` flag, increments
 the `retries` counter and -most important- sets a `when` time further in the future. This last bit fulfills
-the mprotant feature of adding delays to retries, so an element rejected by a consumer for further retry 
+the important feature of adding delays to retries, so an element rejected by a consumer for further retry 
 will not be available immediately (when it is likely to fail again)
 
 Note that the `reserved` flag is purely informational, although further checks could be done on it to improve
 robustness. The same goes for `retries`: it just counts the number of retries; more logic could be added to this,
-for example adding a _dead-queue_ feature: if the number of retries goes too high the items are moved to a 
+for example adding a _deadletter-queue_ feature: if the number of retries goes too high, the items are moved to a 
 separated queue for a more dedicated processing at a later time
 
 ## Queues with historic data
 Here's another twist: instead of fully removing items once consumed (by means f `pop` or `commit`), we just mark 
-them as deleted; then we keep them around for som etime, just in case we need to inspect past traffic, or replay 
+them as deleted; then we keep them around for some time, just in case we need to inspect past traffic, or replay 
 some items. This feature can be desirable on environments where the ability to inspect or even reproduce past traffic
 is paramount. Also, this can be easily done at the expense of storage space only, with the following variation over
 the model above:
@@ -110,13 +110,13 @@ set to some time far in the future, to move it 'away' of the _get_/_reserve_ que
 
 ## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
 
-Htis is an interesting concept: one of the common uses of job queues is to build what's known as ELT pipelines: a set of 
+This is an interesting concept: one of the common uses of job queues is to build what's known as ELT pipelines: a set of 
 computing stations where items are transformed or otherwise processed, connected with queues. A common example would be 
 a POSIX shell pipeline, where several commands are tied together so the output of one becomes the input of the next; a 
 ETL pipeline can have also forks and loops, so the topology can be generalized to a graph, not just a linear pipeline
 
 Let us assume for a moment that messages are never created or duplicated in any station: in other words, an item entering 
-a station will produce zero or one items as output. In this scenario, oen of the reliability problems that arise is that, 
+a station will produce zero or one items as output. In this scenario, one of the reliability problems that arise is that, 
 usually, moving items from one (input) queue to the next (output) queue is not an atomic operation. This may lead to either item loss or item duplication in the case of station
  malfunction, even if we use `reserve-commit`
 
@@ -163,7 +163,7 @@ whereas if we push to output _before_ commit on input, we risk duplication:
   ```
 
 So, the _commit-in-input_ and _push-on-output_ operations must be done atomically; and it turns out it is quite simple 
-to extend the model to accomodate that as a new, atomic _move-to-queue_ operation (although it comes at a price, as we 
+to extend the model to accommodate that as a new, atomic _move-to-queue_ operation (although it comes at a price, as we 
 will see)
 
 This new operation requires that _all_ queues of a given pipeline have to be hosted in the same mongodb collection; so, 
@@ -184,5 +184,3 @@ The new operation _move-to-queue_ is expected to act upon a reserved item, and c
 | moveToQ   | `coll.findOneAndUpdate({_id: params.reserved._id}, {q: params.new_qname, reserved: false, retries: 0})`  |
 
 The operation is rather similar to a rollback, and it is definitely atomic
-
-
