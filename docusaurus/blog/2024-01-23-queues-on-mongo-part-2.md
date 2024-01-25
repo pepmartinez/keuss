@@ -64,15 +64,16 @@ _delay/schedule_ model above :
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`           |
 | pop       | `coll.findOneAndDelete({when < now()}).payload`                                                       |
 | reserve   | `coll.findOneAndUpdate({when < now()}, {when: (now() + params.timeout), reserved: true})`                    | 
-| commit    | `coll.delete({_id: params.reserved._id})`                                                                    | 
-| rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
+| commit    | `coll.delete({_id: params.reserved_item._id})`                                                                    | 
+| rollback  | `coll.findOneAndUpdate({_id: params.reserved_item._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
 
 The general idea is to leverage the existing scheduling feature: to reserve an element is just to set its `when`
 time ahead in the future, by a fixed `timeout` amount; if the consumer is unable to process the element in this 
 time, the item will become eligible again for other consumers.
 
 The `commit` operation simply deletes the entry by using the `_id` of the element returned by 
-`reserve`; and the `rollback` is a bit more complex: it modifies it to remove the `reserved` flag, increments
+`reserve` (which is referred to above as `params_reserved_item`); the `rollback` is a bit more complex: 
+it modifies it to remove the `reserved` flag, increments
 the `retries` counter and -most important- sets a `when` time further in the future. This last bit fulfills
 the important feature of adding delays to retries, so an element rejected by a consumer for further retry 
 will not be available immediately (when it is likely to fail again)
