@@ -37,11 +37,11 @@ and capabilities of the _good enough queues_ depicted before. The model can be e
 | operation | implementation base                                             |
 |:---------:|:---------------------------------------------------------------:|
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now()})`  |
-| pop       | `coll.findOneAndDelete({when < now()}).payload`                 |
+| pop       | `coll.findOneAndDelete({when < now()}, {orderby: {when: $asc}}).payload`                 |
 
 One of the obvious changes is, we no longer insert the item as is: we encapsulate it inside an _envelope_ where we put extra information; in this case, a timestamp stating when the object should start being eligible for a `pop` operation. Thus, the `pop` will only affect items whose `when` timestamp lies in the past, and ignore those with the timestamp still in the future
 
-Then, in order to keep the performance close to `O(1)` we must be sure the collection has an index on `when`; moreover, it would be advisable to also order the `findOneAndDelete` operation by `when`, descending: this way we will add best-effort ordering, where elements with a longer-due timestamp are popped first
+Then, in order to keep the performance close to `O(1)` we must be sure the collection has an index on `when`; moreover, it would be advisable to also order the `findOneAndDelete` operation by `when`, ascending: this way we will add best-effort ordering, where elements with a longer-due timestamp are popped first
 
 ## Adding reserve-commit-rollback
 A feature that should be offered on every decent QMW is the 
@@ -62,8 +62,8 @@ _delay/schedule_ model above :
 | operation | implementation base                                                                                   |
 |:---------:|:-----------------------------------------------------------------------------------------------------:|
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`           |
-| pop       | `coll.findOneAndDelete({when < now()}).payload`                                                       |
-| reserve   | `coll.findOneAndUpdate({when < now()}, {when: (now() + params.timeout), reserved: true})`                    | 
+| pop       | `coll.findOneAndDelete({when < now()}, {orderby: {when: $asc}}).payload`                                                 |
+| reserve   | `coll.findOneAndUpdate({when < now()}, {when: (now() + params.timeout), reserved: true}, {orderby: {when: $asc}})`       | 
 | commit    | `coll.delete({_id: params.reserved_item._id})`                                                                    | 
 | rollback  | `coll.findOneAndUpdate({_id: params.reserved_item._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
 
@@ -93,8 +93,8 @@ the model above:
 | operation | implementation base                                                                                         |
 |:---------:|:-----------------------------------------------------------------------------------------------------------:|
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`                 |
-| pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INF}).payload`    |
-| reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + params.timeout), reserved: true})` | 
+| pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INF}, {orderby: {when: $asc}}).payload`    |
+| reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + params.timeout), reserved: true}, {orderby: {when: $asc}})` | 
 | commit    | `coll.update({_id: params.reserved._id}, {processed: now(), when: $INF})`                                          | 
 | rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})`       |
 
@@ -173,8 +173,8 @@ our item envelope grows to contain an extra field, `q`. Then, all operations are
 | operation | implementation base                                                                                   |
 |:---------:|:-----------------------------------------------------------------------------------------------------:|
 | push      | `coll.insertOne ({q: params.qname, payload: params.item, when: params.when OR now(), retries: 0, reserved: false})` |
-| pop       | `coll.findOneAndDelete({q: params.qname, when < now()}).payload`                                             |
-| reserve   | `coll.findOneAndUpdate({q: params.qname, when < now()}, {when: (now() + params.timeout), reserved: true})`          | 
+| pop       | `coll.findOneAndDelete({q: params.qname, when < now()}, {orderby: {when: $asc}}).payload`                                             |
+| reserve   | `coll.findOneAndUpdate({q: params.qname, when < now()}, {when: (now() + params.timeout), reserved: true}, {orderby: {when: $asc}})`          | 
 | commit    | `coll.delete({_id: params.reserved._id})`                                                                    | 
 | rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})` |
 
