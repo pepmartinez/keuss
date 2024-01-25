@@ -93,9 +93,9 @@ the model above:
 | operation | implementation base                                                                                         |
 |:---------:|:-----------------------------------------------------------------------------------------------------------:|
 | push      | `coll.insertOne ({payload: params.item, when: params.when OR now(), retries: 0, reserved: false})`                 |
-| pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INF}, {orderby: {when: $asc}}).payload`    |
+| pop       | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {processed: now(), when: $INFINITE}, {orderby: {when: $asc}}).payload`    |
 | reserve   | `coll.findOneAndUpdate({when < now(), processed: $nonexistent}, {when: (now() + params.timeout), reserved: true}, {orderby: {when: $asc}})` | 
-| commit    | `coll.update({_id: params.reserved._id}, {processed: now(), when: $INF})`                                          | 
+| commit    | `coll.update({_id: params.reserved._id}, {processed: now(), when: $INFINITE})`                                          | 
 | rollback  | `coll.findOneAndUpdate({_id: params.reserved._id}, {when: (now() + params.delay), reserved: false, retries: $inc})`       |
 
 Then, we need to add a [TTL index](https://www.mongodb.com/docs/manual/core/index-ttl/) on the new field `processed`, with 
@@ -107,7 +107,7 @@ fixed time has elapsed. This means those queues can potentially grow very big, c
 age, and not size
 
 Note that, in order to improve performance a bit, when an element is processed (after either _pop_ or _commit_) its _when_ is
-set to some time far in the future, to move it 'away' of the _get_/_reserve_ query
+set to some time far in the future (to `$INFINITE` and beyond), to move it 'away' of the _get_/_reserve_ query
 
 ## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
 
