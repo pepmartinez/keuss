@@ -107,7 +107,8 @@ fixed time has elapsed. This means those queues can potentially grow very big, c
 age, and not size
 
 Note that, in order to improve performance a bit, when an element is processed (after either _pop_ or _commit_) its _when_ is
-set to some time far in the future (to `$INFINITE` and beyond), to move it 'away' of the _get_/_reserve_ query
+set to some time far in the future (to `$INFINITE` and beyond, althoug in practice `$INFINITE` would be the largest date possible 
+and not a real infinity), to move it 'away' of the _get_/_reserve_ query
 
 ## Queues fit for ETL pipelines: moving elements from one queue to the next, atomically
 
