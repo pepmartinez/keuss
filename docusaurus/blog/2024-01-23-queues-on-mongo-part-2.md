@@ -168,8 +168,9 @@ So, the _commit-in-input_ and _push-on-output_ operations must be done atomicall
 to extend the model to accommodate that as a new, atomic _move-to-queue_ operation (although it comes at a price, as we 
 will see)
 
-This new operation requires that _all_ queues of a given pipeline have to be hosted in the same mongodb collection; so, 
-our item envelope grows to contain an extra field, `q`. Then, all operations are augmented to use this new field:
+The easiest way to implement this operation is to require that _all_ queues of a given pipeline are to be hosted in 
+the same mongodb collection; then, our item envelope grows to contain an extra field, `q`. And last, all 
+operations are augmented to use this new field:
 
 | operation | implementation base                                                                                   |
 |:---------:|:-----------------------------------------------------------------------------------------------------:|
@@ -186,3 +187,10 @@ The new operation _move-to-queue_ is expected to act upon a reserved item, and c
 | moveToQ   | `coll.findOneAndUpdate({_id: params.reserved._id}, {q: params.new_qname, reserved: false, retries: 0})`  |
 
 The operation is rather similar to a rollback, and it is definitely atomic
+
+### Payload mutability
+In any ETL worth its salt the payloads of the items being managed should be mutable: most logic would be otherwise narly impossible,
+or very complicated, to express. 
+
+The operations in the model depicted above do not allow that, but there is nothing that prevents it; it can certainly be done as
+part of the `update` section of the `moveToQ` and `commit` operations. It is simply not added here for clarity
