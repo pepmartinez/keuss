@@ -10,25 +10,26 @@ var MongoClient = require ('mongodb').MongoClient;
 var factory = null;
 
 [
-  {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
-  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo')},
-  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo')},
-  {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo')},
- // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
-  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')},
-  {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder')},
-].forEach(function (MQ_item) {
+  {label: 'Simple MongoDB',       mq: require ('../backends/mongo'), unknown_id: '112233445566778899001122'},
+  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo'), unknown_id: '112233445566778899001122'},
+  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo'), unknown_id: '112233445566778899001122'},
+  {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo'), unknown_id: '112233445566778899001122'},
+ // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe'), unknown_id: '112233445566778899001122'},
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq'), unknown_id: '112233445566778899001122'},
+  {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder'), unknown_id: '112233445566778899001122'},
+  {label: 'Postgres',     mq: require ('../backends/postgres'), unknown_id: '00000000-0000-0000-0000-000000000000'},
+].forEach(MQ_item => {
   describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
     var MQ = MQ_item.mq;
 
-    before(function (done) {
+    before(done => {
       var opts = {
         url: 'mongodb://localhost/keuss_test_backends_rcr',
         signaller: { provider: LocalSignal},
         stats: {provider: MemStats}
       };
 
-      MQ(opts, function (err, fct) {
+      MQ(opts, (err, fct) => {
         if (err) return done(err);
         factory = fct;
         done();
@@ -49,6 +50,7 @@ var factory = null;
       should.equal(q.nextMatureDate(), null);
 
       async.series([
+        cb => q.init(cb),
         cb => q.stats(cb),
         cb => q.size(cb),
         cb => q.totalSize(cb),
@@ -56,7 +58,7 @@ var factory = null;
         cb => q.next_t(cb),
       ], (err, results) => {
         if (err) return done (err);
-        results.should.eql([{
+        results.should.eql([undefined, {
           get: 0,
           put: 0,
           reserve: 0,
@@ -72,6 +74,7 @@ var factory = null;
       var q = factory.queue('test_queue_2');
 
       async.series([
+        cb => q.init(cb),
         cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
         cb => q.push({elem: 2, pl: 'twetrwte'}, cb),
         cb => {
@@ -145,19 +148,9 @@ var factory = null;
       var q = factory.queue('test_queue_3');
 
       async.series([
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, {
-            delay: 2
-          }, cb)
-        },
-        function (cb) {
-          setTimeout(function () {
-            cb()
-          }, 150)
-        },
+        cb => q.init(cb),
+        cb => q.push({elem: 1, pl: 'twetrwte'}, {delay: 2}, cb),
+        cb => setTimeout(cb, 150),
         function (cb) {
           q.push({
             elem: 2,
@@ -270,6 +263,7 @@ var factory = null;
       var q = factory.queue('test_queue_4');
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.push({
             elem: 1,
@@ -414,6 +408,7 @@ var factory = null;
       var q = factory.queue('test_queue_5');
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.push({
             elem: 1,
@@ -497,6 +492,7 @@ var factory = null;
       var hrTime = process.hrtime()
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.push({
             elem: 1,
@@ -612,6 +608,7 @@ var factory = null;
       var obj = null;
 
       async.series([
+        cb => q.init(cb),
         cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
         cb => q.size((err, size) => {
           size.should.equal(1);
@@ -672,6 +669,7 @@ var factory = null;
       var obj = null;
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.push({
             elem: 1,
@@ -810,6 +808,7 @@ var factory = null;
       var obj = null;
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.push({
             elem: 1,
@@ -898,6 +897,7 @@ var factory = null;
       if (q.type () ==  'mongo:intraorder') return done ();
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
           q.rollback('invalid-id', function (err, res) {
             err.should.not.be.null
@@ -926,6 +926,7 @@ var factory = null;
       var state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => _get_all_sizes (q, cb),
         cb => q.push ({a:1, b:2}, {delay: 2}, cb),
         cb => q.push ({a:2, b:2}, cb),
@@ -957,9 +958,9 @@ var factory = null;
         figs.should.eql ([
           [ 0, 0, 0, 0 ],
           [ 3, 2, 1, 0 ],
-          [ 3, 1, 1, 1 ],
+          [ 3, 1, 1, 1 ], // [ 3, 1, 2, 1 ],
           [ 3, 2, 1, 0 ],
-          [ 3, 1, 1, 1 ],
+          [ 3, 1, 1, 1 ], // [ 3, 1, 2, 1 ],
           [ 2, 1, 1, 0 ],
           [ 0, 0, 0, 0 ] ]);
 
@@ -971,16 +972,15 @@ var factory = null;
       var q = factory.queue('test_queue_12');
 
       async.series([
+        cb => q.init(cb),
         function (cb) {
-          q.rollback('112233445566778899001122', function (err, res) {
+          q.rollback(MQ_item.unknown_id, (err, res) => {
             should(err).equal(null)
             should(res).equal(false);
             cb();
           })
         }
-      ], function (err, results) {
-        done(err);
-      });
+      ], done);
     });
 
 
@@ -989,6 +989,7 @@ var factory = null;
       var state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ({a:1, b:2}, {delay: 2}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
