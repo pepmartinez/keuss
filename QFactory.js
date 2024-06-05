@@ -39,9 +39,11 @@ class QFactory {
         this._deadletter_queue = this.queue (this._opts.deadletter.queue || '__deadletter__');
         this._max_ko = this._opts.deadletter.max_ko || 0;
         debug('%s: uses deadletter queue %s, max KO is %d', this._name, this._deadletter_queue.name(), this._max_ko);
+        this._deadletter_queue.init (cb);
       }
-
-      cb();
+      else {
+        cb();
+      }
     });
   }
 
