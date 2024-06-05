@@ -12,7 +12,6 @@ class SimpleMongoQueue extends Queue {
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
 
-    this._factory = factory;
     this._col = factory._db.collection (name);
     this.ensureIndexes (function (err) {});
   }

@@ -16,7 +16,6 @@ class PersistentMongoQueue extends Queue {
 
     if (!this._opts.ttl) this._opts.ttl = 3600;
 
-    this._factory = factory;
     this._col = factory._db.collection (name);
     this.ensureIndexes (function (err) {});
   }

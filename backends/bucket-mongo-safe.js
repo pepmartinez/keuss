@@ -523,9 +523,7 @@ class BucketSet {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class BucketMongoSafeQueue extends Queue {
-
   /*
-
   options:
     bucket_max_size    || 1024;
     bucket_max_wait    || 500;
@@ -540,7 +538,6 @@ class BucketMongoSafeQueue extends Queue {
   //////////////////////////////////////////////
     super (name, factory, opts, orig_opts);
 
-    this._factory = factory;
     this._col = factory._db.collection (name);
     this._ensureIndexes (err => {});
 

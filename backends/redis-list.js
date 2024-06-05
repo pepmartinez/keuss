@@ -143,8 +143,4 @@ function creator (opts, cb) {
 }
 
 module.exports = creator;
-
-
-
-
-
+6

@@ -17,7 +17,6 @@ class StreamMongoQueue extends Queue {
 
     if (!this._opts.ttl) this._opts.ttl = 3600;
 
-    this._factory = factory;
     this._col = factory._db.collection (name);
     this._groups_str = this._opts.groups || 'A,B:C';
     this._groups_vector = this._groups_str.split (/[:,;.-]/).map (i => i.trim());
