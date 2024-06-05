@@ -15,6 +15,7 @@ var factory = null;
   {label: 'plain MongoDB',       backend: require ('../backends/mongo')},
   {label: 'Safe MongoDB Bucket', backend: require ('../backends/bucket-mongo-safe')},
   {label: 'Mongo IntraOrder',    backend: require ('../backends/intraorder')},
+  {label: 'Postgres',            backend: require ('../backends/postgres')},
 ].forEach (backend_item => {
   [
     {label: 'mem',   stats: require('../stats/mem')},
@@ -26,9 +27,11 @@ var factory = null;
       {label: 'redis-pubsub', signal: require ('../signal/redis-pubsub')},
       {label: 'mongo-capped', signal: require ('../signal/mongo-capped')},
     ].forEach (signal_item => {
+      //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       describe (`pause/resume tests with backend ${backend_item.label}, stats ${stats_item.label}, signal ${signal_item.label}`, () => {
         var MQ = backend_item.backend;
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         before (done => {
           var opts = {
             url: 'mongodb://localhost/keuss_test_pause',
@@ -49,6 +52,8 @@ var factory = null;
           });
         });
 
+      
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         after (done => {
           async.series ([
             cb => setTimeout (cb, 1000),
@@ -68,10 +73,12 @@ var factory = null;
           ], done);
         });
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('queue pauses and resumes ok, existing consumers react accordingly', done => {
           var q = factory.queue('_test_0_queue_', {});
 
           async.series ([
+            cb => q.init(cb),
             cb => q._stats.clear (cb),
 
             cb => async.parallel ([
@@ -103,18 +110,20 @@ var factory = null;
 
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.match ({ put: 6, get: 6 });
-            res[5].should.equal (0);
+            res[5].should.match ({ put: 6, get: 6 });
+            res[6].should.equal (0);
             q.nConsumers().should.equal (0);
 
             done ();
           });
         });
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('pauses ok new consumers if queue paused, resumes them allright', done => {
           var q = factory.queue('_test_1_queue_', {});
 
           async.series ([
+            cb => q.init(cb),
             cb => q._stats.clear (cb),
             cb => {q.pause (true); cb ();},
 
@@ -132,18 +141,20 @@ var factory = null;
             cb => q._stats.clear (cb),
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.match ({ put: 1, get: 1 });
-            res[5].should.equal (0);
+            res[5].should.match ({ put: 1, get: 1 });
+            res[6].should.equal (0);
             q.nConsumers().should.equal (0);
 
             done ();
           });
         });
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue was paused', done => {
           var q = factory.queue('_test_2_queue_', {});
 
           async.series ([
+            cb => q.init(cb),
             cb => q._stats.clear (cb),
             cb => {q.pause (true); cb ();},
 
@@ -166,10 +177,10 @@ var factory = null;
             cb => q._stats.clear (cb)
           ], (err, res) => {
             if (err) return done (err);
-            res[4].should.match ({ put: 1 });
-            res[5].should.equal (1);
-            res[2][0].timeout.should.eql (true);
-            res[7].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
+            res[5].should.match ({ put: 1 });
+            res[6].should.equal (1);
+            res[3][0].timeout.should.eql (true);
+            res[8].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
 
             q.nConsumers().should.equal (0);
 
@@ -177,10 +188,12 @@ var factory = null;
           });
         });
 
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue is paused while waiting for delayed item', done => {
           var q = factory.queue('_test_3_queue_', {});
 
           async.series ([
+            cb => q.init(cb),
             cb => q._stats.clear (cb),
             cb => q.push ({q:0, a: 'ryetyeryre 0'}, {delay: 3}, cb),
             cb => {q.pause (true); cb ();},
@@ -202,10 +215,10 @@ var factory = null;
             cb => q._stats.clear (cb)
           ], (err, res) => {
             if (err) return done (err);
-            res[6].should.match ({ put: 1 });
-            res[7].should.equal (1);
-            res[4].timeout.should.eql (true);
-            res[9].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
+            res[7].should.match ({ put: 1 });
+            res[8].should.equal (1);
+            res[5].timeout.should.eql (true);
+            res[10].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
 
             q.nConsumers().should.equal (0);
 

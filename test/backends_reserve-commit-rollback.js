@@ -1,29 +1,61 @@
-var async =  require ('async');
-var should = require ('should');
-var _ =      require ('lodash');
+const async =  require ('async');
+const should = require ('should');
+const _ =      require ('lodash');
 
-var LocalSignal = require ('../signal/local');
-var MemStats =    require ('../stats/mem');
+const LocalSignal = require ('../signal/local');
+const MemStats =    require ('../stats/mem');
 
-var MongoClient = require ('mongodb').MongoClient;
+const MongoClient = require ('mongodb').MongoClient;
 
-var factory = null;
+let factory = null;
+
+process.on("unhandledRejection", reason => {
+	console.log("unhandled rejection:", reason);
+	throw reason;
+});
+
+function _q_size_should_be (q, val, cb) {
+  q.size((err, size) => {
+    if (err) return cb(err);
+    size.should.equal(val);
+    cb();
+  });
+}
+
+function _q_totalsize_should_be (q, val, cb) {
+  q.totalSize((err, size) => {
+    if (err) return cb(err);
+    size.should.equal(val);
+    cb();
+  });
+}
+
+function _q_stats_should_be (q, val, cb) {
+  q.stats((err, stats) => {
+    if (err) return cb(err);
+    stats.should.match(val);
+    cb();
+  });
+}
+
 
 [
-  {label: 'Simple MongoDB',       mq: require ('../backends/mongo'), unknown_id: '112233445566778899001122'},
-  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo'), unknown_id: '112233445566778899001122'},
-  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo'), unknown_id: '112233445566778899001122'},
+  {label: 'Simple MongoDB',       mq: require ('../backends/mongo'),        unknown_id: '112233445566778899001122'},
+  {label: 'Pipelined MongoDB',    mq: require ('../backends/pl-mongo'),     unknown_id: '112233445566778899001122'},
+  {label: 'Tape MongoDB',         mq: require ('../backends/ps-mongo'),     unknown_id: '112233445566778899001122'},
   {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo'), unknown_id: '112233445566778899001122'},
  // {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe'), unknown_id: '112233445566778899001122'},
-  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq'), unknown_id: '112233445566778899001122'},
-  {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder'), unknown_id: '112233445566778899001122'},
-  {label: 'Postgres',     mq: require ('../backends/postgres'), unknown_id: '00000000-0000-0000-0000-000000000000'},
+  {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq'),     unknown_id: '112233445566778899001122'},
+  {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder'),   unknown_id: '112233445566778899001122'},
+  {label: 'Postgres',             mq: require ('../backends/postgres'),     unknown_id: '00000000-0000-0000-0000-000000000000'},
 ].forEach(MQ_item => {
-  describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', function () {
-    var MQ = MQ_item.mq;
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  describe('reserve-commit-rollback with ' + MQ_item.label + ' queue backend', () => {
+    const MQ = MQ_item.mq;
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     before(done => {
-      var opts = {
+      const opts = {
         url: 'mongodb://localhost/keuss_test_backends_rcr',
         signaller: { provider: LocalSignal},
         stats: {provider: MemStats}
@@ -36,6 +68,8 @@ var factory = null;
       });
     });
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb),
@@ -45,8 +79,10 @@ var factory = null;
       })
     ], done));
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('queue is created empty and ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
       should.equal(q.nextMatureDate(), null);
 
       async.series([
@@ -70,369 +106,202 @@ var factory = null;
       });
     });
 
-    it('sequential push & pops with no delay, go as expected', function (done) {
-      var q = factory.queue('test_queue_2');
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('sequential push & pops with no delay, go as expected', done => {
+      const q = factory.queue('test_queue_2');
 
       async.series([
         cb => q.init(cb),
         cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
         cb => q.push({elem: 2, pl: 'twetrwte'}, cb),
-        cb => {
-          q.size ((err, size) => {
-            size.should.equal(2);
-            cb();
-          })
-        },
-        cb => q.stats((err, res) => {
-          res.should.match({
-            get: 0,
-            put: 2,
-            reserve: 0,
-            commit: 0,
-            rollback: 0, 
-            deadletter: 0
-          });
-          cb();
-        }),
+        cb => _q_size_should_be (q, 2, cb),
+        cb => _q_stats_should_be (q, {
+          get: 0,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0, 
+          deadletter: 0
+        }, cb),
         cb=> q.next_t((err, res) => {
           res.getTime().should.be.approximately(new Date().getTime(), 500);
           cb();
         }),
         cb => q.pop('c1', cb),
-        cb => q.size((err, size) => {
-          size.should.equal(1);
-          cb();
-        }),
-        cb => q.stats((err, res) => {
-          res.should.match({
-            get: 1,
-            put: 2,
-            reserve: 0,
-            commit: 0,
-            rollback: 0,
-            deadletter: 0
-          });
-          cb();
-        }),
-        cb => q.pop('c2', cb),
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
+        cb => _q_size_should_be (q, 1, cb),
+        cb => _q_stats_should_be (q, {
+          get: 1,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0,
+          deadletter: 0
+        }, cb),
+        cb => q.pop('c2', cb), 
+        cb => _q_size_should_be (q, 0, cb),
         cb => setTimeout (cb, 1000),
-        cb => q.stats((err, res) => {
-          res.should.match({
-            get: 2,
-            put: 2,
-            reserve: 0,
-            commit: 0,
-            rollback: 0,
-            deadletter: 0
-          });
-          cb();
-        }),
+        cb => _q_stats_should_be (q, {
+          get: 2,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0,
+          deadletter: 0
+        }, cb),
         cb => q.next_t((err, res) => {
           if (q.type () !=  'mongo:intraorder') {
             should.equal(res, null);
           }
           cb();
         })
-      ], (err, results) => {
-        done();
-      });
+      ], done);
     });
 
-    it('sequential push & pops with delays, go as expected', function (done) {
-      var q = factory.queue('test_queue_3');
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('sequential push & pops with delays, go as expected', done => {
+      const q = factory.queue('test_queue_3');
 
       async.series([
         cb => q.init(cb),
         cb => q.push({elem: 1, pl: 'twetrwte'}, {delay: 2}, cb),
         cb => setTimeout(cb, 150),
-        function (cb) {
-          q.push({
-            elem: 2,
-            pl: 'twetrwte'
-          }, {
-            delay: 1
-          }, cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
-              get: 0,
-              put: 2,
-              reserve: 0,
-              commit: 0,
-              rollback: 0,
-              deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime() + 1000, 100);
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c1', function (err, ret) {
-            ret.payload.should.eql({
-              elem: 2,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
-              get: 1,
-              put: 2,
-              reserve: 0,
-              commit: 0,
-              rollback: 0,
-              deadletter: 0
-            });
-            cb();
-          });
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime() + 1000, 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c2', function (err, ret) {
-            ret.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
-              get: 2,
-              put: 2,
-              reserve: 0,
-              commit: 0,
-              rollback: 0,
-              deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            if (q.type () !=  'mongo:intraorder') {
-              should.equal(res, null);
-            }
-            cb();
-          });
-        }
-      ], function (err, results) {
-        done();
-      });
+        cb => q.push({elem: 2, pl: 'twetrwte'}, {delay: 1}, cb),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
+          get: 0,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0,
+          deadletter: 0
+        }, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime() + 1000, 100);
+          cb();
+        }),
+        cb => q.pop('c1', (err, ret) => {
+          ret.payload.should.eql({elem: 2, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
+          get: 1,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0,
+          deadletter: 0
+        }, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime() + 1000, 500);
+          cb();
+        }),
+        cb => q.pop('c2', (err, ret) => {
+          ret.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
+          get: 2,
+          put: 2,
+          reserve: 0,
+          commit: 0,
+          rollback: 0,
+          deadletter: 0
+        }, cb),
+        cb => q.next_t((err, res) => {
+          if (q.type () !=  'mongo:intraorder') {
+            should.equal(res, null);
+          }
+          cb();
+        }),
+      ], done);
     });
 
-    it('timed-out pops work as expected', function (done) {
-      var q = factory.queue('test_queue_4');
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('timed-out pops work as expected', done => {
+      const q = factory.queue('test_queue_4');
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, {
-            delay: 6
-          }, cb)
-        },
-        function (cb) {
-          setTimeout(function () {
-            cb()
-          }, 150)
-        },
-        function (cb) {
-          q.push({
-            elem: 2,
-            pl: 'twetrwte'
-          }, {
-            delay: 5
-          }, cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        cb => q.push({elem: 1, pl: 'twetrwte'}, {delay: 6}, cb),
+        cb => setTimeout(cb, 150),
+        cb => q.push({elem: 2, pl: 'twetrwte'}, {delay: 5}, cb),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 0,
               put: 2,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c1', {
-            timeout: 2000
-          }, function (err, ret) {
-            should.equal(ret, null);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        }, cb),
+        cb => q.pop('c1', {timeout: 2000}, (err, ret) => {
+          should.equal(ret, null);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 0,
               put: 2,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c2', {
-            timeout: 2000
-          }, function (err, ret) {
-            should.equal(ret, null);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        }, cb),
+        cb => q.pop('c2', {timeout: 2000}, (err, ret) => {
+          should.equal(ret, null);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 0,
               put: 2,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          q.pop('c3', {
-            timeout: 5000
-          }, function (err, ret) {
-            ret.payload.should.eql({
-              elem: 2,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.pop('c4', {
-            timeout: 5000
-          }, function (err, ret) {
-            ret.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        }, cb),
+        cb => q.pop('c3', {timeout: 5000}, (err, ret) => {
+          ret.payload.should.eql({elem: 2, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => q.pop('c4', {timeout: 5000}, (err, ret) => {
+          ret.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 2,
               put: 2,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-      ], function (err, results) {
-        done();
-      });
+        }, cb),
+      ], done);
     });
 
-    it('pop cancellation works as expected', function (done) {
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('pop cancellation works as expected', done => {
       var q = factory.queue('test_queue_5');
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, {
-            delay: 6
-          }, cb)
-        },
-        function (cb) {
-          q.push({
-            elem: 2,
-            pl: 'twetrwte'
-          }, {
-            delay: 5
-          }, cb)
-        },
-        function (cb) {
+        cb => q.push({elem: 1, pl: 'twetrwte'}, {delay: 6}, cb),
+        cb => q.push({elem: 2, pl: 'twetrwte'}, {delay: 5}, cb),
+        cb => {
           q.consumers().length.should.equal(0);
           cb();
         },
-        function (cb) {
-          var tid1 = q.pop('c1', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
+        cb => {
+          const tid1 = q.pop('c1', {timeout: 2000}, err => err.should.equal('cancel'));
           q.consumers().length.should.equal(1);
-          var tid2 = q.pop('c2', {timeout: 2000}, function (err, ret) {err.should.equal('cancel')});
+          const tid2 = q.pop('c2', {timeout: 2000}, err => err.should.equal('cancel'));
           q.nConsumers().should.equal(2);
           q.cancel(tid1);
           q.nConsumers().should.equal(1);
@@ -440,180 +309,88 @@ var factory = null;
           q.nConsumers().should.equal(0);
           cb();
         },
-        function (cb) {
-          q.pop('c3', {
-            timeout: 15000
-          }, function (err, ret) {
-            ret.payload.should.eql({
-              elem: 2,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.pop('c4', {
-            timeout: 15000
-          }, function (err, ret) {
-            ret.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            cb(err, ret);
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        cb => q.pop('c3', {timeout: 15000}, (err, ret) => {
+          ret.payload.should.eql({elem: 2, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => q.pop('c4', {timeout: 15000}, (err, ret) => {
+          ret.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          cb(err, ret);
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 2,
               put: 2,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-      ], function (err, results) {
-        done();
-      });
+        }, cb),      
+      ], done);
     });
 
-    it('simultaneous timed out pops on delayed items go in the expected order', function (done) {
-      var q = factory.queue('test_queue_6');
 
-      var hrTime = process.hrtime()
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('simultaneous timed out pops on delayed items go in the expected order', done => {
+      const q = factory.queue('test_queue_6');
+      const hrTime = process.hrtime();
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, {
-            delay: 6
-          }, cb)
-        },
-        function (cb) {
-          q.push({
-            elem: 2,
-            pl: 'twetrwte'
-          }, {
-            delay: 5
-          }, cb)
-        },
-        function (cb) {
-          setTimeout(function () {
-            cb()
-          }, 150)
-        },
-        function (cb) {
-          q.push({
-            elem: 3,
-            pl: 'twetrwte'
-          }, {
-            delay: 4
-          }, cb)
-        },
-        function (cb) {
+        cb => q.push({elem: 1, pl: 'twetrwte'}, {delay: 6}, cb),
+        cb => q.push({elem: 2, pl: 'twetrwte'}, {delay: 5}, cb),
+        cb => setTimeout(cb, 150),
+        cb => q.push({elem: 3, pl: 'twetrwte'}, {delay: 4}, cb),
+        cb => {
           q.consumers().length.should.equal(0);
           cb();
         },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        cb => _q_stats_should_be (q, {
               get: 0,
               put: 3,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        },
-        function (cb) {
-          async.parallel([
-            function (cb) {
-              q.pop('c1', {
-                timeout: 12000
-              }, function (err, ret) {
-                cb(err, ret);
-              })
+        }, cb),   
+        cb => async.parallel([
+            cb => q.pop('c1', {timeout: 12000}, cb),
+            cb => {
+              const tid = q.pop('c0', {timeout: 12000}, err => err.should.equal('cancel'));
+              setTimeout(() => {q.cancel(tid); cb();}, 3000);
             },
-            function (cb) {
-              var tid = q.pop('c0', {timeout: 12000}, function (err, ret) {err.should.equal('cancel')});
-
-              setTimeout(function () {
-                q.cancel(tid);
-                cb();
-              }, 3000)
-            },
-            function (cb) {
-              q.pop('c2', {
-                timeout: 12000
-              }, function (err, ret) {
-                cb(err, ret);
-              })
-            },
-            function (cb) {
-              q.pop('c3', {
-                timeout: 12000
-              }, function (err, ret) {
-                cb(err, ret);
-              })
-            }
-          ], cb);
-        },
-        function (cb) {
-          var diff = process.hrtime(hrTime);
-          var delta = (diff[0] * 1000 + diff[1] / 1000000)
-          delta.should.be.approximately(6000, 500)
+            cb => q.pop('c2', {timeout: 12000}, cb),
+            cb => q.pop('c3', {timeout: 12000}, cb),
+          ], cb),
+        cb => {
+          const diff = process.hrtime(hrTime);
+          const delta = (diff[0] * 1000 + diff[1] / 1000000);
+          delta.should.be.approximately(6000, 500);
           cb();
         },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.stats(function (err, res) {
-            res.should.match({
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_stats_should_be (q, {
               get: 3,
               put: 3,
               reserve: 0,
               commit: 0,
               rollback: 0,
               deadletter: 0
-            });
-            cb();
-          })
-        }
-      ], function (err, results) {
-        done();
-      });
+        }, cb),      
+      ], done);
     });
 
-    it('should do raw reserve & commit as expected', function (done) {
-      var q = factory.queue('test_queue_7');
-      var id = null;
-      var obj = null;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('should do raw reserve & commit as expected', done => {
+      const q = factory.queue('test_queue_7');
+      let id = null;
+      let obj = null;
 
       async.series([
         cb => q.init(cb),
         cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
-        cb => q.size((err, size) => {
-          size.should.equal(1);
-          cb();
-        }),
+        cb => _q_size_should_be (q, 1, cb),
         cb => q.next_t((err, res) => {
           res.getTime().should.be.approximately(new Date().getTime(), 500);
           cb();
@@ -628,14 +405,8 @@ var factory = null;
           res.tries.should.equal(0);
           cb();
         }),
-        cb => q.size((err, size) => {
-          size.should.equal(0);
-          cb();
-        }),
-        cb => q.totalSize((err, size) => {
-          size.should.equal(1);
-          cb();
-        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 1, cb),
         cb => q.next_t((err, res) => {
           res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
           cb();
@@ -644,272 +415,149 @@ var factory = null;
           res.should.equal(true);
           cb();
         }, obj),
-        cb => q.size((err, size) => {
-          size.should.equal(0);
-          cb();
-        }),
-        cb => q.totalSize((err, size) => {
-          size.should.equal(0);
-          cb();
-        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 0, cb),
         cb => q.next_t((err, res) => {
           if (q.type () !=  'mongo:intraorder') {
             should.equal(res, null);
           }
           cb();
         }),
-      ], (err, results) => {
-        done(err);
-      });
+      ], done);
     });
 
-    it('should do raw reserve & rollback as expected', function (done) {
-      var q = factory.queue('test_queue_8');
-      var id = null;
-      var obj = null;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('should do raw reserve & rollback as expected', done => {
+      const q = factory.queue('test_queue_8');
+      let id = null;
+      let obj = null;
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, cb)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime(), 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.reserve(function (err, res) {
-            id = res._id;
-            obj = res;
-            res.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            res.tries.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.rollback(id, function (err, res) {
-            res.should.equal(true);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime(), 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.commit(id, function (err, res) {
-            res.should.equal(false);
-            cb();
-          }, obj)
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime(), 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.get(function (err, res) {
-            res._id.should.eql(id);
-            res.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            res.tries.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            if (q.type () !=  'mongo:intraorder') {
-              should.equal(res, null);
-            }
-            cb();
-          })
-        },
-      ], function (err, results) {
-        done();
-      });
+        cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
+        cb => _q_size_should_be (q, 1, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime(), 500);
+          cb();
+        }),
+        cb => q.reserve((err, res) => {
+          id = res._id;
+          obj = res;
+          res.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          res.tries.should.equal(0);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 1, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
+          cb();
+        }),
+        cb => q.rollback(id, (err, res) => {
+          res.should.equal(true);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 1, cb),
+        cb => _q_totalsize_should_be (q, 1, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime(), 500);
+          cb();
+        }),
+        cb => q.commit(id, (err, res) => {
+          res.should.equal(false);
+          cb();
+        }, obj),
+        cb => _q_size_should_be (q, 1, cb),
+        cb => _q_totalsize_should_be (q, 1, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime(), 500);
+          cb();
+        }),
+        cb => q.get((err, res) => {
+          res._id.should.eql(id);
+          res.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          res.tries.should.equal(1);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 0, cb),
+        cb => q.next_t((err, res) => {
+          if (q.type () !=  'mongo:intraorder') {
+            should.equal(res, null);
+          }
+          cb();
+        }),
+      ], done);
     });
 
-    it('should do get.reserve & ok as expected', function (done) {
-      var q = factory.queue('test_queue_9');
-      var id = null;
-      var obj = null;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('should do get.reserve & ok as expected', done => {
+      const  q = factory.queue('test_queue_9');
+      let id = null;
+      let obj = null;
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.push({
-            elem: 1,
-            pl: 'twetrwte'
-          }, cb)
-        },
-        function (cb) {
-          q.pop('c1', {
-            reserve: true
-          }, function (err, res) {
-            id = res._id;
-            obj = res;
-            res.payload.should.eql({
-              elem: 1,
-              pl: 'twetrwte'
-            });
-            res.tries.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(1);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
-            cb();
-          })
-        },
-        function (cb) {
-          q.ok(obj, function (err, res) {
-            res.should.equal(true);
-            cb();
-          })
-        },
-        function (cb) {
-          q.size(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.totalSize(function (err, size) {
-            size.should.equal(0);
-            cb();
-          })
-        },
-        function (cb) {
-          q.next_t(function (err, res) {
-            if (q.type () !=  'mongo:intraorder') {
-              should.equal(res, null);
-            }
-            cb();
-          })
-        },
+        cb => q.push({elem: 1, pl: 'twetrwte'}, cb),
+        cb => q.pop('c1', {reserve: true}, (err, res) => {
+          id = res._id;
+          obj = res;
+          res.payload.should.eql({elem: 1, pl: 'twetrwte'});
+          res.tries.should.equal(0);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 1, cb),
+        cb => q.next_t((err, res) => {
+          res.getTime().should.be.approximately(new Date().getTime() + 120000, 500);
+          cb();
+        }),
+        cb => q.ok(obj, (err, res) => {
+          res.should.equal(true);
+          cb();
+        }),
+        cb => _q_size_should_be (q, 0, cb),
+        cb => _q_totalsize_should_be (q, 0, cb),
+        cb => q.next_t((err, res) => {
+          if (q.type () !=  'mongo:intraorder') {
+            should.equal(res, null);
+          }
+          cb();
+        }),
         cb => setTimeout (cb, 1000),
-        cb => q.stats((err, res) => {
-          res.should.match({
+        cb => _q_stats_should_be (q, {
             get: 0,
             put: 1,
             reserve: 1,
             commit: 1,
             rollback: 0,
             deadletter: 0
-          });
-          cb();
-        }),
-      ], function (err, results) {
-        done();
-      });
+        }, cb),
+      ], done);
     });
 
-    it('should manage rollback on invalid id as expected', function (done) {
-      var q = factory.queue('test_queue_10');
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('should manage rollback on invalid id as expected', done => {
+      const q = factory.queue('test_queue_10');
 
       if (q.type () ==  'redis:oq') return done ();
       if (q.type () ==  'mongo:intraorder') return done ();
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.rollback('invalid-id', function (err, res) {
-            err.should.not.be.null
-            should(res).equal(undefined);
-            cb();
-          })
-        }
-      ], function (err, results) {
-        done(err);
-      });
+        cb => q.rollback('invalid-id', (err, res) => {
+          err.should.not.be.null
+          should(res).equal(undefined);
+          cb();
+        })
+      ], done);
     });
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should show coherent values of size, schedSize, resvSize on push, pop, reserve, commit, rollback', done => {
       function _get_all_sizes (q, cb) {
         async.parallel ([
@@ -922,8 +570,8 @@ var factory = null;
 
       if (MQ_item.label == 'Redis OrderedQueue') return done ();
 
-      var q = factory.queue('test_queue_11');
-      var state = {};
+      const q = factory.queue('test_queue_11');
+      const state = {};
 
       async.series([
         cb => q.init(cb),
@@ -968,25 +616,26 @@ var factory = null;
       });
     });
 
-    it('should manage rollback on unknown id as expected', function (done) {
-      var q = factory.queue('test_queue_12');
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    it('should manage rollback on unknown id as expected', done => {
+      const q = factory.queue('test_queue_12');
 
       async.series([
         cb => q.init(cb),
-        function (cb) {
-          q.rollback(MQ_item.unknown_id, (err, res) => {
-            should(err).equal(null)
-            should(res).equal(false);
-            cb();
-          })
-        }
+        cb => q.rollback(MQ_item.unknown_id, (err, res) => {
+          should(err).equal(null)
+          should(res).equal(false);
+          cb();
+        })
       ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should rollback ok using full object', done => {
-      var q = factory.queue('test_queue_13');
-      var state = {};
+      const q = factory.queue('test_queue_13');
+      const state = {};
 
       async.series([
         cb => q.init(cb),

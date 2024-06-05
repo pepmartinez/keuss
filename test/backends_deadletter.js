@@ -12,16 +12,12 @@ function stats (q, cb) {
   async.series ({
     stats: cb => q.stats(cb),
     tsize: cb => q.totalSize(cb)
-  }, (err, res) => {
-//    console.log ('stats:', res);
-    cb (err, res);
-  });
+  }, cb);
 }
 
 function pop (q, stage, cb) {
   q.pop('c1', { reserve: true }, (err, res) => {
     stage.obj = res;
-//    console.log('reserved element %o', res);
     cb(err);
   });
 }
@@ -30,24 +26,14 @@ function reject (q, stage, cb) {
   var next_t = new Date().getTime() + 2000;
 
   q.ko (stage.obj, next_t, (err, res) => {
-    if (err) {
-//      console.error ('error in rollback of %s: %j', stage.obj._id, err);
-      return cb (err);
-    }
-
-//    console.log('rolled back element %s: %o', stage.obj._id, res);
+    if (err) return cb (err);
     cb();
   });
 }
 
 function accept (q, stage, cb) {
   q.ok (stage.obj, (err, res) => {
-    if (err) {
-//      console.error ('error in rollback of %s: %j', stage.obj._id, err);
-      return cb (err);
-    }
-
-//    console.log('commited element %s: %j', stage.obj._id, res);
+    if (err) return cb (err);
     cb();
   });
 }
@@ -66,8 +52,6 @@ function get_mq_factory (MQ, opts, cb) {
 }
 
 function release_mq_factory (q, factory, cb) {
-//  console.log ('releasing mq factory');
-
   setTimeout (() => {
     q.cancel ();
     factory.close (cb);
@@ -77,21 +61,26 @@ function release_mq_factory (q, factory, cb) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 [
-//  {label: 'Simple MongoDB',     mq: require ('../backends/mongo')},
-//  {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')},
-//  {label: 'Tape MongoDB',       mq: require ('../backends/ps-mongo')},
-//  {label: 'Stream MongoDB',     mq: require ('../backends/stream-mongo')},
-//  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
-//  {label: 'MongoDB SafeBucket', mq: require ('../backends/bucket-mongo-safe')},
+  {label: 'Simple MongoDB',     mq: require ('../backends/mongo')},
+  {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')},
+  {label: 'Tape MongoDB',       mq: require ('../backends/ps-mongo')},
+  {label: 'Stream MongoDB',     mq: require ('../backends/stream-mongo')},
+  {label: 'Redis OrderedQueue', mq: require ('../backends/redis-oq')},
+  {label: 'MongoDB SafeBucket', mq: require ('../backends/bucket-mongo-safe')},
   {label: 'Mongo IntraOrder',   mq: require ('../backends/intraorder')},
-].forEach(function (MQ_item) {
-  describe('rollback and deadletters with ' + MQ_item.label + ' queue backend', function () {
+  {label: 'Postgres',           mq: require ('../backends/postgres')},
+].forEach(MQ_item => {
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  describe('rollback and deadletters with ' + MQ_item.label + ' queue backend', () => {
     const MQ = MQ_item.mq;
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     beforeEach (done => {
       done();
     });
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     afterEach (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => MongoClient.connect ('mongodb://localhost/keuss_test_backends_deadletter', (err, cl) => {
@@ -101,8 +90,9 @@ function release_mq_factory (q, factory, cb) {
     ], done));
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('repeated ko causes item to be moved to deadletter if deadletter is set', done => {
-      var factory_opts = {
+      const factory_opts = {
         deadletter: {
           max_ko: 3
         }
@@ -119,6 +109,9 @@ function release_mq_factory (q, factory, cb) {
         cb => get_mq_factory (MQ, factory_opts, cb),
         (factory, cb) => {
           const q = factory.queue('test_queue_deadletter', {});
+          q.init (err => cb (err, q, factory))
+        },
+        (q, factory, cb) => {
           const stage = {};
           let tries= 0;
 
@@ -172,9 +165,9 @@ function release_mq_factory (q, factory, cb) {
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('repeated ko causes item NOT to be moved to deadletter if deadletter is not set', done => {
-      var factory_opts = {
-      };
+      const factory_opts = {};
 
       const pl = {
         elem: 1,
@@ -185,9 +178,13 @@ function release_mq_factory (q, factory, cb) {
         cb => get_mq_factory (MQ, factory_opts, cb),
         (factory, cb) => {
           const q = factory.queue('test_queue_deadletter', {});
+          q.init (err => cb (err, q, factory))
+        },
+        (q, factory, cb) => {
           const stage = {};
 
           async.series([
+            cb => q.init(cb),
             cb => q.push (pl, cb),
             cb => pop (q, stage, cb),
             cb => reject (q, stage, cb),

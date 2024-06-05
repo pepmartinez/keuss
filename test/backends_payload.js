@@ -1,13 +1,13 @@
-var async =  require ('async');
-var should = require ('should');
-var _ =      require ('lodash');
+const async =  require ('async');
+const should = require ('should');
+const _ =      require ('lodash');
 
-var LocalSignal = require ('../signal/local');
-var MemStats =    require ('../stats/mem');
+const LocalSignal = require ('../signal/local');
+const MemStats =    require ('../stats/mem');
 
-var MongoClient = require ('mongodb').MongoClient;
+const MongoClient = require ('mongodb').MongoClient;
 
-var factory = null;
+let factory = null;
 
 [
   {label: 'Simple MongoDB',       mq: require ('../backends/mongo')},
@@ -18,12 +18,15 @@ var factory = null;
   {label: 'Redis List',           mq: require ('../backends/redis-list')},
   {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')},
   {label: 'Mongo IntraOrder',     mq: require ('../backends/intraorder')},
-].forEach(function (MQ_item) {
-  describe('payload aspects on ' + MQ_item.label + ' queue backend, round 1', function () {
-    var MQ = MQ_item.mq;
+  {label: 'Postgres',             mq: require ('../backends/postgres')},
+].forEach(MQ_item => {
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  describe('payload aspects on ' + MQ_item.label + ' queue backend, round 1', () => {
+    const MQ = MQ_item.mq;
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     before(done => {
-      var opts = {
+      const opts = {
         url: 'mongodb://localhost/keuss_test_backends_payload',
         signaller: { provider: LocalSignal},
         stats: {provider: MemStats}
@@ -36,6 +39,7 @@ var factory = null;
       });
     });
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb),
@@ -46,10 +50,12 @@ var factory = null;
     ], done));
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop json object payloads ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ({a:1, b:'2'}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -58,16 +64,16 @@ var factory = null;
           res.hdrs.should.eql ({});
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop json array payloads ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -76,16 +82,16 @@ var factory = null;
           res.hdrs.should.eql ({});
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop string payloads ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ("das payload", cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -94,16 +100,16 @@ var factory = null;
           res.hdrs.should.eql ({});
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop number payloads ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
 
       async.series([
+        cb => q.init(cb),
         cb => q.push (123456, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -112,16 +118,17 @@ var factory = null;
           res.hdrs.should.eql ({});
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop Buffer payloads ok', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
       const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
+      
       async.series([
+        cb => q.init(cb),
         cb => q.push (bf, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -130,16 +137,14 @@ var factory = null;
           res.hdrs.should.eql ({});
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
-
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop json object payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -147,6 +152,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ({a:1, b:'2'}, {hdrs}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -155,15 +161,14 @@ var factory = null;
           res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop json array payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -171,6 +176,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], {hdrs}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -179,15 +185,14 @@ var factory = null;
           res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop string payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -195,6 +200,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ("das payload", {hdrs}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -203,15 +209,14 @@ var factory = null;
           res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop number payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -219,6 +224,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push (123456, {hdrs}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -227,16 +233,15 @@ var factory = null;
           res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and pop Buffer payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
+      const q = factory.queue('test_queue_1');
       const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
-      var hdrs = {
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -244,6 +249,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push (bf, {hdrs}, cb),
         cb => q.pop ('me', (err, res) => {
           if (err) return db (err);
@@ -252,9 +258,7 @@ var factory = null;
           res.hdrs.should.eql (hdrs);
           cb (null, res);
         }),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
   });
@@ -268,12 +272,15 @@ var factory = null;
   {label: 'Stream MongoDB',       mq: require ('../backends/stream-mongo')},
   {label: 'Safe MongoDB Buckets', mq: require ('../backends/bucket-mongo-safe')},
   {label: 'Redis OrderedQueue',   mq: require ('../backends/redis-oq')},
+  {label: 'Postgres',             mq: require ('../backends/postgres')},
 ].forEach(function (MQ_item) {
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   describe('payload aspects on ' + MQ_item.label + ' queue backend, round 2', function () {
-    var MQ = MQ_item.mq;
+    const MQ = MQ_item.mq;
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     before(done => {
-      var opts = {
+      const opts = {
         url: 'mongodb://localhost/keuss_test_backends_payload',
         signaller: { provider: LocalSignal},
         stats: {provider: MemStats}
@@ -286,6 +293,8 @@ var factory = null;
       });
     });
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb),
@@ -296,11 +305,13 @@ var factory = null;
     ], done));
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve json object payloads ok', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
+      const q = factory.queue('test_queue_1');
+      const state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ({a:1, b:'2'}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -311,17 +322,17 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve json array payloads ok', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
+      const q = factory.queue('test_queue_1');
+      const state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -332,17 +343,17 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ],done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve string payloads ok', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
+      const q = factory.queue('test_queue_1');
+      const state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ("das payload", cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -353,17 +364,17 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve number payloads ok', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
+      const q = factory.queue('test_queue_1');
+      const state = {};
 
       async.series([
+        cb => q.init(cb),
         cb => q.push (123456, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -374,17 +385,18 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve Buffer payloads ok', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
+      const q = factory.queue('test_queue_1');
+      const state = {};
       const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
+
       async.series([
+        cb => q.init(cb),
         cb => q.push (bf, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -395,17 +407,15 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
-
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve json object payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const state = {};
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -413,6 +423,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ({a:1, b:'2'}, {hdrs}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -423,16 +434,15 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve json array payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const state = {};
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -440,6 +450,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ([{a:1}, {b:'2'}, 4, 'yyy'], {hdrs}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -450,16 +461,15 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve string payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const state = {};
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -467,6 +477,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push ("das payload", {hdrs}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -477,16 +488,15 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve number payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const state = {};
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -494,6 +504,7 @@ var factory = null;
       };
 
       async.series([
+        cb => q.init(cb),
         cb => q.push (123456, {hdrs}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -504,16 +515,15 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it('should insert and reserve Buffer payloads ok with headers', done => {
-      var q = factory.queue('test_queue_1');
-      var state = {};
-      var hdrs = {
+      const q = factory.queue('test_queue_1');
+      const state = {};
+      const hdrs = {
         aaa: 'qwerty',
         bbb: 12,
         ccc: true,
@@ -521,7 +531,9 @@ var factory = null;
       };
 
       const bf = Buffer.from ([0x62, 0x75, 0x66, 0x66, 0x65, 0x72]);
+
       async.series([
+        cb => q.init(cb),
         cb => q.push (bf, {hdrs}, cb),
         cb => q.pop ('me', {reserve: true}, (err, res) => {
           if (err) return db (err);
@@ -532,11 +544,7 @@ var factory = null;
           cb (null, res);
         }),
         cb => q.ok (state.reserved_id, cb),
-      ], (err, res) => {
-        done (err);
-      });
+      ], done);
     });
-
-
   });
 });
