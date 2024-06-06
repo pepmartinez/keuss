@@ -13,6 +13,7 @@ class PGQueue extends Queue {
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
     this._pool = factory._pool;
+    this._tbl_name = this._name; 
   }
 
 
@@ -32,14 +33,14 @@ class PGQueue extends Queue {
   // ensure table and indexes exists
   init (cb) {
     this._pool.query (`
-    CREATE TABLE IF NOT EXISTS ${this._name} (
+    CREATE TABLE IF NOT EXISTS ${this._tbl_name} (
       _id      VARCHAR(64) PRIMARY KEY,
       _pl      TEXT,
       mature   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
       tries    INTEGER DEFAULT 0 NOT NULL,
       reserved TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS idx_mature ON ${this._name} (mature);
+    CREATE INDEX IF NOT EXISTS idx_mature ON ${this._tbl_name} (mature);
     `, err => cb (err));
   }
 
@@ -48,7 +49,7 @@ class PGQueue extends Queue {
   // add element to queue
   insert (entry, cb) {
     const _id =     entry.id || uuid.v4();
-    const tries =   entry.tries;
+    const tries =   entry.tries || 0;
     const mature =  new Date (entry.mature);
 
     const pl = {
@@ -61,7 +62,7 @@ class PGQueue extends Queue {
       pl.type = 'buffer';
     }
 
-    this._pool.query (`INSERT INTO ${this._name} VALUES($1, $2, $3)`, [_id, JSON.stringify (pl), mature], (err, res) => {
+    this._pool.query (`INSERT INTO ${this._tbl_name} VALUES($1, $2, $3, $4)`, [_id, JSON.stringify (pl), mature, tries], (err, res) => {
       if (err) return cb (err);
 
       // TODO assert res.rowCount==1 ?
@@ -76,13 +77,13 @@ class PGQueue extends Queue {
     this._pool.query (`
       WITH cte AS (
         SELECT *
-        FROM ${this._name}
+        FROM ${this._tbl_name}
         WHERE mature < now()
         ORDER BY mature
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
-      DELETE FROM ${this._name}
+      DELETE FROM ${this._tbl_name}
       WHERE _id IN (SELECT _id FROM cte)
       RETURNING *;
     `, (err, res) => {
@@ -116,13 +117,13 @@ class PGQueue extends Queue {
     this._pool.query (`
       WITH cte AS (
         SELECT *
-        FROM ${this._name}
+        FROM ${this._tbl_name}
         WHERE mature < now()
         ORDER BY mature
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       )
-      UPDATE ${this._name}
+      UPDATE ${this._tbl_name}
       SET
         tries = tries + 1,
         mature = mature + make_interval(secs => ${delay}),
@@ -158,10 +159,10 @@ class PGQueue extends Queue {
   //////////////////////////////////
   // commit previous reserve, by p.id
   commit (id, cb) {
-    if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as rollback id: not a valid UUID');
+    if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as commit id: not a valid UUID');
 
     this._pool.query (`
-      DELETE FROM ${this._name}
+      DELETE FROM ${this._tbl_name}
       WHERE _id = $1
       AND reserved IS NOT NULL
     `, 
@@ -186,7 +187,7 @@ class PGQueue extends Queue {
     const nxt = (next_t ? new Date (next_t) : Queue.now ());
 
     this._pool.query (`
-      UPDATE ${this._name}
+      UPDATE ${this._tbl_name}
       SET
         reserved = NULL,
         mature = $1
@@ -206,7 +207,7 @@ class PGQueue extends Queue {
   totalSize (cb) {
     this._pool.query (`
       SELECT COUNT(*)
-      FROM ${this._name}
+      FROM ${this._tbl_name}
     `, 
     (err, res) => {
       if (err) return cb (err);
@@ -220,7 +221,7 @@ class PGQueue extends Queue {
   size (cb) {
     this._pool.query (`
       SELECT COUNT(*)
-      FROM ${this._name}
+      FROM ${this._tbl_name}
       WHERE mature < now()
     `, 
     (err, res) => {
@@ -235,7 +236,7 @@ class PGQueue extends Queue {
   schedSize (cb) {
     this._pool.query (`
       SELECT COUNT(*)
-      FROM ${this._name}
+      FROM ${this._tbl_name}
       WHERE mature >= now()
       AND reserved IS NULL
     `, 
@@ -251,7 +252,7 @@ class PGQueue extends Queue {
   resvSize (cb) {
     this._pool.query (`
       SELECT COUNT(*)
-      FROM ${this._name}
+      FROM ${this._tbl_name}
       WHERE mature >= now()
       AND reserved IS NOT NULL
     `, 
@@ -267,7 +268,7 @@ class PGQueue extends Queue {
   next_t (cb) {  
     this._pool.query (`
       SELECT mature
-      FROM ${this._name}
+      FROM ${this._tbl_name}
       ORDER BY mature
       LIMIT 1
     `, (err, res) => {
@@ -282,10 +283,10 @@ class PGQueue extends Queue {
   //////////////////////////////////////////////
   // remove by id
   remove (id, cb) {
-    if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as rollback id: not a valid UUID');
+    if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as remove id: not a valid UUID');
 
     this._pool.query (`
-      DELETE FROM ${this._name}
+      DELETE FROM ${this._tbl_name}
       WHERE _id = $1
       AND reserved IS NULL
     `, 

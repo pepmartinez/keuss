@@ -1,10 +1,10 @@
 
-var async =  require ('async');
-var should = require ('should');
-var _ =      require ('lodash');
-var MongoClient = require ('mongodb').MongoClient;
+const async =  require ('async');
+const should = require ('should');
+const _ =      require ('lodash');
+const MongoClient = require ('mongodb').MongoClient;
 
-var factory = null;
+let factory = null;
 
 [
   {label: 'redis list',          backend: require ('../backends/redis-list')},
@@ -29,11 +29,11 @@ var factory = null;
     ].forEach (signal_item => {
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       describe (`pause/resume tests with backend ${backend_item.label}, stats ${stats_item.label}, signal ${signal_item.label}`, () => {
-        var MQ = backend_item.backend;
+        const MQ = backend_item.backend;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         before (done => {
-          var opts = {
+          const opts = {
             url: 'mongodb://localhost/keuss_test_pause',
             signaller: {
               provider: signal_item.signal,
@@ -75,7 +75,7 @@ var factory = null;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('queue pauses and resumes ok, existing consumers react accordingly', done => {
-          var q = factory.queue('_test_0_queue_', {});
+          const q = factory.queue('_test_0_queue_', {});
 
           async.series ([
             cb => q.init(cb),
@@ -120,7 +120,7 @@ var factory = null;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('pauses ok new consumers if queue paused, resumes them allright', done => {
-          var q = factory.queue('_test_1_queue_', {});
+          const q = factory.queue('_test_1_queue_', {});
 
           async.series ([
             cb => q.init(cb),
@@ -151,7 +151,7 @@ var factory = null;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue was paused', done => {
-          var q = factory.queue('_test_2_queue_', {});
+          const q = factory.queue('_test_2_queue_', {});
 
           async.series ([
             cb => q.init(cb),
@@ -190,7 +190,7 @@ var factory = null;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue is paused while waiting for delayed item', done => {
-          var q = factory.queue('_test_3_queue_', {});
+          const q = factory.queue('_test_3_queue_', {});
 
           async.series ([
             cb => q.init(cb),
