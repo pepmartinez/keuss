@@ -10,15 +10,16 @@
  * 
 */
 
-var MQ = require ('../../backends/bucket-mongo-safe');
+//const MQ = require ('../../backends/bucket-mongo-safe');
+const MQ = require ('../../backends/postgres');
 
-var _ =      require ('lodash');
-var async =  require ('async');
-var Chance = require ('chance');
-var chance = new Chance();
+const _ =      require ('lodash');
+const async =  require ('async');
+const Chance = require ('chance');
+const chance = new Chance();
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus',
   name: 'Random-NS',
   reject_delta_base: 2000,
@@ -26,106 +27,104 @@ var factory_opts = {
 };
 
 // test dimensions: elems to produce and consume, number of consumers, number of producers
-const num_elems = 1000000;
+const num_elems = 200000;
 const num_producers = 3;
-const num_consumers = 7;
-const commit_likelihood = 75;
+const num_pop_consumers = 2;
+const num_rcr_consumers = 13;
+const commit_likelihood = 57;
 
 // stats holder
-var selfs = {
+const selfs = {
   consumers: {},
   producers: {}
 };
 
-var shareds = {};
+let push_done = false;
+let items_pushed = 0;
+let items_popped = 0;
+let items_reserved = 0;
+let items_rolledback = 0;
+let items_commited = 0;
+let items_processed = 0;
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function consume_one (shared_ctx, self_ctx, cb) {
-  if (shared_ctx.pop_count > shared_ctx.pop_max) {
+  if ((push_done) && (items_processed >= items_pushed)) {
     console.log ('pop consumer %s ended', self_ctx.id);
-    shared_ctx.q.cancel ();
+    shared_ctx.q.cancel();
     return cb ();
   }
 
-  shared_ctx.pop_count ++;
-  self_ctx.pop_count ++;
-
   shared_ctx.q.pop (self_ctx.id, shared_ctx.pop_opts, (err, res) => {
     if (err) return cb (err);
-    if ((shared_ctx.pop_count % 100000) == 0) console.log ('%s : consumed #%d elems', self_ctx.id, shared_ctx.pop_count);
+
+    self_ctx.pop_count++;
+    items_popped++;
+    items_processed++;
+    
+    if ((shared_ctx.pop_count % 100000) == 0) console.log ('%s : pop-consumed #%d elems', self_ctx.id, shared_ctx.pop_count);
     consume_one (shared_ctx, self_ctx, cb);
   });
 }
 
-
 function run_a_pop_consumer (shared_ctx, cb) {
-  var self_ctx = {
+  const self_ctx = {
     id: chance.word (),
     pop_count: 0
   };
 
   selfs.consumers[self_ctx.id] = self_ctx;
 
-  consume_one (shared_ctx, self_ctx, cb);
+  console.log ('pop consumer %s started', self_ctx.id);
+  consume_one (shared_ctx, self_ctx, err => {
+    console.log (`pop consumer ${self_ctx.id} ended`);
+    if (err && (err != 'cancel')) console.log (`Error in pop consumer ${self_ctx.id}`, err);
+    cb ();
+  });
 }
 
-
-function run_consumers (q, cnt, cb) {
-  var shared_ctx = {
+function run_pop_consumers (q, cnt, cb) {
+  const shared_ctx = {
     q: q,
-    pop_count: 0,
-    pop_max: cnt,
     pop_opts: {}
   };
 
-  shareds.pc = shared_ctx;
-
-  var tasks = [];
-  for (var i = 0; i < num_consumers; i++) tasks.push ((cb) => run_a_pop_consumer (shared_ctx, cb));
+  const tasks = [];
+  for (let i = 0; i < num_pop_consumers; i++) tasks.push ((cb) => run_a_pop_consumer (shared_ctx, cb));
   async.parallel (tasks, cb);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-var das_pop = 0;
-var das_ko = 0;
-var das_ok = 0;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function reserve_and_commit_one (shared_ctx, self_ctx, cb) {
-  self_ctx.pop_count ++;
+  if ((push_done) && (items_processed >= items_pushed)) {
+    shared_ctx.q.cancel();
+    return cb ();
+  }
 
-  shared_ctx.q.pop (self_ctx.consumer, shared_ctx.pop_opts, (err, res) => {
+  shared_ctx.q.pop (self_ctx.id, shared_ctx.pop_opts, (err, res) => {
     if (err) return cb (err);
-    self_ctx.resv_count ++;
-
-    das_pop++;
+    self_ctx.resv_count++;
+    items_reserved++;
 
     if (chance.bool({likelihood: commit_likelihood})) {
       shared_ctx.q.ok (res._id, (err) => {
         if (err) return cb (err);
-        self_ctx.ok_count ++;
-        shared_ctx.pop_count ++;
-        das_ok++;
 
-        if (shared_ctx.pop_count > shared_ctx.pop_max) {
-          console.log ('rcr consumer %s ended', self_ctx.id);
-          shared_ctx.q.cancel ();
-          return cb ();
-        }
+        self_ctx.ok_count++;
+        items_commited++;
+        items_processed++;
 
-//        if ((shared_ctx.pop_count % 100000) == 0) console.log ('%s : consumed #%d elems', self_ctx.id, shared_ctx.pop_count);
         reserve_and_commit_one (shared_ctx, self_ctx, cb);
       });
     }
     else {
       shared_ctx.q.ko (res._id, (err) => {
         if (err) return cb (err);
-        self_ctx.ko_count ++;
-        das_ko++;
+        self_ctx.ko_count++;
+        items_rolledback++;
 
-//        if ((shared_ctx.pop_count % 100000) == 0) console.log ('%s : consumed #%d elems', self_ctx.id, shared_ctx.pop_count);
         reserve_and_commit_one (shared_ctx, self_ctx, cb);
       });
     }
@@ -133,7 +132,7 @@ function reserve_and_commit_one (shared_ctx, self_ctx, cb) {
 }
 
 function run_a_rcr_consumer (shared_ctx, cb) {
-  var self_ctx = {
+  const self_ctx = {
     id: chance.word (),
     pop_count: 0,
     resv_count: 0,
@@ -143,23 +142,24 @@ function run_a_rcr_consumer (shared_ctx, cb) {
 
   selfs.consumers[self_ctx.id] = self_ctx;
 
-  reserve_and_commit_one (shared_ctx, self_ctx, cb);
+  console.log ('rcr consumer %s started', self_ctx.id);
+  reserve_and_commit_one (shared_ctx, self_ctx, err => {
+    console.log (`rcr consumer ${self_ctx.id} ended`);
+    if (err && (err != 'cancel')) console.log (`Error in rcr consumer ${self_ctx.id}`, err);
+    cb ();
+  });
 }
 
 function run_rcr_consumers (q, cnt, cb) {
-  var shared_ctx = {
+  const shared_ctx = {
     q: q,
-    pop_count: 0,
-    pop_max: cnt,
     pop_opts: {
       reserve: true
     }
   };
 
-  shareds.rcrc = shared_ctx;
-
-  var tasks = [];
-  for (var i = 0; i < num_consumers; i++) 
+  const tasks = [];
+  for (let i = 0; i < num_rcr_consumers; i++) 
     tasks.push ((cb) => run_a_rcr_consumer (shared_ctx, cb));
   
   async.parallel (tasks, cb);
@@ -171,43 +171,41 @@ function run_rcr_consumers (q, cnt, cb) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function produce_one (shared_ctx, self_ctx, cb) {
-  if (shared_ctx.push_count > shared_ctx.push_max) {
+  if (items_pushed >= num_elems) {
+    push_done = true;
     console.log ('producer %s ended', self_ctx.id);
     return cb ();
   }
-  
-  shared_ctx.push_count ++;
-  self_ctx.push_count ++;
 
-  shared_ctx.q.push ({a: chance.integer (), b: chance.word (), n: shared_ctx.push_count}, function (err, res) {
+  shared_ctx.q.push ({a: chance.integer (), b: chance.word (), n: shared_ctx.push_count}, (err, res) => {
     if (err) return console.error (err);
-//    if ((shared_ctx.push_count % 100000) == 0) console.log ('%s : produced #%d elems', self_ctx.id, shared_ctx.push_count);
+
+    items_pushed++;
+    self_ctx.push_count++;
+    
     produce_one (shared_ctx, self_ctx, cb);
   });
 }
 
 function run_a_producer (shared_ctx, cb) {
-  var self_ctx = {
+  const self_ctx = {
     id: chance.word (),
     push_count: 0
   };
 
   selfs.producers[self_ctx.id] = self_ctx;
 
+  console.log ('producer %s started', self_ctx.id);
   produce_one (shared_ctx, self_ctx, cb);
 }
 
 function run_producers (q, cnt, cb) {
-  var shared_ctx = {
-    q: q,
-    push_count: 0,
-    push_max: cnt
+  const shared_ctx = {
+    q: q
   };
 
-  shareds.prod = shared_ctx;
-
-  var tasks = [];
-  for (var i = 0; i < num_producers; i++) tasks.push ((cb) => run_a_producer (shared_ctx, cb));
+  const tasks = [];
+  for (let i = 0; i < num_producers; i++) tasks.push ((cb) => run_a_producer (shared_ctx, cb));
   async.parallel (tasks, cb);
 }
 
@@ -219,52 +217,63 @@ MQ (factory_opts, function (err, factory) {
   if (err) return console.error (err);
 
   // factory ready, create one queue
-  var q_opts = {};
-  var q = factory.queue ('test_queue_456', q_opts);
+  const q_opts = {};
+  const q = factory.queue ('test_queue_456', q_opts);
 
-  var timer = setInterval (() => {
-    console.log ('**** state: %o', _.map (shareds, (v, k) => {return {cnt: v.push_count || v.pop_count, max: v.push_max || v.pop_max }}));
-   
-    console.log ('das pop %d, ko %d, ok %d', das_pop, das_ko, das_ok);
+  q.init(err => {
+    if (err) return console.error (err);
 
-    q.status ((err ,res) => {
-      console.log ('**** status: %o', res);
-    });
-  }, 2000);
+    const timer = setInterval (() => {
+      q.status ((err ,res) => {
+        console.log ('push %d, pop %d, rsv %d, ko %d, ok %d, processed %d, status: %o', 
+          items_pushed, 
+          items_popped,
+          items_reserved,
+          items_rolledback,
+          items_commited, 
+          items_processed,
+          _.pick (res, ['size', 'totalSize', 'resvSize']));
+      });
+    }, 1000);
 
-  async.parallel ([
-    (cb) => run_producers (q, num_elems, cb),
-//    (cb) => run_consumers (q, 250000, cb),
-    (cb) => run_rcr_consumers (q, num_elems, cb),
-  ], (err) => {
-    if (err) {
-      console.error (err);
-    }
+    async.parallel ([
+      cb => run_producers     (q, num_elems, cb),
+      cb => run_pop_consumers (q, num_elems, cb),
+      cb => run_rcr_consumers (q, num_elems, cb),
+    ], (err) => {
+      if (err) return console.error (err);
     
-    var tot_push = 0;
-    var tot_pop = 0;
-    var tot_resv = 0;
-    var tot_ok = 0;
-    var tot_ko = 0;
+      let tot_push = 0;
+      let tot_pop = 0;
+      let tot_resv = 0;
+      let tot_ok = 0;
+      let tot_ko = 0;
 
-    console.log ('\nProducers: ');
-    _.each (selfs.producers, (v, k) => {console.log ('  %s: pushed %d', v.id, v.push_count), tot_push += v.push_count});
+      console.log ('\nProducers: ');
+      _.each (selfs.producers, (v, k) => {console.log ('  %s: pushed %d', v.id, v.push_count), tot_push += v.push_count});
     
-    console.log ('\nConsumers: ');
-    _.each (selfs.consumers, (v, k) => {
-      console.log ('  %s: popped %d, resvd %d, committed %d, rollbacked %d', v.id, v.pop_count, v.resv_count, v.ok_count, v.ko_count);
-      tot_pop += v.pop_count;
-      tot_resv += v.resv_count;
-      tot_ok += v.ok_count;
-      tot_ko += v.ko_count;
-    });
+      console.log ('\nConsumers: ');
+      _.each (selfs.consumers, (v, k) => {
+        console.log ('  %s: popped %d, resvd %d, committed %d, rollbacked %d', 
+          v.id, 
+          v.pop_count || 0, 
+          v.resv_count || 0, 
+          v.ok_count || 0, 
+          v.ko_count || 0);
+
+        tot_pop += (v.pop_count || 0);
+        tot_resv += (v.resv_count || 0);
+        tot_ok += (v.ok_count || 0);
+        tot_ko += (v.ko_count || 0);
+      });
     
-    console.log ('  \nTotals: %d popped, %d pushed, resvd %d, committed %d, rollbacked %d', tot_pop, tot_push, tot_resv, tot_ok, tot_ko);
-    clearInterval (timer);
+      console.log ('  \nTotals: %d popped, %d pushed, resvd %d, committed %d, rollbacked %d', tot_pop, tot_push, tot_resv, tot_ok, tot_ko);
+      clearInterval (timer);
     
-    q.status ((err ,res) => {
-      console.log ('**** status: %o', res);
-      q.drain (() => factory.close ());
+      q.status ((err ,res) => {
+        console.log ('**** status: %o', _.omit (res, ['type', 'capabilities', 'factory', 'paused']));
+        q.drain (() => factory.close ());
+      });
     });
   });
 });
