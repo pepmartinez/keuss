@@ -76,16 +76,16 @@ class PGQueue extends Queue {
   get (cb) {    
     this._pool.query (`
       BEGIN;
-      LOCK TABLE ${this._tbl_name} IN EXCLUSIVE MODE;
       WITH cte AS (
         SELECT *
         FROM ${this._tbl_name}
         WHERE mature < now()
         ORDER BY mature
         LIMIT 1
+        FOR UPDATE SKIP LOCKED
       )
       DELETE FROM ${this._tbl_name}
-      WHERE _id IN (SELECT _id FROM cte)
+      WHERE _id = (SELECT _id FROM cte LIMIT 1)
       RETURNING *;
       COMMIT;
     `, (err, res) => {
@@ -123,20 +123,20 @@ class PGQueue extends Queue {
 
     this._pool.query (`
       BEGIN;
-      LOCK TABLE ${this._tbl_name} IN EXCLUSIVE MODE;
       WITH cte AS (
         SELECT *
         FROM ${this._tbl_name}
         WHERE mature < now()
         ORDER BY mature
         LIMIT 1
+        FOR UPDATE SKIP LOCKED
       )
       UPDATE ${this._tbl_name}
       SET
         tries = tries + 1,
         mature = mature + make_interval(secs => ${delay}),
         reserved = now()
-      WHERE _id IN (SELECT _id FROM cte)
+      WHERE _id = (SELECT _id FROM cte LIMIT 1)
       RETURNING *;
       COMMIT;
     `, (err, res) => {
@@ -176,9 +176,11 @@ class PGQueue extends Queue {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as commit id: not a valid UUID');
 
     this._pool.query (`
+      BEGIN;
       DELETE FROM ${this._tbl_name}
       WHERE _id = $1
-      AND reserved IS NOT NULL
+      AND reserved IS NOT NULL;
+      COMMIT;
     `, 
     [id],
     (err, res) => {
@@ -202,12 +204,14 @@ class PGQueue extends Queue {
     const nxt = (next_t ? new Date (next_t) : Queue.now ());
 
     this._pool.query (`
+      BEGIN;
       UPDATE ${this._tbl_name}
       SET
         reserved = NULL,
         mature = $1
       WHERE _id = $2
-      AND reserved IS NOT NULL
+      AND reserved IS NOT NULL;
+      COMMIT;
     `, 
     [nxt, id],
     (err, res) => {
@@ -302,9 +306,11 @@ class PGQueue extends Queue {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as remove id: not a valid UUID');
 
     this._pool.query (`
+      BEGIN;
       DELETE FROM ${this._tbl_name}
       WHERE _id = $1
-      AND reserved IS NULL
+      AND reserved IS NULL;
+      COMMIT;
     `, 
     [id],
     (err, res) => {
@@ -374,11 +380,11 @@ function creator (opts, cb) {
   debug ('Creator: creating pool with %j', _opts);
 
   const dflt = {
-    user:     'pg', 
-    password: 'pg',
+    user:     'postgres', 
+    password: 'poppwd',
     host:     'localhost',
-    port:     5432,
-    database: 'pg'
+    port:     5555,
+    database: 'dbpop'
   }
 
   const pool = new pg.Pool(_.merge ({}, dflt, _opts.postgres));
