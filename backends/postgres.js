@@ -73,9 +73,11 @@ class PGQueue extends Queue {
 
   /////////////////////////////////////////
   // get element from queue
-  get (cb) {    
-    this._pool.query (`
-      BEGIN;
+  get (cb) { 
+    this._pool.connect().then(client => {
+      client.query('BEGIN').
+        then( () => 
+         client.query (`
       WITH cte AS (
         SELECT *
         FROM ${this._tbl_name}
@@ -87,17 +89,12 @@ class PGQueue extends Queue {
       DELETE FROM ${this._tbl_name}
       WHERE _id = (SELECT _id FROM cte LIMIT 1)
       RETURNING *;
-      COMMIT;
-    `, (err, res) => {
-      if (err) {
-        // serialization error, let it flow and be retried. Should not happen with a table-lock
-        if (err.code == '40001') return cb (null, null); 
-        return cb (err);
-      }
+    `)).then( res => {
+      client.query('COMMIT');
+      if (res.rowCount == 0) 
+          return cb (null, null); 
 
-      if (_.size (res[2].rows) == 0) return cb (null, null); // not found
-      
-      const pl = res[2].rows[0];
+      const pl = res.rows[0];
 
       // re-hydrate _pl
       pl._pl = JSON.parse (pl._pl);
@@ -110,9 +107,14 @@ class PGQueue extends Queue {
         } catch (e) {
         }
       }
-
-      cb (null, pl);
-    })
+      return cb (null, pl);
+    }).catch (err => {
+      client.query('ROLLBACK');
+        // serialization error, let it flow and be retried. Should not happen with a table-lock
+        if (err.code == '40001') return cb (null, null);
+        return cb (err);
+    }).finally(() => {client.release()}); 
+  });
   }
 
 
@@ -120,53 +122,59 @@ class PGQueue extends Queue {
   // reserve element: call cb (err, pl) where pl has an id
   reserve (cb) {
     const delay = this._opts.reserve_delay || 120;
-
-    this._pool.query (`
-      BEGIN;
-      WITH cte AS (
-        SELECT *
-        FROM ${this._tbl_name}
-        WHERE mature < now()
-        ORDER BY mature
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-      )
-      UPDATE ${this._tbl_name}
-      SET
-        tries = tries + 1,
-        mature = mature + make_interval(secs => ${delay}),
-        reserved = now()
-      WHERE _id = (SELECT _id FROM cte LIMIT 1)
-      RETURNING *;
-      COMMIT;
-    `, (err, res) => {
-      if (err) {
-        // serialization error, let it flow and be retried. Should not happen with a table-lock
-        if (err.code == '40001') return cb (null, null); 
-        return cb (err);
-      }
-      
-      if (_.size (res[2].rows) == 0) return cb (null, null); // not found
-      
-      const pl = res[2].rows[0];
-
-      // re-hydrate _pl
-      pl._pl = JSON.parse (pl._pl);
-      _.merge (pl, pl._pl);
-      delete (pl._pl);
-
-      // adjust tries to pre-update
-      pl.tries--;
-
-      if (pl.type == 'buffer') {
-        try {
-          pl.payload = Buffer.from (pl.payload, 'base64');
-        } catch (e) {
+    this._pool.connect().then(client => {
+      client.query('BEGIN').
+        then( () => 
+         client.query (`
+        WITH cte AS (
+          SELECT *
+          FROM ${this._tbl_name}
+          WHERE mature < now()
+          ORDER BY mature
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED
+        )
+        UPDATE ${this._tbl_name}
+        SET
+          tries = tries + 1,
+          mature = mature + make_interval(secs => ${delay}),
+          reserved = now()
+        WHERE _id = (SELECT _id FROM cte LIMIT 1)
+        RETURNING *;
+      `)).then( res => {
+        
+        client.query('COMMIT');
+        if (res.rowCount == 0) 
+        {
+            console.log('No rows affected');
+            return cb (null, null); // not found
         }
-      }
+        const pl = res.rows[0];
 
-      cb (null, pl);
-    })
+        // re-hydrate _pl
+        pl._pl = JSON.parse (pl._pl);
+        _.merge (pl, pl._pl);
+        delete (pl._pl);
+
+        // adjust tries to pre-update
+        pl.tries--;
+
+        if (pl.type == 'buffer') {
+          try {
+            pl.payload = Buffer.from (pl.payload, 'base64');
+          } catch (e) {
+          }
+        }
+
+        return cb (null, pl);
+      }).catch (err => {
+          client.query('ROLLBACK');
+          // serialization error, let it flow and be retried. Should not happen with a table-lock
+          console.log("rollback!");
+          if (err.code == '40001') return cb (null, null);
+          return cb (err);
+      }).finally(() => {client.release()}); 
+    });
   }
 
 
@@ -176,14 +184,17 @@ class PGQueue extends Queue {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as commit id: not a valid UUID');
 
     this._pool.query (`
-      BEGIN;
       DELETE FROM ${this._tbl_name}
       WHERE _id = $1
-      AND reserved IS NOT NULL;
-      COMMIT;
+      AND reserved IS NOT NULL
+      returning *;
     `, 
     [id],
     (err, res) => {
+      if (res.rowCount != 1)
+      {
+        console.log(`id not removed ${id}`);
+      }
       if (err) console.log ('GET', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
@@ -194,6 +205,7 @@ class PGQueue extends Queue {
   //////////////////////////////////
   // rollback previous reserve, by p.id
   rollback (id, next_t, cb) {
+    console.log(`rolling back element ${id}` )
     if (_.isFunction (next_t)) {
       cb = next_t;
       next_t = null;
