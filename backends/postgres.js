@@ -9,6 +9,8 @@ const debug = require('debug')('keuss:Queue:postgres');
 
 class PGQueue extends Queue {
 
+
+	// TODO escape table name properly , as identifier
   //////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
