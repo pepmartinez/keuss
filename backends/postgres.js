@@ -146,7 +146,7 @@ class PGQueue extends Queue {
             UPDATE ${this._tbl_name}
             SET
               tries = tries + 1,
-              mature = mature + make_interval(secs => ${delay}),
+              mature = now() + make_interval(secs => ${delay}),
               reserved = now()
             WHERE _id = (SELECT _id FROM cte LIMIT 1)
             RETURNING *;
