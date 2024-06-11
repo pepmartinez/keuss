@@ -77,47 +77,53 @@ class PGQueue extends Queue {
   // get element from queue
   get (cb) { 
     this._pool.connect().then(client => {
-         client.query (`
-            BEGIN;
-              WITH cte AS (
-                SELECT *
-                FROM ${this._tbl_name}
-                WHERE mature < now()
-                ORDER BY mature
-                FOR UPDATE SKIP LOCKED
-                LIMIT 1
-              )
-              DELETE FROM ${this._tbl_name}
-              WHERE _id = (SELECT _id FROM cte LIMIT 1)
-              RETURNING *;
-            COMMIT;
-        `).then( res => {
-            if (res[1].rowCount == 0) 
-            {
-              // No elements in the queue
-                return cb (null, null); 
-            }
-            const pl = res[1].rows[0];
+      client.query (`
+        BEGIN;
+          WITH cte AS (
+            SELECT *
+            FROM ${this._tbl_name}
+            WHERE mature < now()
+            ORDER BY mature
+            FOR UPDATE SKIP LOCKED
+            LIMIT 1
+          )
+          DELETE FROM ${this._tbl_name}
+          WHERE _id = (SELECT _id FROM cte LIMIT 1)
+          RETURNING *;
+        COMMIT;
+      `).then( res => {
+        if (res[1].rowCount == 0)  {
+          console.log("get returns empty!");
+          return cb (null, null); 
+        }
 
-            // re-hydrate _pl
-            pl._pl = JSON.parse (pl._pl);
-            _.merge (pl, pl._pl);
-            delete (pl._pl);
+        const pl = res[1].rows[0];
 
-            if (pl.type == 'buffer') {
-              try {
-                pl.payload = Buffer.from (pl.payload, 'base64');
-              } catch (e) {
-              }
-            }
-            return cb (null, pl);
-          }).catch (err => {
-            client.query('ROLLBACK');
-              // serialization error, let it flow and be retried. Should not happen with a table-lock
-              // TODO: Not sure if this is still needed
-              if (err.code == '40001') return cb (null, null);
-              return cb (err);
-          }).finally(() => {client.release()}); 
+        // re-hydrate _pl
+        pl._pl = JSON.parse (pl._pl);
+        _.merge (pl, pl._pl);
+        delete (pl._pl);
+
+        if (pl.type == 'buffer') {
+          try {
+            pl.payload = Buffer.from (pl.payload, 'base64');
+          } catch (e) {
+          }
+        }
+        return cb (null, pl);
+      }).catch (err => {
+        client.query('ROLLBACK');
+        console.log("get rollback!");
+        // serialization error, let it flow and be retried. Should not happen with a table-lock
+        // TODO: Not sure if this is still needed
+        if (err.code == '40001') {
+          console.log("get Error 40001!");
+          return cb (null, null);
+        }
+           
+        console.log("get Error!", err);
+        return cb (err);
+      }).finally(() => client.release()); 
     });
   }
 
@@ -126,7 +132,6 @@ class PGQueue extends Queue {
   // reserve element: call cb (err, pl) where pl has an id
   reserve (cb) {
     const delay = this._opts.reserve_delay || 120;
-    // TODO: Ensure the new 'reserved' update condition is valid
     this._pool.connect().then(client => {
          client.query (`
           BEGIN;
@@ -134,7 +139,6 @@ class PGQueue extends Queue {
               SELECT *
               FROM ${this._tbl_name}
               WHERE mature < now()
-              AND (reserved IS NULL OR reserved < now())
               ORDER BY mature
               FOR UPDATE SKIP LOCKED
               LIMIT 1
@@ -143,16 +147,17 @@ class PGQueue extends Queue {
             SET
               tries = tries + 1,
               mature = mature + make_interval(secs => ${delay}),
-              reserved = now() + make_interval(secs => ${delay})
+              reserved = now()
             WHERE _id = (SELECT _id FROM cte LIMIT 1)
             RETURNING *;
           COMMIT;
       `)
       .then( res => {
-          if (res[1].rowCount == 0) 
-          {
-              return cb (null, null); // not found
+          if (res[1].rowCount == 0)  {
+            console.log("get returns empty!");
+            return cb (null, null); 
           }
+
           const pl = res[1].rows[0];
 
           // re-hydrate _pl
@@ -167,7 +172,6 @@ class PGQueue extends Queue {
             try {
               pl.payload = Buffer.from (pl.payload, 'base64');
             } catch (e) {
-              // TODO: warn? Error?
             }
           }
           return cb (null, pl);
@@ -175,8 +179,13 @@ class PGQueue extends Queue {
           client.query('ROLLBACK');
           // serialization error, let it flow and be retried. Should not happen with a table-lock
           // TODO: Not sure if this is still needed
-          console.log("rollback!");
-          if (err.code == '40001') return cb (null, null);
+          console.log("reserve rollback!");
+          if (err.code == '40001') {
+            console.log("Reserve Error 40001!");
+            return cb (null, null);
+          }
+
+          console.log("Reserve Error", err);
           return cb (err);
       }).finally(() => client.release()); 
     });
@@ -188,32 +197,22 @@ class PGQueue extends Queue {
   commit (id, cb) {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as commit id: not a valid UUID');
 
-    // TODO: Maybe this does not need to be transacional
-    this._pool.connect().then(client => {
-          client.query('BEGIN').then( () => {
-          client.query (`
-                DELETE FROM ${this._tbl_name}
-                WHERE _id = $1
-                AND reserved IS NOT NULL
-                RETURNING *;
-              `, [id]) 
-          .then( res => {
-                client.query('COMMIT').then( () =>
-                  cb (null, res && (res.rowCount == 1)));
-          }).catch (err => {
-              client.query('ROLLBACK');
-              console.log ('COMMIT', err)
-              return cb (err);   
-          }).finally(() => client.release() )
-      });
-  })
-}
+    this._pool.query (`
+      DELETE FROM ${this._tbl_name}
+      WHERE _id = $1
+      AND reserved IS NOT NULL
+    `, 
+    [id],
+    (err, res) => {
+      if (err) return cb (err);
+      cb (null, res && (res.rowCount == 1));
+    })
+  }
 
 
   //////////////////////////////////
   // rollback previous reserve, by p.id
   rollback (id, next_t, cb) {
-    console.log(`rolling back element ${id}` )
     if (_.isFunction (next_t)) {
       cb = next_t;
       next_t = null;
@@ -222,20 +221,17 @@ class PGQueue extends Queue {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as rollback id: not a valid UUID');
 
     const nxt = (next_t ? new Date (next_t) : Queue.now ());
-    // TODO: Make this transactional?
+
     this._pool.query (`
-      BEGIN;
       UPDATE ${this._tbl_name}
       SET
         reserved = NULL,
         mature = $1
       WHERE _id = $2
-      AND reserved IS NOT NULL;
-      COMMIT;
+      AND reserved IS NOT NULL
     `, 
     [nxt, id],
     (err, res) => {
-      if (err) console.log ('ROLLBACK', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -326,17 +322,14 @@ class PGQueue extends Queue {
   // remove by id
   remove (id, cb) {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as remove id: not a valid UUID');
-   // TODO: Make this transactional?
+    
     this._pool.query (`
-      BEGIN;
       DELETE FROM ${this._tbl_name}
       WHERE _id = $1
       AND reserved IS NULL;
-      COMMIT;
     `, 
     [id],
     (err, res) => {
-      if (err) console.log ('REMOVE', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -403,11 +396,11 @@ function creator (opts, cb) {
 
   // TODO: adjust to your db params
   const dflt = {
-    user:     'postgres', 
-    password: 'poppwd',
+    user:     'pg', 
+    password: 'pg',
     host:     'localhost',
-    port:     5555,
-    database: 'dbpop'
+    port:     5432,
+    database: 'pg'
   }
 
   const pool = new pg.Pool(_.merge ({}, dflt, _opts.postgres));

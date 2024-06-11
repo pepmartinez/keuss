@@ -84,7 +84,7 @@ function release_mq_factory (q, factory, cb) {
         });
       },
       cb => {
-        const pool = new pg.Pool({user: 'postgres', password: 'poppwd', database: 'dbpop', port: 5555});
+        const pool = new pg.Pool({user: 'pg', password: 'pg', database: 'pg', port: 5432});
 
         pool.query ('DROP TABLE IF EXISTS test_queue_remove', err => {
           if (err) return cb (err);
