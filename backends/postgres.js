@@ -42,7 +42,7 @@ class PGQueue extends Queue {
       tries    INTEGER DEFAULT 0 NOT NULL,
       reserved TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS idx_mature ON ${this._tbl_name} (mature);
+    CREATE INDEX IF NOT EXISTS idx_${this._tbl_name}_mature ON ${this._tbl_name} (mature);
     `, err => cb (err));
   }
 
