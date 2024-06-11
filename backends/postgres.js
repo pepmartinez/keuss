@@ -32,6 +32,8 @@ class PGQueue extends Queue {
   //////////////////////////////////////////////
   // ensure table and indexes exists
   init (cb) {
+    // TODO: Check reserved names to avoid crash on creating the table? see  pg_get_keywords()
+    // TODO: use JSON type for _pl? see https://www.postgresql.org/docs/current/datatype-json.html
     this._pool.query (`
     CREATE TABLE IF NOT EXISTS ${this._tbl_name} (
       _id      VARCHAR(64) PRIMARY KEY,
@@ -75,46 +77,48 @@ class PGQueue extends Queue {
   // get element from queue
   get (cb) { 
     this._pool.connect().then(client => {
-      client.query('BEGIN').
-        then( () => 
          client.query (`
-      WITH cte AS (
-        SELECT *
-        FROM ${this._tbl_name}
-        WHERE mature < now()
-        ORDER BY mature
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-      )
-      DELETE FROM ${this._tbl_name}
-      WHERE _id = (SELECT _id FROM cte LIMIT 1)
-      RETURNING *;
-    `)).then( res => {
-      client.query('COMMIT');
-      if (res.rowCount == 0) 
-          return cb (null, null); 
+            BEGIN;
+              WITH cte AS (
+                SELECT *
+                FROM ${this._tbl_name}
+                WHERE mature < now()
+                ORDER BY mature
+                FOR UPDATE SKIP LOCKED
+                LIMIT 1
+              )
+              DELETE FROM ${this._tbl_name}
+              WHERE _id = (SELECT _id FROM cte LIMIT 1)
+              RETURNING *;
+            COMMIT;
+        `).then( res => {
+            if (res[1].rowCount == 0) 
+            {
+              // No elements in the queue
+                return cb (null, null); 
+            }
+            const pl = res[1].rows[0];
 
-      const pl = res.rows[0];
+            // re-hydrate _pl
+            pl._pl = JSON.parse (pl._pl);
+            _.merge (pl, pl._pl);
+            delete (pl._pl);
 
-      // re-hydrate _pl
-      pl._pl = JSON.parse (pl._pl);
-      _.merge (pl, pl._pl);
-      delete (pl._pl);
-
-      if (pl.type == 'buffer') {
-        try {
-          pl.payload = Buffer.from (pl.payload, 'base64');
-        } catch (e) {
-        }
-      }
-      return cb (null, pl);
-    }).catch (err => {
-      client.query('ROLLBACK');
-        // serialization error, let it flow and be retried. Should not happen with a table-lock
-        if (err.code == '40001') return cb (null, null);
-        return cb (err);
-    }).finally(() => {client.release()}); 
-  });
+            if (pl.type == 'buffer') {
+              try {
+                pl.payload = Buffer.from (pl.payload, 'base64');
+              } catch (e) {
+              }
+            }
+            return cb (null, pl);
+          }).catch (err => {
+            client.query('ROLLBACK');
+              // serialization error, let it flow and be retried. Should not happen with a table-lock
+              // TODO: Not sure if this is still needed
+              if (err.code == '40001') return cb (null, null);
+              return cb (err);
+          }).finally(() => {client.release()}); 
+    });
   }
 
 
@@ -122,58 +126,59 @@ class PGQueue extends Queue {
   // reserve element: call cb (err, pl) where pl has an id
   reserve (cb) {
     const delay = this._opts.reserve_delay || 120;
+    // TODO: Ensure the new 'reserved' update condition is valid
     this._pool.connect().then(client => {
-      client.query('BEGIN').
-        then( () => 
          client.query (`
-        WITH cte AS (
-          SELECT *
-          FROM ${this._tbl_name}
-          WHERE mature < now()
-          ORDER BY mature
-          LIMIT 1
-          FOR UPDATE SKIP LOCKED
-        )
-        UPDATE ${this._tbl_name}
-        SET
-          tries = tries + 1,
-          mature = mature + make_interval(secs => ${delay}),
-          reserved = now()
-        WHERE _id = (SELECT _id FROM cte LIMIT 1)
-        RETURNING *;
-      `)).then( res => {
-        
-        client.query('COMMIT');
-        if (res.rowCount == 0) 
-        {
-            console.log('No rows affected');
-            return cb (null, null); // not found
-        }
-        const pl = res.rows[0];
-
-        // re-hydrate _pl
-        pl._pl = JSON.parse (pl._pl);
-        _.merge (pl, pl._pl);
-        delete (pl._pl);
-
-        // adjust tries to pre-update
-        pl.tries--;
-
-        if (pl.type == 'buffer') {
-          try {
-            pl.payload = Buffer.from (pl.payload, 'base64');
-          } catch (e) {
+          BEGIN;
+            WITH cte AS (
+              SELECT *
+              FROM ${this._tbl_name}
+              WHERE mature < now()
+              AND (reserved IS NULL OR reserved < now())
+              ORDER BY mature
+              FOR UPDATE SKIP LOCKED
+              LIMIT 1
+            )
+            UPDATE ${this._tbl_name}
+            SET
+              tries = tries + 1,
+              mature = mature + make_interval(secs => ${delay}),
+              reserved = now() + make_interval(secs => ${delay})
+            WHERE _id = (SELECT _id FROM cte LIMIT 1)
+            RETURNING *;
+          COMMIT;
+      `)
+      .then( res => {
+          if (res[1].rowCount == 0) 
+          {
+              return cb (null, null); // not found
           }
-        }
+          const pl = res[1].rows[0];
 
-        return cb (null, pl);
+          // re-hydrate _pl
+          pl._pl = JSON.parse (pl._pl);
+          _.merge (pl, pl._pl);
+          delete (pl._pl);
+
+          // adjust tries to pre-update
+          pl.tries--;
+
+          if (pl.type == 'buffer') {
+            try {
+              pl.payload = Buffer.from (pl.payload, 'base64');
+            } catch (e) {
+              // TODO: warn? Error?
+            }
+          }
+          return cb (null, pl);
       }).catch (err => {
           client.query('ROLLBACK');
           // serialization error, let it flow and be retried. Should not happen with a table-lock
+          // TODO: Not sure if this is still needed
           console.log("rollback!");
           if (err.code == '40001') return cb (null, null);
           return cb (err);
-      }).finally(() => {client.release()}); 
+      }).finally(() => client.release()); 
     });
   }
 
@@ -183,23 +188,26 @@ class PGQueue extends Queue {
   commit (id, cb) {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as commit id: not a valid UUID');
 
-    this._pool.query (`
-      DELETE FROM ${this._tbl_name}
-      WHERE _id = $1
-      AND reserved IS NOT NULL
-      returning *;
-    `, 
-    [id],
-    (err, res) => {
-      if (res.rowCount != 1)
-      {
-        console.log(`id not removed ${id}`);
-      }
-      if (err) console.log ('GET', err)
-      if (err) return cb (err);
-      cb (null, res && (res.rowCount == 1));
-    })
-  }
+    // TODO: Maybe this does not need to be transacional
+    this._pool.connect().then(client => {
+          client.query('BEGIN').then( () => {
+          client.query (`
+                DELETE FROM ${this._tbl_name}
+                WHERE _id = $1
+                AND reserved IS NOT NULL
+                RETURNING *;
+              `, [id]) 
+          .then( res => {
+                client.query('COMMIT').then( () =>
+                  cb (null, res && (res.rowCount == 1)));
+          }).catch (err => {
+              client.query('ROLLBACK');
+              console.log ('COMMIT', err)
+              return cb (err);   
+          }).finally(() => client.release() )
+      });
+  })
+}
 
 
   //////////////////////////////////
@@ -214,7 +222,7 @@ class PGQueue extends Queue {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as rollback id: not a valid UUID');
 
     const nxt = (next_t ? new Date (next_t) : Queue.now ());
-
+    // TODO: Make this transactional?
     this._pool.query (`
       BEGIN;
       UPDATE ${this._tbl_name}
@@ -227,7 +235,7 @@ class PGQueue extends Queue {
     `, 
     [nxt, id],
     (err, res) => {
-      if (err) console.log ('GET', err)
+      if (err) console.log ('ROLLBACK', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -282,6 +290,7 @@ class PGQueue extends Queue {
   //////////////////////////////////
   // queue size of reserved elements only
   resvSize (cb) {
+    // TODO: Check if this needs change
     this._pool.query (`
       SELECT COUNT(*)
       FROM ${this._tbl_name}
@@ -298,6 +307,7 @@ class PGQueue extends Queue {
   /////////////////////////////////////////
   // get element from queue
   next_t (cb) {  
+    // TODO: Not sure what this is need for...
     this._pool.query (`
       SELECT mature
       FROM ${this._tbl_name}
@@ -316,7 +326,7 @@ class PGQueue extends Queue {
   // remove by id
   remove (id, cb) {
     if (!uuid.validate (id)) return cb ('id [' + id + '] can not be used as remove id: not a valid UUID');
-
+   // TODO: Make this transactional?
     this._pool.query (`
       BEGIN;
       DELETE FROM ${this._tbl_name}
@@ -326,7 +336,7 @@ class PGQueue extends Queue {
     `, 
     [id],
     (err, res) => {
-      if (err) console.log ('GET', err)
+      if (err) console.log ('REMOVE', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -391,6 +401,7 @@ function creator (opts, cb) {
 
   debug ('Creator: creating pool with %j', _opts);
 
+  // TODO: adjust to your db params
   const dflt = {
     user:     'postgres', 
     password: 'poppwd',
