@@ -77,19 +77,16 @@ class PGQueue extends Queue {
   // get element from queue
   get (cb) {    
     this._pool.query (`
-      BEGIN;
-      LOCK TABLE ${this._tbl_name} IN EXCLUSIVE MODE;
-      WITH cte AS (
-        SELECT *
+      DELETE FROM ${this._tbl_name}
+      WHERE _id = (
+        SELECT _id
         FROM ${this._tbl_name}
         WHERE mature < now()
         ORDER BY mature
+        FOR UPDATE SKIP LOCKED
         LIMIT 1
       )
-      DELETE FROM ${this._tbl_name}
-      WHERE _id IN (SELECT _id FROM cte)
       RETURNING *;
-      COMMIT;
     `, (err, res) => {
       if (err) {
         // serialization error, let it flow and be retried. Should not happen with a table-lock
@@ -97,9 +94,9 @@ class PGQueue extends Queue {
         return cb (err);
       }
 
-      if (_.size (res[2].rows) == 0) return cb (null, null); // not found
+      if (_.size (res.rows) == 0) return cb (null, null); // not found
       
-      const pl = res[2].rows[0];
+      const pl = res.rows[0];
 
       // re-hydrate _pl
       pl._pl = JSON.parse (pl._pl);
@@ -124,23 +121,20 @@ class PGQueue extends Queue {
     const delay = this._opts.reserve_delay || 120;
 
     this._pool.query (`
-      BEGIN;
-      LOCK TABLE ${this._tbl_name} IN EXCLUSIVE MODE;
-      WITH cte AS (
-        SELECT *
-        FROM ${this._tbl_name}
-        WHERE mature < now()
-        ORDER BY mature
-        LIMIT 1
-      )
       UPDATE ${this._tbl_name}
       SET
         tries = tries + 1,
-        mature = mature + make_interval(secs => ${delay}),
+        mature = now() + make_interval(secs => ${delay}),
         reserved = now()
-      WHERE _id IN (SELECT _id FROM cte)
+      WHERE _id = (
+        SELECT _id
+        FROM ${this._tbl_name}
+        WHERE mature < now()
+        ORDER BY mature
+        FOR UPDATE SKIP LOCKED
+        LIMIT 1
+      )
       RETURNING *;
-      COMMIT;
     `, (err, res) => {
       if (err) {
         // serialization error, let it flow and be retried. Should not happen with a table-lock
@@ -148,9 +142,9 @@ class PGQueue extends Queue {
         return cb (err);
       }
       
-      if (_.size (res[2].rows) == 0) return cb (null, null); // not found
+      if (_.size (res.rows) == 0) return cb (null, null); // not found
       
-      const pl = res[2].rows[0];
+      const pl = res.rows[0];
 
       // re-hydrate _pl
       pl._pl = JSON.parse (pl._pl);
