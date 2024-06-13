@@ -37,7 +37,7 @@ class PGQueue extends Queue {
     this._pool.query (`
     CREATE TABLE IF NOT EXISTS ${this._tbl_name} (
       _id      VARCHAR(64) PRIMARY KEY,
-      _pl      TEXT,
+      _pl      JSONB,
       mature   TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
       tries    INTEGER DEFAULT 0 NOT NULL,
       reserved TIMESTAMPTZ
@@ -64,7 +64,7 @@ class PGQueue extends Queue {
       pl.type = 'buffer';
     }
 
-    this._pool.query (`INSERT INTO ${this._tbl_name} VALUES($1, $2, $3, $4)`, [_id, JSON.stringify (pl), mature, tries], (err, res) => {
+    this._pool.query (`INSERT INTO ${this._tbl_name} VALUES($1, $2, $3, $4)`, [_id, pl, mature, tries], (err, res) => {
       if (err) return cb (err);
 
       // TODO assert res.rowCount==1 ?
@@ -88,18 +88,12 @@ class PGQueue extends Queue {
       )
       RETURNING *;
     `, (err, res) => {
-      if (err) {
-        // serialization error, let it flow and be retried. Should not happen with a table-lock
-        if (err.code == '40001') return cb (null, null); 
-        return cb (err);
-      }
+      if (err) return cb (err);
 
       if (_.size (res.rows) == 0) return cb (null, null); // not found
       
       const pl = res.rows[0];
 
-      // re-hydrate _pl
-      pl._pl = JSON.parse (pl._pl);
       _.merge (pl, pl._pl);
       delete (pl._pl);
 
@@ -136,18 +130,12 @@ class PGQueue extends Queue {
       )
       RETURNING *;
     `, (err, res) => {
-      if (err) {
-        // serialization error, let it flow and be retried. Should not happen with a table-lock
-        if (err.code == '40001') return cb (null, null); 
-        return cb (err);
-      }
+      if (err) return cb (err);
       
       if (_.size (res.rows) == 0) return cb (null, null); // not found
       
       const pl = res.rows[0];
 
-      // re-hydrate _pl
-      pl._pl = JSON.parse (pl._pl);
       _.merge (pl, pl._pl);
       delete (pl._pl);
 
@@ -178,7 +166,6 @@ class PGQueue extends Queue {
     `, 
     [id],
     (err, res) => {
-      if (err) console.log ('GET', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -207,7 +194,6 @@ class PGQueue extends Queue {
     `, 
     [nxt, id],
     (err, res) => {
-      if (err) console.log ('GET', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })
@@ -304,7 +290,6 @@ class PGQueue extends Queue {
     `, 
     [id],
     (err, res) => {
-      if (err) console.log ('GET', err)
       if (err) return cb (err);
       cb (null, res && (res.rowCount == 1));
     })

@@ -27,11 +27,12 @@ const factory_opts = {
 };
 
 // test dimensions: elems to produce and consume, number of consumers, number of producers
-const num_elems = 200000;
-const num_producers = 3;
-const num_pop_consumers = 2;
-const num_rcr_consumers = 13;
-const commit_likelihood = 57;
+const num_elems =        1000000;
+const num_producers =          9;
+const num_pop_consumers =      2;
+const num_rcr_consumers =     13;
+const commit_likelihood =     37;
+const retry_max_delay =     5000;
 
 // stats holder
 const selfs = {
@@ -120,7 +121,9 @@ function reserve_and_commit_one (shared_ctx, self_ctx, cb) {
       });
     }
     else {
-      shared_ctx.q.ko (res._id, (err) => {
+      const retry_delta = chance.integer({ min: 0, max: retry_max_delay });
+      const next_t = (new Date().getTime()) + retry_delta;
+      shared_ctx.q.ko (res._id, next_t, (err) => {
         if (err) return cb (err);
         self_ctx.ko_count++;
         items_rolledback++;
@@ -232,7 +235,7 @@ MQ (factory_opts, function (err, factory) {
           items_rolledback,
           items_commited, 
           items_processed,
-          _.pick (res, ['size', 'totalSize', 'resvSize']));
+          _.pick (res, ['size', 'totalSize', 'resvSize', 'schedSize']));
       });
     }, 1000);
 
