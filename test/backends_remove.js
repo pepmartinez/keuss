@@ -9,6 +9,11 @@ const MongoClient = require ('mongodb').MongoClient;
 const Redis =       require("ioredis");
 const pg =          require ('pg');
 
+
+process.on('unhandledRejection', (err, p) => {
+  console.error('unhandledRejection', err.stack, p)
+})
+
 function stats (q, cb) {
   async.series ({
     stats: cb => q.stats(cb),
@@ -101,10 +106,7 @@ function release_mq_factory (q, factory, cb) {
 
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory))
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => q.remove ('invalid-id', err => cb (null, err, q, factory)),
         (err, q, factory, cb) => {
           err.should.match (/can not be used as remove id/);
@@ -118,10 +120,7 @@ function release_mq_factory (q, factory, cb) {
     it('fails on nonexistent id', done => {
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory))
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => q.remove (MQ_item.unknown_id, (err, res) => cb (null, err, res, q, factory)),
         (err, res, q, factory, cb) => {
           should (err).be.null();
@@ -137,10 +136,7 @@ function release_mq_factory (q, factory, cb) {
       const ctx = {};
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory))
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => async.series ([
           cb => q.push ({a: 1, b: 'oo', i: 'deletes regular element ok'}, cb),
           cb => setTimeout (cb, 1000),
@@ -185,10 +181,7 @@ function release_mq_factory (q, factory, cb) {
       const ctx = {};
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory));
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => async.series ([
           cb => q.push ({a: 1, b: 'oo', i: 'does not delete reserved element'}, cb),
           cb => setTimeout (cb, 1000),
@@ -233,10 +226,7 @@ function release_mq_factory (q, factory, cb) {
       const ctx = {};
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory));
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => async.series ([
           cb => q.push ({a: 1, b: 'oo', i: 'does delete reserved+rolledback element'}, cb),
           cb => setTimeout (cb, 1000),
@@ -288,10 +278,7 @@ function release_mq_factory (q, factory, cb) {
       const ctx = {};
       async.waterfall ([
         cb => get_mq_factory (MQ, {}, cb),
-        (factory, cb) => {
-          const q = factory.queue('test_queue_remove', {});
-          q.init(err => cb (err, q, factory));
-        },
+        (factory, cb) => factory.queue('test_queue_remove', (err, q) => cb (err, q, factory)),
         (q, factory, cb) => async.series ([
           cb => q.push ({a: 1, b: 'oo', i: 'does fail trying to delete an already-deleted element'}, cb),
           cb => setTimeout (cb, 1000),
@@ -336,7 +323,5 @@ function release_mq_factory (q, factory, cb) {
         }
       ], done);
     });
-
-
   });
 });

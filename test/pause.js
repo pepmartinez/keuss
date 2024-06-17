@@ -4,6 +4,10 @@ const should = require ('should');
 const _ =      require ('lodash');
 const MongoClient = require ('mongodb').MongoClient;
 
+process.on('unhandledRejection', (err, p) => {
+  console.error('unhandledRejection', err.stack, p)
+})
+
 let factory = null;
 
 [
@@ -75,157 +79,163 @@ let factory = null;
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('queue pauses and resumes ok, existing consumers react accordingly', done => {
-          const q = factory.queue('_test_0_queue_', {});
-
-          async.series ([
-            cb => q.init(cb),
-            cb => q._stats.clear (cb),
-
-            cb => async.parallel ([
-              cb => q.push ({q:0, a: 'ryetyeryre 0'}, cb),
-              cb => q.push ({q:1, a: 'ryetyeryre 1'}, cb),
-              cb => q.push ({q:2, a: 'ryetyeryre 2'}, cb),
-              cb => q.push ({q:3, a: 'ryetyeryre 3'}, cb),
-              cb => q.push ({q:4, a: 'ryetyeryre 4'}, cb),
-              cb => q.push ({q:5, a: 'ryetyeryre 5'}, cb),
-            ], cb),
-
-            cb => async.parallel ([
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-              cb => setTimeout (() => q.pop ('me', cb), 1000),
-
-              cb => setTimeout (() => {q.pause(true); cb ();}, 100),
-              cb => setTimeout (() => {q.pause(false); cb ();}, 2000),
-            ], cb),
-
-            cb => setTimeout (cb, 1000),
-
-            cb => q.stats(cb),
-            cb => q.size (cb),
-            cb => q._stats.clear (cb),
-
-          ], (err, res) => {
+          factory.queue('_test_0_queue_', (err, q) => {
             if (err) return done (err);
-            res[5].should.match ({ put: 6, get: 6 });
-            res[6].should.equal (0);
-            q.nConsumers().should.equal (0);
+      
+            async.series ([
+              cb => q._stats.clear (cb),
 
-            done ();
+              cb => async.parallel ([
+                cb => q.push ({q:0, a: 'ryetyeryre 0'}, cb),
+                cb => q.push ({q:1, a: 'ryetyeryre 1'}, cb),
+                cb => q.push ({q:2, a: 'ryetyeryre 2'}, cb),
+                cb => q.push ({q:3, a: 'ryetyeryre 3'}, cb),
+                cb => q.push ({q:4, a: 'ryetyeryre 4'}, cb),
+                cb => q.push ({q:5, a: 'ryetyeryre 5'}, cb),
+              ], cb),
+
+              cb => async.parallel ([
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+                cb => setTimeout (() => q.pop ('me', cb), 1000),
+
+                cb => setTimeout (() => {q.pause(true); cb ();}, 100),
+                cb => setTimeout (() => {q.pause(false); cb ();}, 2000),
+              ], cb),
+
+              cb => setTimeout (cb, 1000),
+
+              cb => q.stats(cb),
+              cb => q.size (cb),
+              cb => q._stats.clear (cb),
+
+            ], (err, res) => {
+              if (err) return done (err);
+              res[4].should.match ({ put: 6, get: 6 });
+              res[5].should.equal (0);
+              q.nConsumers().should.equal (0);
+
+              done ();
+            });
           });
         });
+
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('pauses ok new consumers if queue paused, resumes them allright', done => {
-          const q = factory.queue('_test_1_queue_', {});
-
-          async.series ([
-            cb => q.init(cb),
-            cb => q._stats.clear (cb),
-            cb => {q.pause (true); cb ();},
-
-            cb => async.parallel ([
-              cb => setTimeout (() => q.pop ('me', cb), 100),
-              cb => setTimeout (() => q.push ({q:0, a: 'ryetyeryre 0'}, cb), 1000),
-              cb => setTimeout (() => {q.pause (false); cb ();}, 2000),
-            ], cb),
-
-            cb => setTimeout (cb, 1000),
-
-            cb => q.stats(cb),
-            cb => q.size (cb),
-
-            cb => q._stats.clear (cb),
-          ], (err, res) => {
+          factory.queue('_test_1_queue_', (err, q) => {
             if (err) return done (err);
-            res[5].should.match ({ put: 1, get: 1 });
-            res[6].should.equal (0);
-            q.nConsumers().should.equal (0);
 
-            done ();
+            async.series ([
+              cb => q._stats.clear (cb),
+              cb => {q.pause (true); cb ();},
+
+              cb => async.parallel ([
+                cb => setTimeout (() => q.pop ('me', cb), 100),
+                cb => setTimeout (() => q.push ({q:0, a: 'ryetyeryre 0'}, cb), 1000),
+                cb => setTimeout (() => {q.pause (false); cb ();}, 2000),
+              ], cb),
+
+              cb => setTimeout (cb, 1000),
+
+              cb => q.stats(cb),
+              cb => q.size (cb),
+
+              cb => q._stats.clear (cb),
+            ], (err, res) => {
+              if (err) return done (err);
+              res[4].should.match ({ put: 1, get: 1 });
+              res[5].should.equal (0);
+              q.nConsumers().should.equal (0);
+
+              done ();
+            });
           });
         });
+
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue was paused', done => {
-          const q = factory.queue('_test_2_queue_', {});
-
-          async.series ([
-            cb => q.init(cb),
-            cb => q._stats.clear (cb),
-            cb => {q.pause (true); cb ();},
-
-            cb => async.parallel ([
-              cb => setTimeout (() => q.pop ('me', {timeout: 2000}, err => cb (null, err)), 100),
-              cb => setTimeout (() => q.push ({q:0, a: 'ryetyeryre 0'}, cb), 200),
-            ], cb),
-
-            cb => setTimeout (cb, 1000),
-
-            cb => q.stats((err, res) => {
-              if (err) return cb (err);
-              cb (null, _.cloneDeep (res))
-            }),
-            cb => q.size (cb),
-
-            cb => {q.pause (false); cb ();},
-            cb => q.pop ('me', cb),
-
-            cb => q._stats.clear (cb)
-          ], (err, res) => {
+          factory.queue('_test_2_queue_', (err, q) => {
             if (err) return done (err);
-            res[5].should.match ({ put: 1 });
-            res[6].should.equal (1);
-            res[3][0].timeout.should.eql (true);
-            res[8].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
 
-            q.nConsumers().should.equal (0);
+            async.series ([
+              cb => q._stats.clear (cb),
+              cb => {q.pause (true); cb ();},
 
-            done ();
+              cb => async.parallel ([
+                cb => setTimeout (() => q.pop ('me', {timeout: 2000}, err => cb (null, err)), 100),
+                cb => setTimeout (() => q.push ({q:0, a: 'ryetyeryre 0'}, cb), 200),
+              ], cb),
+
+              cb => setTimeout (cb, 1000),
+
+              cb => q.stats((err, res) => {
+                if (err) return cb (err);
+                cb (null, _.cloneDeep (res))
+              }),
+              cb => q.size (cb),
+
+              cb => {q.pause (false); cb ();},
+              cb => q.pop ('me', cb),
+
+              cb => q._stats.clear (cb)
+            ], (err, res) => {
+              if (err) return done (err);
+              res[4].should.match ({ put: 1 });
+              res[5].should.equal (1);
+              res[2][0].timeout.should.eql (true);
+              res[7].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
+
+              q.nConsumers().should.equal (0);
+
+              done ();
+            });
           });
         });
+
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         it ('consumer with timeout times out ok if queue is paused while waiting for delayed item', done => {
-          const q = factory.queue('_test_3_queue_', {});
-
-          async.series ([
-            cb => q.init(cb),
-            cb => q._stats.clear (cb),
-            cb => q.push ({q:0, a: 'ryetyeryre 0'}, {delay: 3}, cb),
-            cb => {q.pause (true); cb ();},
-            cb => setTimeout (cb, 100),
-
-            cb => q.pop ('me', {timeout: 1000}, err => cb (null, err)),
-
-            cb => setTimeout (cb, 1000),
-
-            cb => q.stats((err, res) => {
-              if (err) return cb (err);
-              cb (null, _.cloneDeep (res))
-            }),
-            cb => q.totalSize (cb),
-
-            cb => {q.pause (false); cb ();},
-            cb => q.pop ('me', cb),
-
-            cb => q._stats.clear (cb)
-          ], (err, res) => {
+          factory.queue('_test_3_queue_', (err, q) => {
             if (err) return done (err);
-            res[7].should.match ({ put: 1 });
-            res[8].should.equal (1);
-            res[5].timeout.should.eql (true);
-            res[10].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
 
-            q.nConsumers().should.equal (0);
+            async.series ([
+              cb => q._stats.clear (cb),
+              cb => q.push ({q:0, a: 'ryetyeryre 0'}, {delay: 3}, cb),
+              cb => {q.pause (true); cb ();},
+              cb => setTimeout (cb, 100),
 
-            done ();
+              cb => q.pop ('me', {timeout: 1000}, err => cb (null, err)),
+
+              cb => setTimeout (cb, 1000),
+
+              cb => q.stats((err, res) => {
+                if (err) return cb (err);
+                cb (null, _.cloneDeep (res))
+              }),
+              cb => q.totalSize (cb),
+
+              cb => {q.pause (false); cb ();},
+              cb => q.pop ('me', cb),
+
+              cb => q._stats.clear (cb)
+            ], (err, res) => {
+              if (err) return done (err);
+              res[6].should.match ({ put: 1 });
+              res[7].should.equal (1);
+              res[4].timeout.should.eql (true);
+              res[9].payload.should.eql ({q:0, a: 'ryetyeryre 0'});
+
+              q.nConsumers().should.equal (0);
+
+              done ();
+            });
           });
         });
-
       });
     });
   });
