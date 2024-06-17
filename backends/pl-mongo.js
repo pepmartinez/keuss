@@ -119,18 +119,21 @@ class Factory extends QFactory_MongoDB_defaults {
 
 
   ///////////////////////////////////////////////////////////
-  queue (name, opts) {
-    if (!opts) opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
 
-    var pl_name = opts.pipeline || 'default';
-    var pipeline = this._pipelines[pl_name];
+    const pl_name = opts.pipeline || 'default';
+    let pipeline = this._pipelines[pl_name];
 
     if (!pipeline) {
       this._pipelines[pl_name] = new Pipeline (pl_name, this);
       pipeline = this._pipelines[pl_name];
     }
 
-    return this._queue_from_pipeline (name, pipeline, opts);
+    return cb (null, this._queue_from_pipeline (name, pipeline, opts));
   }
 
 

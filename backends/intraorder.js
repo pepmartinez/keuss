@@ -321,10 +321,15 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new IntraOrderedQueue (name, this, full_opts, opts);
+    return cb (null, new IntraOrderedQueue (name, this, full_opts, opts));
   }
 
   close (cb) {

@@ -128,10 +128,15 @@ class Factory extends QFactory {
     this._roq_factory = roq_factory;
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new RedisOQ (name, this, full_opts, opts);
+    return cb (null, new RedisOQ (name, this, full_opts, opts));
   }
 
   close (cb) {

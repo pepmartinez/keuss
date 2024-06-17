@@ -62,9 +62,6 @@ class Queue {
   ////////////////////////////////////////////////////////////////////////////
   // expected redefinitions on subclasses
 
-  // asnc init
-  init (callback) {callback (null);}
-
   // add element to queue
   insert (entry, callback) {callback (null, null);}
 

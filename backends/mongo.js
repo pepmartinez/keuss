@@ -13,6 +13,8 @@ class SimpleMongoQueue extends Queue {
     super (name, factory, opts, orig_opts);
 
     this._col = factory._db.collection (name);
+
+    // TODO Move this to a separated init()
     this.ensureIndexes (function (err) {});
   }
 
@@ -225,10 +227,15 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new SimpleMongoQueue (name, this, full_opts, opts);
+    return cb (null, new SimpleMongoQueue (name, this, full_opts, opts));
   }
 
   close (cb) {
