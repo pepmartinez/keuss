@@ -15,7 +15,6 @@ process.on('unhandledRejection', (err, p) => {
 
 let factory = null;
 
-
 [
   {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')}
 ].forEach (MQ_item => {

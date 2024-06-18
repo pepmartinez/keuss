@@ -7,7 +7,7 @@ let factory = null;
 
 process.on('unhandledRejection', (err, p) => {
   console.error('unhandledRejection', err.stack, p)
-})
+});
 
 [
   {label: 'Redis List', mq: require ('../backends/redis-list')}

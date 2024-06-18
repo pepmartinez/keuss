@@ -8,43 +8,48 @@ const MemStats =    require ('../stats/mem');
 const MongoClient = require ('mongodb').MongoClient;
 
 
+process.on('unhandledRejection', (err, p) => {
+  console.error('unhandledRejection', err.stack, p)
+});
+
 const MQ = require ('../backends/intraorder');
 
-var factory = null;
+let factory = null;
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+describe('IntraOrder backend: specific operations', () => {
 
-  describe('IntraOrder backend: specific operations', () => {
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  before(done => {
+    var opts = {
+      url: 'mongodb://localhost/keuss_test_intraorder',
+      signaller: {provider: LocalSignal},
+      stats: {provider: MemStats}
+    };
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    before(done => {
-      var opts = {
-        url: 'mongodb://localhost/keuss_test_intraorder',
-        signaller: {provider: LocalSignal},
-        stats: {provider: MemStats}
-      };
-
-      MQ(opts, (err, fct) => {
-        if (err) return done(err);
-        factory = fct;
-        done();
-      });
+    MQ(opts, (err, fct) => {
+      if (err) return done(err);
+      factory = fct;
+      done();
     });
+  });
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    after (done => async.series ([
-      cb => setTimeout (cb, 1000),
-      cb => factory.close (cb),
-      cb => MongoClient.connect ('mongodb://localhost/keuss_test_intraorder', (err, cl) => {
-        if (err) return done (err);
-        cl.db().dropDatabase (() => cl.close (cb))
-      })
-    ], done));
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  after (done => async.series ([
+    cb => setTimeout (cb, 1000),
+    cb => factory.close (cb),
+    cb => MongoClient.connect ('mongodb://localhost/keuss_test_intraorder', (err, cl) => {
+      if (err) return done (err);
+      cl.db().dropDatabase (() => cl.close (cb))
+    })
+  ], done));
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('sequential push & pops with no retries preserves order', done => {
-      const q = factory.queue('test_queue_1');
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  it('sequential push & pops with no retries preserves order', done => {
+    factory.queue('test_queue_1', (err, q) => {
+      if (err) return done (err);
 
       async.series([
         cb => q.push({elem: 1, iid: 'twetrwte', pl: {d: 't-', a: 56}}, cb),
@@ -103,11 +108,14 @@ var factory = null;
         done();
       });
     });
+  });
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('sequential reserve-commit with retries preserves order', done => {
-      const q = factory.queue('test_queue_2');
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  it('sequential reserve-commit with retries preserves order', done => {
+    factory.queue('test_queue_2', (err, q) => {
+      if (err) return done (err);
+
       const t0 = process.hrtime();
       async.series([
         cb => q.push({elem: 1, iid: 'twetrwte', pl: {d: 't-', a: 56}}, cb),
@@ -161,11 +169,14 @@ var factory = null;
         done();
       });
     });
+  });
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('parallel reserve-commit on same iid blocks until commit', done => {
-      const q = factory.queue('test_queue_3');
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  it('parallel reserve-commit on same iid blocks until commit', done => {
+    factory.queue('test_queue_3', (err, q) => {
+      if (err) return done (err);
+
       const t0 = process.hrtime();
       const pops = [];
 
@@ -218,11 +229,14 @@ var factory = null;
         done();
       });
     });
+  });
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('parallel reserve-commit on same iid blocks until rollback', done => {
-      const q = factory.queue('test_queue_4');
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  it('parallel reserve-commit on same iid blocks until rollback', done => {
+    factory.queue('test_queue_4', (err, q) => {
+      if (err) return done (err);
+
       const t0 = process.hrtime();
       const pops = [];
 
@@ -293,11 +307,13 @@ var factory = null;
         done();
       });
     });
+  });
 
-    
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    it('delayed push preserves order', done => {
-      const q = factory.queue('test_queue_1');
+  
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  it('delayed push preserves order', done => {
+    factory.queue('test_queue_5', (err, q) => {
+      if (err) return done (err);
 
       async.series([
         cb => q.push({elem: 1, iid: 'twetrwte', pl: {d: 't-', a: 56}}, {delay: 5}, cb),
@@ -320,6 +336,5 @@ var factory = null;
         done();
       });
     });
-
-
   });
+});
