@@ -14,36 +14,38 @@ MQ ({
   if (err) return console.error(err);
 
   // factory ready, create one queue
-  const q = factory.queue ('test_queue', {});
+  factory.queue ('test_queue', (err, q) => {
+    if (err) return console.error(err);
+    
+    async.series([
+    // push element
+      cb => q.push (
+        {elem: 1, headline: 'something something', tags: {a: 1, b: 2}}, // this is the payload
+        {
+          hdrs: {h1: 'aaa', h2: 12, h3: false}  // let's add some headers too
+        },
+        cb
+      ),
+    // pop element
+      cb => q.pop ('consumer-1', cb)
+    ], (err, res) => {
+      if (err) {
+        console.error (err);
+      }
+      else {
+        console.log (res[1]);
+        // this should print something like:
+        // {
+        //   _id: <some id>,
+        //   mature: <some date>,
+        //   payload: { elem: 1, headline: 'something something', tags: { a: 1, b: 2 } },
+        //   tries: 0
+        //   hdrs: {h1: 'aaa', h2: 12, h3: false}
+        // }
+      }
 
-  async.series([
-  // push element
-    cb => q.push (
-      {elem: 1, headline: 'something something', tags: {a: 1, b: 2}}, // this is the payload
-      {
-        hdrs: {h1: 'aaa', h2: 12, h3: false}  // let's add some headers too
-      },
-      cb
-    ),
-  // pop element
-    cb => q.pop ('consumer-1', cb)
-  ], (err, res) => {
-    if (err) {
-      console.error (err);
-    }
-    else {
-      console.log (res[1]);
-      // this should print something like:
-      // {
-      //   _id: <some id>,
-      //   mature: <some date>,
-      //   payload: { elem: 1, headline: 'something something', tags: { a: 1, b: 2 } },
-      //   tries: 0
-      //   hdrs: {h1: 'aaa', h2: 12, h3: false}
-      // }
-    }
-
-    factory.close ();
+      factory.close ();
+    });
   });
 });
 

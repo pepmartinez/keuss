@@ -1,8 +1,8 @@
 // redis-list consumer & producer on a redislabs Redis
 
-var MQ = require('../../backends/redis-list');
+const MQ = require('../../backends/redis-list');
 
-var factory_opts = {
+const factory_opts = {
   redis: {
     Redis: {
       port: 12345,
@@ -15,30 +15,24 @@ var factory_opts = {
 };
 
 // initialize factory 
-MQ(factory_opts, function (err, factory) {
-  if (err) {
-    return console.error(err);
-  }
+MQ(factory_opts, (err, factory) => {
+  if (err) return console.error(err);
 
   // factory ready, create one queue
-  var q_opts = {};
-  var q = factory.queue('test_queue', q_opts);
+  const q_opts = {};
+  factory.queue ('test_queue', q_opts, (err, q) => {
+    if (err) return console.error(err);
 
-  // insert element
-  q.push({ a: 1, b: '666' }, function (err, res) {
-    if (err) {
-      return console.error(err);
-    }
+    // insert element
+    q.push({ a: 1, b: '666' }, (err, res) => {
+      if (err) return console.error(err);
 
-    // element inserted at this point. pop it again
-    var pop_opts = {};
-    q.pop('consumer-one', pop_opts, function (err, res) {
-      if (err) {
-        return console.error(err);
-      }
-
-      console.log('got this: ', res.payload);
+      // element inserted at this point. pop it again
+      const pop_opts = {};
+      q.pop('consumer-one', pop_opts, (err, res) => {
+        if (err) return console.error(err);
+        console.log('got this: ', res.payload);
+      });
     });
   });
-
 });

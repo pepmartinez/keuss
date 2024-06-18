@@ -10,8 +10,12 @@
  * 
 */
 
-//const MQ = require ('../../backends/bucket-mongo-safe');
-const MQ = require ('../../backends/postgres');
+const MQ = require(
+  '../../backends/postgres'
+//  '../../backends/bucket-mongo-safe'
+//  '../../backends/redis-oq'
+//  '../../backends/ps-mongo'
+);
 
 const _ =      require ('lodash');
 const async =  require ('async');
@@ -27,7 +31,7 @@ const factory_opts = {
 };
 
 // test dimensions: elems to produce and consume, number of consumers, number of producers
-const num_elems =        1000000;
+const num_elems =         100000;
 const num_producers =          9;
 const num_pop_consumers =      2;
 const num_rcr_consumers =     13;
@@ -221,10 +225,8 @@ MQ (factory_opts, function (err, factory) {
 
   // factory ready, create one queue
   const q_opts = {};
-  const q = factory.queue ('test_queue_456', q_opts);
-
-  q.init(err => {
-    if (err) return console.error (err);
+  factory.queue ('test_queue_456', q_opts, (err, q) => {
+    if (err) return console.error(err);
 
     const timer = setInterval (() => {
       q.status ((err ,res) => {

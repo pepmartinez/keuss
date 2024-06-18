@@ -6,11 +6,13 @@
  * 
  */
 
-// var MQ = require('../../backends/bucket-mongo-safe');
-// var MQ = require('../../backends/redis-oq');
-var MQ = require('../../backends/ps-mongo');
+const MQ = require(
+  '../../backends/bucket-mongo-safe'
+//  '../../backends/redis-oq'
+//  '../../backends/ps-mongo'
+);
 
-var async = require('async');
+const async = require('async');
 
 
 function stats (q, cb) {
@@ -29,7 +31,7 @@ function pop (q, stage, cb) {
 }
 
 function reject (q, stage, cb) {
-  var next_t = new Date().getTime() + 2000;
+  const next_t = new Date().getTime() + 2000;
 
   q.ko (stage.obj, next_t, (err, res) => {
     if (err) {
@@ -55,7 +57,7 @@ function accept (q, stage, cb) {
 }
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus',
   deadletter: {
     max_ko: 3
@@ -67,39 +69,41 @@ MQ(factory_opts, (err, factory) => {
   if (err) return console.error(err);
 
   // factory ready, create one queue
-  var q = factory.queue('test_queue_rcr', {});
-  
-  // state is kept here
-  var stage = {};
+  factory.queue ('test_queue_rcr', (err, q) => {
+    if (err) return console.error(err);
+    
+    // state is kept here
+    const stage = {};
 
-  async.series([
-    cb => q.push({ elem: 1, pl: 'twetrwte' }, (err, res) => {
-      console.log('pushed element');
-      cb(err);
-    }),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb),
-    cb => pop (q, stage, cb),
-    cb => reject (q, stage, cb)
-  ], err => {
-    // all done
-    if (err) console.error ('reject_line error: ', err);
-    else console.log ('reject_line done');
-  });
+    async.series([
+      cb => q.push({ elem: 1, pl: 'twetrwte' }, (err, res) => {
+        console.log('pushed element');
+        cb(err);
+      }),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb),
+      cb => pop (q, stage, cb),
+      cb => reject (q, stage, cb)
+    ], err => {
+      // all done
+      if (err) console.error ('reject_line error: ', err);
+      else console.log ('reject_line done');
+    });
 
-  factory.deadletter_queue().pop('c2', (err, res) => {
-    console.log('from deadletter_queue, got element %o', res);
-    setTimeout (() => {
-      q.cancel ();
-      factory.close (() => console.log ('done'));
-    }, 1000);
+    factory.deadletter_queue().pop('c2', (err, res) => {
+      console.log('from deadletter_queue, got element %o', res);
+      setTimeout (() => {
+        q.cancel ();
+        factory.close (() => console.log ('done'));
+      }, 1000);
+    });
   });
 });

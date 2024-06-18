@@ -1,9 +1,7 @@
 const Chance = require ('chance');
-
-
 const chance = new Chance();
 
-const MQ = require    ('../../../backends/pl-mongo');
+const MQ = require ('../../../backends/pl-mongo');
 
 function loop (n, fn, cb) {
   if (n == 0) return cb ();
