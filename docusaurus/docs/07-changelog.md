@@ -3,6 +3,12 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v2.0.0
+  * updated deps
+  * added postgreSQL backend
+  * BREAKING CHANGE: `factory.queue()` method is now asynchronous, and requires a callback
+* v1.7.4
+  * updated deps
 * v1.7.3
   * license changed to MIT
 * v1.7.2

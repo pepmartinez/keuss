@@ -9,9 +9,9 @@ sidebar_label: Stats
 Stats factories are passed to queues either in queue creation or in backend init, inside *opts.signaller*. Note that the result of the `new` operation is indeed the factory; the result of the `require` is therefore a *metafactory*
 
 ```javascript
-var local_redis_pubsub = require ('keuss/signal/redis-pubsub');
+const local_redis_pubsub = require ('keuss/signal/redis-pubsub');
 
-var local_redis_opts = {
+const local_redis_opts = {
   Redis: {
     port: 6379,
     host: 'localhost',
@@ -19,7 +19,7 @@ var local_redis_opts = {
   }
 };
 
-var f_opts = {
+const f_opts = {
   stats: {
     provider: signal_redis_pubsub,
     opts: local_redis_opts

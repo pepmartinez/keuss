@@ -15,6 +15,8 @@ Pipelines can be built in 3 ways:
 This is a quite simple approach: you create the queues, then you create the Processors that would glue them. Processors take i theit constructors the queues they use, so it's rather straightforward:
 
 ```javascript
+cosnt async = require ('async');
+
 const MQ =  require ('../../../backends/pl-mongo');
 const DCT = require ('../../../Pipeline/DirectLink');
 const SNK = require ('../../../Pipeline/Sink');
@@ -34,41 +36,45 @@ MQ (factory_opts, (err, factory) => {
 
   // factory ready, create queues on default pipeline
   const q_opts = {aaa: 666, b: 'yy'};
-  const q1 = factory.queue ('pl_many_q_1', q_opts);
-  const q2 = factory.queue ('pl_many_q_2', q_opts);
-  const q3 = factory.queue ('pl_many_q_3', q_opts);
-  const q4 = factory.queue ('pl_many_q_4', q_opts);
-  const q5 = factory.queue ('pl_many_q_5', q_opts);
+  
+  async.parallel ({
+    q1: cb => factory.queue ('pl_many_q_1', q_opts, cb),
+    q2: cb => factory.queue ('pl_many_q_2', q_opts, cb),
+    q3: cb => factory.queue ('pl_many_q_3', q_opts, cb),
+    q4: cb => factory.queue ('pl_many_q_4', q_opts, cb),
+    q5: cb => factory.queue ('pl_many_q_5', q_opts, cb),
+  }, (err, queues) => {
+    if (err) return console.error (err);
 
-  // tie them up:
-  const dl1 = new DCT (q1, q2);
-  const cl1 = new CHC (q2, [q3, q4, q5]);
-  const sk1 = new SNK (q3);
-  const sk2 = new SNK (q4);
-  const sk3 = new SNK (q5);
+    // tie them up:
+    const dl1 = new DCT (queues.q1, queues.q2);
+    const cl1 = new CHC (queues.q2, [queues.q3, queues.q4, queues.q5]);
+    const sk1 = new SNK (queues.q3);
+    const sk2 = new SNK (queues.q4);
+    const sk3 = new SNK (queues.q5);
 
-  sk1.on_data (sink_process);
-  sk2.on_data (sink_process);
-  sk3.on_data (sink_process);
+    sk1.on_data (sink_process);
+    sk2.on_data (sink_process);
+    sk3.on_data (sink_process);
 
-  cl1.on_data (function (elem, done) {
-    // define processing for the ChoiceLink
+    cl1.on_data (function (elem, done) {
+      // define processing for the ChoiceLink
+    });
+
+    dl1.on_data (function (elem, done) {
+      // define processing for the DirectLink
+    });
+
+    // start the whole lot
+    sk1.start ();
+    sk2.start ();
+    sk3.start ();
+    cl1.start ();
+    dl1.start ();
+
+    // pipeline is ready now. Push stuff to queues, see it work
   });
-
-  dl1.on_data (function (elem, done) {
-    // define processing for the DirectLink
-  });
-
-  // start the whole lot
-  sk1.start ();
-  sk2.start ();
-  sk3.start ();
-  cl1.start ();
-  dl1.start ();
-
-  // pipeline is ready now. Push stuff to queues, see it work
 });
-
 ```
 
 See [Processors](processors) for all the available options and features (such as processing functions and error management)

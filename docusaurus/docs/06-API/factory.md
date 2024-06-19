@@ -9,7 +9,7 @@ Backends, which work as queue factories, have the following operations:
 ## `MQ`: Factory initialization
 
 ```javascript
-var QM = require ('keuss/backends/<backend>');
+const QM = require ('keuss/backends/<backend>');
 
 MQ (opts, (err, factory) => {
   // factory contains the actual factory, initialized
@@ -57,7 +57,7 @@ The concept of *deadletter* is very common on queue middlewares: in case reserve
 By default, keuss uses no deadletter queue; it can be activated by passing a `deadletter` object at the time of factory creation, in the options:
 
 ```javascript
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus',
   deadletter: {
     max_ko: 3
@@ -87,7 +87,9 @@ When an element is moved to deadletter, the original headers are kept, and other
 
 ```javascript
 // factory has been initialized
-var q = factory.queue (<name>, <options>);
+factory.queue (<name>, <options>, (err, q) => {
+  ...
+});
 ```
 
 Where:

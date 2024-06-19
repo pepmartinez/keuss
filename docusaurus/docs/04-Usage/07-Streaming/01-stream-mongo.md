@@ -43,7 +43,6 @@ In short, a `stream-mongo` queue works by attaching a separated 'consumed marker
 
 Let's see an example:
 ```js
-
 const async = require ('async');
 const MQ =    require ('../../backends/stream-mongo');
 
@@ -51,54 +50,62 @@ const MQ =    require ('../../backends/stream-mongo');
 MQ ({url: 'mongodb://localhost/keuss_test_stream'}, (err, factory) => {
   if (err) return console.error(err);
 
-  // producer: possible consumer groups are G1, G2 and G4, on top of collection test_stream
-  const q0 = factory.queue ('test_stream', {groups: 'G1, G2, G4'});
+  async.parallel ({
+    // producer: possible consumer groups are G1, G2 and G4, on top of collection test_stream
+    q0: cb => factory.queue ('test_stream', {groups: 'G1, G2, G4'}, cb)
 
-  // first consumer, using consumer group G1
-  const q1 = factory.queue ('test_stream', {group: 'G1'});
+    // first consumer, using consumer group G1
+    q1: cb => factory.queue ('test_stream', {group: 'G1'}, cb),
 
-  // second consumer, using consumer group G2
-  const q2 = factory.queue ('test_stream', {group: 'G2'});
+    // second consumer, using consumer group G2
+    q2: cb => factory.queue ('test_stream', {group: 'G2'}, cb),
+  }, (err, queues) => {
+    if (err) return console.error(err);
 
-  // let's roll
-  async.series ([
-    // push element
-    cb => q0.push ({a: 1}, cb),
-    cb => setTimeout (cb, 1000),  // wait a bit
-    cb => q1.pop ('consumer-1', cb), // pop element in group G1
-    cb => q2.pop ('consumer-2', cb), // pop element in group G2
-  ], (err, res) => {
-    console.log ('element popped for group G1:', res[2]);
-    console.log ('element popped for group G2:', res[3]);
+    // let's roll
+    async.series ([
+      // push element
+      cb => queues.q0.push ({a: 1}, cb),
+      cb => setTimeout (cb, 1000),  // wait a bit
+      cb => queues.q1.pop ('consumer-1', cb), // pop element in group G1
+      cb => queues.q2.pop ('consumer-2', cb), // pop element in group G2
+    ], (err, res) => {
+      console.log ('element popped for group G1:', res[2]);
+      console.log ('element popped for group G2:', res[3]);
 
-    factory.close ();
+      factory.close ();
+    });
   });
 });
 ```
 Both q1 and q2 will get the same element, inserted by q0. If we change the code a bit:
 
 ```js
-const q0 = factory.queue ('test_stream', {groups: 'G1, G2, G4'});
-const q1 = factory.queue ('test_stream', {group: 'G1'});
-const q2 = factory.queue ('test_stream', {group: 'G2'});
-const q2bis = factory.queue ('test_stream', {group: 'G2'});
-const q3 = factory.queue ('test_stream', {group: 'G3'});
+async.parallel ({
+  q0:    cb => factory.queue ('test_stream', {groups: 'G1, G2, G4'}, cb),
+  q1:    cb => factory.queue ('test_stream', {group: 'G1'}, cb),
+  q2:    cb => factory.queue ('test_stream', {group: 'G2'}, cb),
+  q2bis: cb => factory.queue ('test_stream', {group: 'G2'}, cb),
+  q3:    cb => factory.queue ('test_stream', {group: 'G3'}, cb),
+}, (err, queues) => {
+  if (err) return console.error(err);
 
-async.parallel ([
-    cb => setTimeout (() => q0.push ({a: 1}, cb), 1000), // delay push by a second so all consumers are ready
-    cb => q1.pop ('consumer-1', cb),
-    cb => q2.pop ('consumer-2', cb),
-    cb => q2bis.pop ('consumer-2', cb),
-    cb => q3.pop ('consumer-2', cb),
+  async.parallel ([
+    cb => setTimeout (() => queues.q0.push ({a: 1}, cb), 1000), // delay push by a second so all consumers are ready
+    cb => queues.q1.pop ('consumer-1', cb),
+    cb => queues.q2.pop ('consumer-2', cb),
+    cb => queues.q2bis.pop ('consumer-2', cb),
+    cb => queues.q3.pop ('consumer-2', cb),
   ], (err, res) => {
     ...
-  })
+  });
+});
 ```
 In this situation:
 
 * q1 would get the message
 * either q2 or q2bis (exactly one of them) would get a copy too; the other would block forever
-* q3 would not get a message and woudl block forever
+* q3 would not get a message and would block forever
 
 ## Extra stats
 Queues of type `stream-mongo` generate extra stats, besides the standard ones:

@@ -31,7 +31,7 @@ So, assuming we're dealing with a problem with no practical an complete solution
 The implementation comes in the form of a queue backend named `intraorder`, backed by `mongodb` and works as follows:
 
 * All items in a queue will provide a *grouping identifier*, which is expected at the field `iid`
-* When an item is pushed in a queu where other items already exist with the same `iid`, it is *guaranteed* that this item 
+* When an item is pushed in a queue where other items already exist with the same `iid`, it is *guaranteed* that this item 
   will not be served until the already-existing items are gone (popped, committed or moved to deadletter)
 * The former is true also in the presence of retries and delays: if an item is rolled back, it will block 
   any other item with the same `iid` that happened to be pushed after

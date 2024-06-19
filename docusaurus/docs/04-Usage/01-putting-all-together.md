@@ -32,15 +32,35 @@ You can create and use as many factories as desided, from the same or many backe
 You use the factory to create queues:
 
 ```javascript
-const q1 = factory.queue ('test_queue_1', {});
-const q2 = factory.queue ('test_queue_2', {});
+// one queue
+factory.queue ('test_queue', {...}, (err, q) => {
+  // queue q is ready to be used
+  ....
+});
+
+// or use async to create several queues in one go
+async.parallel ({
+  q1: cb => factory.queue ('test_queue_1', opts_1, cb),
+  q2: cb => factory.queue ('test_queue_2', opts_2, cb),
+  ...
+  qn: cb => factory.queue ('test_queue_n', opts_n, cb),
+}, (err, queues) => {
+  // queues.q1, queues.q2... queues.qn are ready to be used
+  ....
+});
 ```
 
 A queue can be created more than once with the same name, inside the same factory (this is a common procedure when consumer and producer are separated). The effect would be virtually the same as sharing the queue:
 
 ```javascript
-const q_consumer = factory.queue ('test_queue', {});
-const q_producer = factory.queue ('test_queue', {});
+async.parallel ({
+  q1: cb => factory.queue ('test_queue_1', cb),
+  q2: cb => factory.queue ('test_queue_1', cb),
+}, (err, queues) => {
+  // queues.q1 and queues.q2 are different objects but share all state
+  ....
+});
+
 ```
 
 ## Put elements in queue (push)
