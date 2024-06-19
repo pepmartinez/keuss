@@ -1,13 +1,13 @@
+const async = require ('async');
 
-var async = require ('async');
+const MQ = require('../backends/mongo');
 
-var MQ = require('../backends/mongo');
-//var signal_mongo_capped = require('../signal/mongo-capped');
-var signal_mongo_capped = require('../signal/local');
-var stats_mongo = require('../stats/mongo');
+//const signal_mongo_capped = require('../signal/mongo-capped');
+const signal_mongo_capped = require('../signal/local');
+const stats_mongo = require('../stats/mongo');
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus',
   signaller: {
     provider: signal_mongo_capped,
@@ -27,12 +27,10 @@ var factory_opts = {
 
 // initialize factory
 MQ(factory_opts, (err, factory) => {
-  if (err) {
-    return console.error(err);
-  }
+  if (err) return console.error(err);
 
-  var consumed = 0;
-  var produced = 0;
+  let consumed = 0;
+  let produced = 0;
 
   function run_consumer(q) {
     q.pop('c1', {}, (err, res) => {
@@ -43,10 +41,7 @@ MQ(factory_opts, (err, factory) => {
         factory.close();
       } else {
         if (!(consumed % 10)) console.log('< %d', consumed);
-
-        setTimeout(function () {
-          run_consumer(q);
-        }, 222);
+        setTimeout(() => run_consumer(q), 222);
       }
     });
   }
@@ -64,45 +59,45 @@ MQ(factory_opts, (err, factory) => {
 
       } else {
         if (!(produced % 10)) console.log('> %d', produced);
-
-        setTimeout(function () {
-          run_producer(q);
-        }, 33);
+        setTimeout(() => run_producer(q), 33);
       }
     });
   }
 
-  var opts = {};
+  const opts = {};
 
-  var q = factory.queue('bench_test_queue_0', opts);
-//  run_consumer(q);
-//  run_producer(q);
+  factory.queue('bench_test_queue_0', opts, (err, q) => {
+    if (err) return console.error(err);
 
-  async.series ([
-    cb => q.push ({q:0, a: 'ryetyeryre 0'}, cb),
-    cb => q.push ({q:1, a: 'ryetyeryre 1'}, cb),
-    cb => q.pop ('me', (err, res) => {console.log ('>>>>>>> POP c0:', res); cb ();}),
-    cb => q.pop ('me', (err, res) => {console.log ('>>>>>>> POP c1:', res); cb ();}),
+    // run_consumer(q);
+    // run_producer(q);
 
-    cb => {
-      q.pop ('me', (err, res) => console.log ('>>>>>>> POP c2:', res));
-      q.pop ('me', (err, res) => console.log ('>>>>>>> POP c3:', res));
-      q.pop ('me', (err, res) => console.log ('>>>>>>> POP c4:', res));
-      q.pop ('me', (err, res) => console.log ('>>>>>>> POP c5:', res));
-      q.pop ('me', (err, res) => console.log ('>>>>>>> POP c6:', res));
-      cb ();
-    },
-    cb => setTimeout (cb, 2000),
-    cb => {q.pause(true); cb ();},
-    cb => q.push ({q:2, a: 'ryetyeryre 2'}, cb),
-    cb => q.push ({q:3, a: 'ryetyeryre 3'}, cb),
-    cb => q.push ({q:4, a: 'ryetyeryre 4'}, cb),
-    cb => q.push ({q:5, a: 'ryetyeryre 5'}, cb),
-    cb => setTimeout (cb, 2000),
-    cb => {q.pause(false); cb ();},
-    cb => setTimeout (cb, 2000),
-  ], () => {
-    q.cancel();
-    factory.close();
+    async.series ([
+      cb => q.push ({q:0, a: 'ryetyeryre 0'}, cb),
+      cb => q.push ({q:1, a: 'ryetyeryre 1'}, cb),
+      cb => q.pop ('me', (err, res) => {console.log ('>>>>>>> POP c0:', res); cb ();}),
+      cb => q.pop ('me', (err, res) => {console.log ('>>>>>>> POP c1:', res); cb ();}),
+
+      cb => {
+        q.pop ('me', (err, res) => console.log ('>>>>>>> POP c2:', res));
+        q.pop ('me', (err, res) => console.log ('>>>>>>> POP c3:', res));
+        q.pop ('me', (err, res) => console.log ('>>>>>>> POP c4:', res));
+        q.pop ('me', (err, res) => console.log ('>>>>>>> POP c5:', res));
+        q.pop ('me', (err, res) => console.log ('>>>>>>> POP c6:', res));
+        cb ();
+      },
+      cb => setTimeout (cb, 2000),
+      cb => {q.pause(true); cb ();},
+      cb => q.push ({q:2, a: 'ryetyeryre 2'}, cb),
+      cb => q.push ({q:3, a: 'ryetyeryre 3'}, cb),
+      cb => q.push ({q:4, a: 'ryetyeryre 4'}, cb),
+      cb => q.push ({q:5, a: 'ryetyeryre 5'}, cb),
+      cb => setTimeout (cb, 2000),
+      cb => {q.pause(false); cb ();},
+      cb => setTimeout (cb, 2000),
+    ], () => {
+      q.cancel();
+      factory.close();
+    });
   });
 });

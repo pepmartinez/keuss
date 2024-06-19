@@ -1,74 +1,77 @@
 // mongodb: create a consumer and a producer
-var MQ = require ('../backends/pl-mongo');
-var PLL = require ('../Pipeline/DirectLink');
-var async = require ('async');
+const MQ = require ('../backends/pl-mongo');
+const PLL = require ('../Pipeline/DirectLink');
+const async = require ('async');
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus'
 };
 
 // initialize factory
-MQ (factory_opts, function (err, factory) {
-  if (err) {
-    return console.error (err);
-  }
+MQ (factory_opts, (err, factory) => {
+  if (err) return console.error (err);
 
   // factory ready, create 3 queues on default pipeline
-  var q_opts = {};
-  var q1 = factory.queue ('test_pl_1', q_opts);
-  var q2 = factory.queue ('test_pl_2', q_opts);
-  var q3 = factory.queue ('test_pl_3', q_opts);
+  const q_opts = {};
 
-  // tie them up, q1 -> q2 -> q3 -> q1
-  var pll1 = new PLL (q1, q2, {delay: 1});
-  var pll2 = new PLL (q2, q3);
-  var pll3 = new PLL (q3, q1);
+  async.parallel ({
+    q1: cb => factory.queue ('test_pl_1', q_opts, cb),
+    q2: cb => factory.queue ('test_pl_2', q_opts, cb),
+    q3: cb => factory.queue ('test_pl_3', q_opts, cb),
+  }, (err, qs) => {
+    if (err) return console.error (err);
 
-  pll1.start (function (elem, done) {
-    var pl = elem.payload;
+    // tie them up, q1 -> q2 -> q3 -> q1
+    const pll1 = new PLL (qs.q1, qs.q2, {delay: 1});
+    const pll2 = new PLL (qs.q2, qs.q3);
+    const pll3 = new PLL (qs.q3, qs.q1);
 
-    if (!pl.processed_1) {
-      pl.processed_1=1
-    }
-    else {
-      pl.processed_1++
-    }
+    pll1.start (function (elem, done) {
+      const pl = elem.payload;
 
-    console.log ('%s: tick', pll1.name ());
-    done();
-  });
+      if (!pl.processed_1) {
+        pl.processed_1=1
+      }
+      else {
+        pl.processed_1++
+      }
 
-  pll2.start (function (elem, done) {
-    var pl = elem.payload;
+      console.log ('%s: tick', pll1.name ());
+      done();
+    });
 
-    if (!pl.processed_2) {
-      pl.processed_2=1
-    }
-    else {
-      pl.processed_2++
-    }
+    pll2.start (function (elem, done) {
+      const pl = elem.payload;
 
-    console.log ('%s: tick', pll2.name ());
-    done();
-  });
+      if (!pl.processed_2) {
+        pl.processed_2=1
+      }
+      else {
+        pl.processed_2++
+      }
 
-  pll3.start (function (elem, done) {
-    var pl = elem.payload;
+      console.log ('%s: tick', pll2.name ());
+      done();
+    });
 
-    if (!pl.processed_3) {
-      pl.processed_3=1
-    }
-    else {
-      pl.processed_3++
-    }
+    pll3.start (function (elem, done) {
+      const pl = elem.payload;
 
-    console.log ('%s: tick', pll3.name ());
-    done ();
-  });
+      if (!pl.processed_3) {
+        pl.processed_3=1
+      }
+      else {
+        pl.processed_3++
+      }
 
-  // insert elements
-  async.timesLimit (111, 3, function (n, next) {
-    q1.push ({a:n, b:'see it spin...'}, {}, next);
+      console.log ('%s: tick', pll3.name ());
+      done ();
+    });
+
+    // insert elements
+    async.timesLimit (111, 3, (n, next) => {
+      qs.q1.push ({a:n, b:'see it spin...'}, {}, next);
+    });
   });
 });
