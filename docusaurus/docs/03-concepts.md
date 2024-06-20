@@ -52,6 +52,7 @@ The **Storage** or **Backend** provides almost-complete queue primitives, fully 
 * *`stream-mongo`*, a simple yet effective approximation to event streaming by adding more than one possible consumer to each
   element in queue. This provides a good approximation to a real event streamer such as `kafka` or `nats-jetstream`, at a 
   fraction fo the complexity
+* *`postgres`* postgresql-db based backend. Provides queues on top of this database tables. Not as performant as the other backends, but it gains all the features of Postgresql as RDBMS
 
 As mentioned before, persistence and High Availability (HA) depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases.
 
@@ -66,6 +67,7 @@ pl-mongo          | x | x | x | - | x | - | +
 ps-mongo          | x | x | - | x | x | - | ++
 bucket-mongo-safe | x | x | - | - | x | - | +++++
 stream-mongo      | x | x | - | x | - | x | ++
+postgres          | x | x | - | - | x | - | .
 
 ## Signaller
 
