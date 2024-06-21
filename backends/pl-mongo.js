@@ -133,7 +133,7 @@ class Factory extends QFactory_MongoDB_defaults {
       pipeline = this._pipelines[pl_name];
     }
 
-    return cb (null, this._queue_from_pipeline (name, pipeline, opts));
+    return setImmediate (() => cb (null, this._queue_from_pipeline (name, pipeline, opts)));
   }
 
 

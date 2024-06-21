@@ -15,9 +15,7 @@ class IntraOrderedQueue extends Queue {
   //////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
-
     this._col = factory._db.collection (name);
-    this.ensureIndexes (err => {});
   }
 
 
@@ -305,10 +303,10 @@ class IntraOrderedQueue extends Queue {
 
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
-  ensureIndexes (cb) {
+  _ensureIndexes (cb) {
     async.series ([
-      cb => this._col.createIndex ({mature : 1, qcnt: 1}, cb),
-    ], cb);
+      cb => this._col.createIndex ({mature : 1, qcnt: 1}, err => cb (err)),
+    ], err => cb (err, this));
   }
 }
 
@@ -328,7 +326,9 @@ class Factory extends QFactory_MongoDB_defaults {
 
     const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return cb (null, new IntraOrderedQueue (name, this, full_opts, opts));
+
+    const q = new IntraOrderedQueue (name, this, full_opts, opts);
+    q._ensureIndexes (cb);
   }
 
   close (cb) {
