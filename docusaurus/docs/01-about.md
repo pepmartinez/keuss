@@ -23,3 +23,4 @@ As time passed more complex backens were added to cater for more specific needs:
   from queue) and *event stream* (ie, a single message can be consumed more than once). It is not a pure stream in the sense than 
   the nuber of possible consumers is limited (nd somewhat predefined), but it provides event funcionality for free if you already
   use mongodb, without having to add and maintain another subsystem (see [here](/docs/usage/streaming/stream-mongo))
+* On v2.0.0 a new `postgres` backend was added, to support [postgresql](https://www.postgresql.org) as an RDBM backend for your queues

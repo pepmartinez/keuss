@@ -1,9 +1,9 @@
 // mongodb: create a consumer and a producer, use redis signaller and redis stats
-var MQ = require ('../backends/mongo');
-var signal_redis_pubsub = require ('../signal/redis-pubsub');
-var stats_redis = require ('../stats/redis');
+const MQ = require ('../backends/mongo');
+const signal_redis_pubsub = require ('../signal/redis-pubsub');
+const stats_redis = require ('../stats/redis');
 
-var local_redis_opts = {
+const local_redis_opts = {
   Redis: {
     port: 6379,
     host: 'localhost',
@@ -11,7 +11,7 @@ var local_redis_opts = {
   }
 };
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus',
   signaller: {
     provider: signal_redis_pubsub,
@@ -24,29 +24,24 @@ var factory_opts = {
 };
     
 // initialize factory 
-MQ (factory_opts, function (err, factory) {
-  if (err) {
-    return console.error (err);
-  }
+MQ (factory_opts, (err, factory) => {
+  if (err) return console.error (err);
 
   // factory ready, create one queue
-  var q_opts = {};
-  var q = factory.queue ('test_queue_123', q_opts);
+  const q_opts = {};
+  factory.queue ('test_queue_123', q_opts, (err, q) => {
+    if (err) return console.error(err);
 
-  // insert element
-  q.push ({a:1, b:'666'}, function (err, res) {
-    if (err) {
-      return console.error (err);
-    }
+    // insert element
+    q.push ({a:1, b:'666'}, (err, res) => {
+      if (err) return console.error (err);
 
-    // element inserted at this point. pop it again
-    var pop_opts = {};
-    q.pop ('consumer-one', pop_opts, function (err, res) {
-      if (err) {
-        return console.error (err);
-      }
-
-      console.log ('got this: ', res.payload);
+      // element inserted at this point. pop it again
+      const pop_opts = {};
+      q.pop ('consumer-one', pop_opts, (err, res) => {
+        if (err) return console.error (err);
+        console.log ('got this: ', res.payload);
+      });
     });
   });
 });

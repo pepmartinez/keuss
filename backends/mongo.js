@@ -11,9 +11,7 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
-
     this._col = factory._db.collection (name);
-    this.ensureIndexes (function (err) {});
   }
 
 
@@ -32,7 +30,6 @@ class SimpleMongoQueue extends Queue {
   insert (entry, callback) {
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
     });
   }
@@ -212,8 +209,8 @@ class SimpleMongoQueue extends Queue {
 
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
-  ensureIndexes (cb) {
-    this._col.createIndex ({mature : 1}, err => cb (err));
+  _ensureIndexes (cb) {
+    this._col.createIndex ({mature : 1}, err => cb (err, this));
   }
 };
 
@@ -225,10 +222,17 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new SimpleMongoQueue (name, this, full_opts, opts);
+    
+    const q = new SimpleMongoQueue (name, this, full_opts, opts);
+    q._ensureIndexes (cb);
   }
 
   close (cb) {

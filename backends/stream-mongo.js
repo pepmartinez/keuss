@@ -22,15 +22,6 @@ class StreamMongoQueue extends Queue {
     this._groups_vector = this._groups_str.split (/[:,;.-]/).map (i => i.trim());
     this._gid = this._opts.group || this._groups_vector[0];
 
-    this.ensureIndexes (err => {
-      if (err) {
-        console.error ('keuss:Queue:StreamMongo: index creation failed, queues performance will be severely impacted:', err);
-      }
-      else {
-        debug ('indexes created');
-      }
-    });
-
     debug ('created with groups %j and gid %s (used for pop/reserve only)', this._groups_vector, this._gid);
   }
 
@@ -69,7 +60,6 @@ class StreamMongoQueue extends Queue {
 
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
       this._groups_vector.forEach (i => this._stats.incr (`stream.${i}.put`));
     });
@@ -402,7 +392,7 @@ class StreamMongoQueue extends Queue {
 
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
-  ensureIndexes (cb) {
+  _ensureIndexes (cb) {
     const tasks = [];
 
     this._groups_vector.forEach (i => {
@@ -411,7 +401,7 @@ class StreamMongoQueue extends Queue {
       tasks.push (cb => this._col.createIndex (idx, cb));
     });
     tasks.push (cb => this._col.createIndex ({t: 1}, {expireAfterSeconds: this._opts.ttl}, cb));
-    async.series (tasks, cb);
+    async.series (tasks, err => cb (err, this));
   }
 }
 
@@ -423,10 +413,16 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
     const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new StreamMongoQueue (name, this, full_opts, opts);
+    const q = new StreamMongoQueue (name, this, full_opts, opts);
+    q._ensureIndexes (cb);
   }
 
   close (cb) {

@@ -106,10 +106,15 @@ class Factory extends QFactory {
     this._rediscl = rediscl;
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new RedisListQueue (name, this, full_opts, opts);
+    return setImmediate(() => cb (null, new RedisListQueue (name, this, full_opts, opts)));
   }
 
   close (cb) {
@@ -143,4 +148,3 @@ function creator (opts, cb) {
 }
 
 module.exports = creator;
-6

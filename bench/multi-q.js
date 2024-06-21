@@ -1,85 +1,94 @@
-var async =  require ('async');
-var should = require ('should');
-var Chance = require ('chance');
+const async =  require ('async');
+const should = require ('should');
+const Chance = require ('chance');
 
-var produced = 0;
-var consumed = 0;
+let produced = 0;
+let consumed = 0;
 
-var chance = new Chance();
+const chance = new Chance();
 
 
-//var MQ = require ('../backends/redis-oq');
-//var MQ = require ('../backends/redis-list');
-//var MQ = require ('../backends/mongo');
-var MQ = require ('../backends/pl-mongo');
+// choice of backend
+const MQ = require (
+  //  '../backends/bucket-mongo-safe'
+  //  '../backends/redis-oq'
+  // '../backends/redis-list'
+  '../backends/mongo'
+  //  '../backends/ps-mongo'
+  //  '../backends/pl-mongo'
+  );
 
-var redis_signaller = require ('../signal/redis-pubsub');
-var redis_stats =     require ('../stats/redis');
-
-var opts = {
+const redis_signaller = require ('../signal/redis-pubsub');
+const redis_stats =     require ('../stats/redis');
+    
+const factory_opts = {
   signaller: {
-    provider: new redis_signaller ()
+    provider: redis_signaller,
   },
   stats: {
-    provider: new redis_stats ()
+    provider: redis_stats,
   }
 };
+
+
+MQ (factory_opts, (err, factory) => {
+  if (err) return console.error (err);
     
-MQ (opts, function (err, factory) {
-  if (err) {
-    return console.error (err);
+  function run_consumer (q) {
+    q.pop ('c1', {}, (err, res) => {
+  //    console.log ('consumer[%s]: got res %j', q.name(), res, {});
+      consumed++;
+
+      if (consumed > 1000000) {
+        factory.close ();
+      }
+      else {
+        if (!(consumed % 10000)) console.log ('< %d', consumed)
+  //    setTimeout (function () {
+        run_consumer (q);
+  //    }, chance.integer({ min: 200, max: 2000 }));
+      }
+    });
   }
 
-  
-function run_consumer (q) {
-  q.pop ('c1', {}, function (err, res) {
-//    console.log ('consumer[%s]: got res %j', q.name(), res, {});
-    consumed++;
+  function run_producer (q) {
+    q.push ({a:1, b:'666'}, (err, res) => {
+      produced++;
 
-    if (consumed > 1000000) {
-      factory.close ();
-    }
-    else {
-      if (!(consumed % 10000)) console.log ('< %d', consumed)
-//    setTimeout (function () {
-      run_consumer (q);
-//    }, chance.integer({ min: 200, max: 2000 }));
-    }
+      if (produced > 1000000) {
+        
+      }
+      else {
+        if (!(produced % 10000)) console.log ('> %d', produced)
+  //    setTimeout (function () {
+        run_producer (q);
+  //    }, chance.integer({ min: 200, max: 2000 }));
+      }
+    });
+  }
+
+  factory.queue('bench_test_queue_0', (err, q0) => {
+    if (err) return console.error (err);
+    run_consumer (q0);
+    run_producer (q0);
   });
-}
-
-function run_producer (q) {
-  q.push ({a:1, b:'666'}, function (err, res) {
-    produced++;
-
-    if (produced > 1000000) {
-      
-    }
-    else {
-      if (!(produced % 10000)) console.log ('> %d', produced)
-//    setTimeout (function () {
-      run_producer (q);
-//    }, chance.integer({ min: 200, max: 2000 }));
-    }
-  });
-}
-
-
-
-  var q0 = factory.queue('bench_test_queue_0', opts);
-  run_consumer (q0);
-  run_producer (q0);
 /*
-  var q1 = factory.queue('bench_test_queue_1', opts);
-  run_consumer (q1);
-  run_producer (q1);
+  factory.queue('bench_test_queue_1', (err, q1) => {
+    if (err) return console.error (err);
+    run_consumer (q1);
+    run_producer (q1);
+  });
 
-  var q2 = factory.queue('bench_test_queue_2', opts);
-  run_consumer (q2);
-  run_producer (q2);
+  factory.queue('bench_test_queue_0', (err, q2) => {
+    if (err) return console.error (err);
+    run_consumer (q2);
+    run_producer (q2);
+  });
 
-  var q3 = factory.queue('bench_test_queue_3', opts);
-  run_consumer (q3);
-  run_producer (q3);
+  factory.queue('bench_test_queue_0', (err, q3) => {
+    if (err) return console.error (err);
+    run_consumer (q3);
+    run_producer (q3);
+  });
 */
 });

@@ -1,10 +1,9 @@
-var async =  require ('async');
-var should = require ('should');
+const async =  require ('async');
 
-var counter = 0;
+let counter = 0;
 
 function run_consumer (q) {
-  q.pop ('c1', {}, function (err, res) {
+  q.pop ('c1', {}, (err, res) => {
     console.log ('consumer: got err %j', err, {});
     console.log ('consumer: got res %j', res, {});
 
@@ -14,17 +13,14 @@ function run_consumer (q) {
   });
 }
 
-var MQ = require ('../backends/redis-oq');
+const MQ = require ('../backends/redis-oq');
 
-var opts = {
-};
+const opts = {};
     
-MQ (opts, function (err, factory) {
-  if (err) {
-    return logger.error (err);
-  }
+MQ (opts, (err, factory) => {
+  if (err) return logger.error (err);
 
-  var q_opts = {
+  const q_opts = {
     logger: logger,
     signaller: {
       provider: require ('../signal/redis-pubsub')
@@ -34,7 +30,8 @@ MQ (opts, function (err, factory) {
     }
   };
 
-  var q = factory.queue ('test_queue', q_opts);
-
-  run_consumer (q);
+  factory.queue ('test_queue', q_opts, (err, q) => {
+    if (err) return logger.error (err);
+    run_consumer (q);
+  });
 });

@@ -17,7 +17,6 @@ class PersistentMongoQueue extends Queue {
     if (!this._opts.ttl) this._opts.ttl = 3600;
 
     this._col = factory._db.collection (name);
-    this.ensureIndexes (function (err) {});
   }
 
 
@@ -36,7 +35,6 @@ class PersistentMongoQueue extends Queue {
   insert (entry, callback) {
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
     });
   }
@@ -272,10 +270,10 @@ class PersistentMongoQueue extends Queue {
 
   //////////////////////////////////////////////////////////////////
   // create needed indexes for O(1) functioning
-  ensureIndexes (cb) {
+  _ensureIndexes (cb) {
     this._col.createIndex ({mature : 1}, err => {
       if (err) return cb (err);
-      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl}, err => cb (err));
+      this._col.createIndex({processed: 1}, {expireAfterSeconds: this._opts.ttl}, err => cb (err, this));
     });
   }
 }
@@ -288,10 +286,16 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
-    var full_opts = {};
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new PersistentMongoQueue (name, this, full_opts, opts);
+    const q = new PersistentMongoQueue (name, this, full_opts, opts);
+    q._ensureIndexes (cb);
   }
 
   close (cb) {

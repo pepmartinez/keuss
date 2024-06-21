@@ -33,7 +33,7 @@ class PGQueue extends Queue {
 
   //////////////////////////////////////////////
   // ensure table and indexes exists
-  init (cb) {
+  _init (cb) {
     this._pool.query (`
     CREATE TABLE IF NOT EXISTS ${this._tbl_name} (
       _id      VARCHAR(64) PRIMARY KEY,
@@ -66,8 +66,6 @@ class PGQueue extends Queue {
 
     this._pool.query (`INSERT INTO ${this._tbl_name} VALUES($1, $2, $3, $4)`, [_id, pl, mature, tries], (err, res) => {
       if (err) return cb (err);
-
-      // TODO assert res.rowCount==1 ?
       cb (null, _id)
     })
   }
@@ -312,17 +310,20 @@ class Factory extends QFactory {
   }
 
   queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
     const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    debug ('creating queue with full_opts %j', full_opts)
-    const q = new PGQueue (name, this, full_opts, opts);
+    debug ('creating queue with full_opts %j', full_opts);
 
-    if (cb) {
-      q.init (err => cb (err, q));
-    }
-    else {
-      return q;
-    }
+    const q = new PGQueue (name, this, full_opts, opts);
+    q._init (err => {
+      if (err) return cb (err);
+      cb (null, q);
+    });
   }
 
   close (cb) {

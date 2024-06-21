@@ -96,8 +96,6 @@ class Bucket {
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
 
-        // TODO optimization: set this._b[i] = null
-
         if (is_reserve) {
           this._b_states[i] = State.Reserved;
           this._b_counts.Reserved++;
@@ -314,7 +312,6 @@ class BucketSet {
         if (bcket.exhausted ()) {
           debug ('bucket %s already exhausted, read another', bcket.id());
           this._active_bucket = null;
-          // TODO loop internally!!!!!
           cb ();
         }
         else {
@@ -539,7 +536,6 @@ class BucketMongoSafeQueue extends Queue {
     super (name, factory, opts, orig_opts);
 
     this._col = factory._db.collection (name);
-    this._ensureIndexes (err => {});
 
     this._insert_bucket = {
       _id: new mongo.ObjectID (),
@@ -818,7 +814,7 @@ class BucketMongoSafeQueue extends Queue {
 
   /////////////////////////////////////////
   _ensureIndexes (cb) {
-    this._col.createIndex ({mature : 1}, err => cb (err));
+    this._col.createIndex ({mature : 1}, err => cb (err, this));
   }
 
 
@@ -912,10 +908,17 @@ class Factory extends QFactory_MongoDB_defaults {
     this._db = mongo_conn.db();
   }
 
-  queue (name, opts) {
-    var full_opts = {}
+  queue (name, opts, cb) {
+    if (!cb) {
+      cb = opts;
+      opts = {};
+    }
+    
+    const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return new BucketMongoSafeQueue (name, this, full_opts, opts);
+
+    const q = new BucketMongoSafeQueue (name, this, full_opts, opts);
+    q._ensureIndexes (cb);
   }
 
   close (cb) {

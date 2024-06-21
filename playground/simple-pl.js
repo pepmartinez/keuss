@@ -1,41 +1,43 @@
-var MQ = require ('../backends/pl-mongo');
-var PLL = require ('../Pipeline/DirectLink');
-var async = require ('async');
+const MQ = require ('../backends/pl-mongo');
+const PLL = require ('../Pipeline/DirectLink');
+const async = require ('async');
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus'
 };
 
 // initialize factory
-MQ (factory_opts, function (err, factory) {
-  if (err) {
-    return console.error (err);
-  }
+MQ (factory_opts, (err, factory) => {
+  if (err) return console.error (err);
 
   // factory ready, create 2 queues on default pipeline
-  var q_opts = {};
-  var q1 = factory.queue ('test_pl_1', q_opts);
-  var q2 = factory.queue ('test_pl_2', q_opts);
+  const q_opts = {};
+  async.parallel ({
+    q1: cb => factory.queue ('test_pl_1', q_opts, cb),
+    q2: cb => factory.queue ('test_pl_2', q_opts, cb),
+  }, (err, qs) => {
+    if (err) return console.error (err);
 
-  // tie them up, q1 -> q2
-  var pll = new PLL (q1, q2);
+    // tie them up, q1 -> q2
+    const pll = new PLL (qs.q1, qs.q2);
 
-  pll.start (function (elem, done) {
-    var pl = elem.payload;
-    pl.pll_processed = true;
-    done();
-  });
+    pll.start (function (elem, done) {
+      const pl = elem.payload;
+      pl.pll_processed = true;
+      done();
+    });
 
-  // insert elements in the entry queue
-  async.timesLimit (111, 3, function (n, next) {
-    q1.push ({a:n, b:'see it spin...'}, {}, next);
-  });
+    // insert elements in the entry queue
+    async.timesLimit (111, 3, (n, next) => {
+      qs.q1.push ({a:n, b:'see it spin...'}, {}, next);
+    });
 
-  async.timesLimit (111, 3, function (n, next) {
-    q2.pop ('exit', {}, function (err, res) {
-      console.log ('end point get', res);
-      next ();
+    async.timesLimit (111, 3, (n, next) => {
+      qs.q2.pop ('exit', {}, (err, res) => {
+        console.log ('end point get', res);
+        next ();
+      });
     });
   });
 });

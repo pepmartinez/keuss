@@ -36,10 +36,13 @@ class QFactory {
       this._stats_factory = res[1];
 
       if (this._opts.deadletter) {
-        this._deadletter_queue = this.queue (this._opts.deadletter.queue || '__deadletter__');
         this._max_ko = this._opts.deadletter.max_ko || 0;
-        debug('%s: uses deadletter queue %s, max KO is %d', this._name, this._deadletter_queue.name(), this._max_ko);
-        this._deadletter_queue.init (cb);
+        const qname = this._opts.deadletter.queue || '__deadletter__';
+        debug('%s: uses deadletter queue %s, max KO is %d', this._name, qname, this._max_ko);
+        this.queue (qname, (err, dlq) => {
+          this._deadletter_queue = dlq;
+          cb (err);
+        });
       }
       else {
         cb();
@@ -55,8 +58,8 @@ class QFactory {
     return this._stats_factory;
   }
 
-  queue (name, opts) {
-    return null;
+  queue (name, opts, cb) {
+    return cb ();
   }
 
   close (cb) {

@@ -3,11 +3,9 @@
  * very simple example of stream-mongo: one element pushed, consumed three times
  *
  */
-
 const async = require ('async');
 const _ =     require ('lodash');
 const MQ =    require ('../backends/stream-mongo');
-
 
 const group_cardinality = 3;
 const mesgs = 1000000;
@@ -35,16 +33,13 @@ function do_times (cnt, fn, done) {
   })
 }
 
-
 function payload (n) {
   return {elem: n, headline: 'something something', tags: {a: n, b: 2*n}}
 }
 
-
 function headers (n) {
   return {cnt: n, h1: 'something something', h2: false}
 }
-
 
 function producer_looper (q, id) {
   console.log (`creating producer looper ${id}`);
@@ -57,7 +52,6 @@ function producer_looper (q, id) {
   }
 }
 
-
 function consumer_looper (q, id) {
   console.log (`creating consumer looper ${id}`);
   return (n, cb) => {
@@ -69,7 +63,6 @@ function consumer_looper (q, id) {
   }
 }
 
-
 // initialize factory
 MQ ({
   url: 'mongodb://localhost/keuss_test_stream'
@@ -80,35 +73,39 @@ MQ ({
   console.log('groups: ', groups);
 
   // create queues and clients
-  const queues = {};
-  queues['qp'] =  factory.queue ('test_stream', {groups});
+  const queue_ctors = {};
+
+  queue_ctors['qp'] =  cb => factory.queue ('test_stream', {groups}, cb);
 
   for (let i = 1; i <= group_cardinality; i++) {
-    queues[`qc${i}`] = factory.queue ('test_stream', {group: `G${i}`});
+    queue_ctors[`qc${i}`] = cb => factory.queue ('test_stream', {group: `G${i}`}, cb);
   }
 
-  console.log (`created queues (one producer, ${group_cardinality} consumers)`);
+  async.parallel (queue_ctors, (err, queues) => {
+    if (err) return console.error(err);
+    console.log (`created queues (one producer, ${group_cardinality} consumers)`);
 
-  // create tasks
-  const tasks = [];
-  tasks.push (cb => do_times (mesgs, producer_looper (queues['qp'], 'p0'),  cb));
+    // create tasks
+    const tasks = [];
+    tasks.push (cb => do_times (mesgs, producer_looper (queues['qp'], 'p0'),  cb));
 
-  for (let t = 1; t <= group_cardinality; t++) {
-    tasks.push (cb => do_times (mesgs, consumer_looper (queues[`qc${t}`], `c${t}`), cb),)
-  }
+    for (let t = 1; t <= group_cardinality; t++) {
+      tasks.push (cb => do_times (mesgs, consumer_looper (queues[`qc${t}`], `c${t}`), cb),)
+    }
 
-  console.log (`created tasks (one producer, ${group_cardinality} consumers)`);
+    console.log (`created tasks (one producer, ${group_cardinality} consumers)`);
 
-  async.parallel (tasks, err => {
-    factory.close ();
-    if (err) console.error (err);
-    console.log ('done');
+    async.parallel (tasks, err => {
+      factory.close ();
+      if (err) console.error (err);
+      console.log ('done');
+    });
+
+    setInterval (() => {
+      console.log (`produced ${stats.producer.total - stats.producer.last} msg/s, consumed ${stats.consumer.total - stats.consumer.last} msg/s`);
+      stats.producer.last = stats.producer.total;
+      stats.consumer.last = stats.consumer.total
+    }, 1000);
   });
-
-  setInterval (() => {
-    console.log (`produced ${stats.producer.total - stats.producer.last} msg/s, consumed ${stats.consumer.total - stats.consumer.last} msg/s`);
-    stats.producer.last = stats.producer.total;
-    stats.consumer.last = stats.consumer.total
-  }, 1000);
 });
 

@@ -8,6 +8,12 @@ var MemStats =    require ('../stats/mem');
 
 const MongoClient = require ('mongodb').MongoClient;
 
+
+process.on('unhandledRejection', (err, p) => {
+  console.error('unhandledRejection', err.stack, p)
+})
+
+
 const bs_src_array = [
   `
   const Chance = require ('chance');
@@ -92,10 +98,12 @@ var factory = null;
 
 [
   {label: 'Pipelined MongoDB',  mq: require ('../backends/pl-mongo')}
-].forEach (function (MQ_item) {
-  describe ('Pipeline/Builder operations over ' + MQ_item.label, function () {
-    var MQ = MQ_item.mq;
+].forEach (MQ_item => {
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  describe ('Pipeline/Builder operations over ' + MQ_item.label, () => {
+    const MQ = MQ_item.mq;
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     before (done => {
       var opts = {
         url: 'mongodb://localhost/__test_pipeline_builder__',
@@ -111,6 +119,7 @@ var factory = null;
       });
     });
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     after (done => async.series ([
       cb => setTimeout (cb, 1000),
       cb => factory.close (cb),
@@ -121,6 +130,7 @@ var factory = null;
     ], done));
 
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it ('constructs, runs and destructs a pipeline ok', done => {
       let pipeline = null;
 
@@ -156,6 +166,8 @@ var factory = null;
       });
     });
 
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it ('catches error events in processors', done => {
       const bs_src_array_local = [
         `
@@ -247,6 +259,7 @@ var factory = null;
     });
 
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it ('catches errors in js BS scripts on initialization', done => {
       const bs_src_array_local =  [
         'aaaa()'
@@ -259,6 +272,7 @@ var factory = null;
     });
 
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it ('catches errors in js setup scripts on initialization', done => {
       const setup_src_array_local = [
         `
@@ -279,6 +293,8 @@ var factory = null;
       });
     });
 
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     it ('propagates to a second pipeline instance');
 
   });

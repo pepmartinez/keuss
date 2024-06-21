@@ -57,28 +57,33 @@ MQ (factory_opts, (err, factory) => {
 
   // factory ready, create 2 queues on default pipeline
   const q_opts = {};
-  const q1 = factory.queue ('test_pl_1', q_opts);
-  const q2 = factory.queue ('test_pl_2', q_opts);
 
-  // tie them up, q1 -> q2
-  const pdl = new PDL (q1, q2);
+  async.parallel ({
+    q1: cb => factory.queue ('test_pl_1', q_opts, cb),
+    q2: cb => factory.queue ('test_pl_2', q_opts, cb),
+  }, (err, queues) {
+    if (err) return console.error (err);
 
-  pdl.start ((elem, done) => {
-    // pass element to next queue, set payload.passed to true
-    done (null, {
-      update: {
-        $set: {passed: true}
-      }
+    // tie them up, q1 -> q2
+    const pdl = new PDL (queues.q1, queues.q2);
+
+    pdl.start ((elem, done) => {
+      // pass element to next queue, set payload.passed to true
+      done (null, {
+        update: {
+          $set: {passed: true}
+        }
+      });
     });
-  });
 
-  // insert elements in the entry queue
-  async.timesLimit (111, 3, (n, next) => q1.push ({a:n, b:'see it spin...'}, next));
+    // insert elements in the entry queue
+    async.timesLimit (111, 3, (n, next) => queues.q1.push ({a:n, b:'see it spin...'}, next));
 
-  // read elements at the outer end
-  async.timesLimit (111, 3, (n, next) => q2.pop ('exit', (err, res) => {
-    console.log ('end point get', res);
-    next ();
+    // read elements at the outer end
+    async.timesLimit (111, 3, (n, next) => queues.q2.pop ('exit', (err, res) => {
+      console.log ('end point get', res);
+      next ();
+    }));
   }));
 });
 ```
@@ -91,12 +96,16 @@ As stated before only one Keuss Queue backed -`pl-mongo`- is compatible with pip
 
 * `pipeline`: specifies the pipeline name for this queue. Only queues within the same pipeline (that is, same mongodb url and same pipeline name) can actually work together in a pipeline. Defaults to `default`
 
-In the above example both queues q1 and q2 are created in a pipeline named 'default'. To use a different one you just change the code into:
+In the above example both queues q1 and q2 are created in a pipeline named `default`. To use a different one you just change the code into:
 
 ```javascript
 const q_opts = {pipeline: 'some_other_pipeline'};
-const q1 = factory.queue ('test_pl_1', q_opts);
-const q2 = factory.queue ('test_pl_2', q_opts);
+
+async.parallel ({
+  q1: cb => factory.queue ('test_pl_1', q_opts, cb),
+  q2: cb => factory.queue ('test_pl_2', q_opts, cb),
+}, (err, queues) {
+  ...
 ```
 
 Also, pipeline-aware queues provide a new operation:

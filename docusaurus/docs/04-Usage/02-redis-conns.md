@@ -50,9 +50,9 @@ This apparent complexity is required since redis connections are inherently crea
 * Using a factory function:
 
   ```javascript
-  var MQ = require ('keuss/backends/redis-list');
-  var Redis = require ('ioredis');
-  var factory_opts = {
+  const MQ = require ('keuss/backends/redis-list');
+  const Redis = require ('ioredis');
+  const factory_opts = {
     redis: function () {
       return new Redis ({
         port: 12293,

@@ -62,9 +62,6 @@ class Queue {
   ////////////////////////////////////////////////////////////////////////////
   // expected redefinitions on subclasses
 
-  // asnc init
-  init (callback) {callback (null);}
-
   // add element to queue
   insert (entry, callback) {callback (null, null);}
 
@@ -345,8 +342,6 @@ class Queue {
   //////////////////////////////////
   // obtain element from queue
   pop (cid, opts, callback) {
-    // TODO fail if too many consumers?
-
     if (this._drained) return setImmediate (() => {
       debug ('%s: pop while drained, return error', this._name);
       if (callback) callback ('drain');
@@ -595,7 +590,6 @@ class Queue {
         }
       }
 
-      // TODO eat up errors?
       if (err) {
         // get/reserve in error
         debug ('%s - tid %s: getOrReserve_cb in error: err %o', this._name, consumer.tid, err);

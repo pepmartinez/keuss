@@ -68,7 +68,6 @@ class MemStats extends Stats {
     this._s.paused = false;
 
     // TODO remove from factory
-
     if (cb) cb();
   }
 

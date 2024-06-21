@@ -1,10 +1,10 @@
 // mongodb: create a consumer and a producer
-var MQ =    require ('../backends/pl-mongo');
-var DL =    require ('../Pipeline/DirectLink');
-var async = require ('async');
+const MQ =    require ('../backends/pl-mongo');
+const DL =    require ('../Pipeline/DirectLink');
+const async = require ('async');
 
 
-var factory_opts = {
+const factory_opts = {
   url: 'mongodb://localhost/qeus-pl'
 };
 
@@ -15,41 +15,46 @@ MQ (factory_opts, function (err, factory) {
   }
 
   // factory ready, create 3 queues on default pipeline
-  var q_opts = {};
-  var q1 = factory.queue ('test_pl_r_1', q_opts);
-  var q2 = factory.queue ('test_pl_r_2', q_opts);
+  const q_opts = {};
 
-  // tie them up, q1 -> q2
-  var pll = new DL (q1, q2);
+  async.parallel ({
+    q1: cb => factory.queue ('test_pl_r_1', q_opts, cb),
+    q2: cb => factory.queue ('test_pl_r_2', q_opts, cb),
+  }, (err, qs) => {
 
-  pll.start (function (elem, done)  {
-    console.log (this.name())
-    if (elem.tries < 1) {
-      console.log ('%d: nope, try %d', elem.payload.a, elem.tries)
-      done ({e: 'error, retry'});
-    }
-    else {
-      console.log ('%d: alles klar, try %d', elem.payload.a, elem.tries);
+    // tie them up, q1 -> q2
+    const pll = new DL (qs.q1, qs.q2);
 
-      const update = {
-        $set: {
-          alfa: 666*elem.tries,
-          stage: `stage-${elem.tries}`
-        },
-        $inc: {
-          'counters.alpha': 2,
-          'counters.beta': 1,
-        }
-      };
+    pll.start (function (elem, done) {
+      console.log (this.name());
 
-      done (null, {update});
-    }
+      if (elem.tries < 1) {
+        console.log ('%d: nope, try %d', elem.payload.a, elem.tries)
+        done ({e: 'error, retry'});
+      }
+      else {
+        console.log ('%d: alles klar, try %d', elem.payload.a, elem.tries);
+
+        const update = {
+          $set: {
+            alfa: 666*elem.tries,
+            stage: `stage-${elem.tries}`
+          },
+          $inc: {
+            'counters.alpha': 2,
+            'counters.beta': 1,
+          }
+        };
+
+        done (null, {update});
+      }
+    });
+
+    // insert elements
+  //  async.timesLimit (111, 3, (n, next) => {
+  //    setTimeout (() => q1.push ({a:n, b:'see it fail...'}, {}, next), 1111);
+  //  });
+
+    qs.q1.push ({a:5, b:'see it fail...'}, {}, () => {});
   });
-
-  // insert elements
-//  async.timesLimit (111, 3, (n, next) => {
-//    setTimeout (() => q1.push ({a:n, b:'see it fail...'}, {}, next), 1111);
-//  });
-
-  q1.push ({a:5, b:'see it fail...'}, {}, function () {});
 });

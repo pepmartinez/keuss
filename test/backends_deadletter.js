@@ -7,6 +7,9 @@ var MemStats =    require ('../stats/mem');
 
 const MongoClient = require ('mongodb').MongoClient;
 
+process.on('unhandledRejection', (err, p) => {
+  console.error('unhandledRejection', err.stack, p)
+})
 
 function stats (q, cb) {
   async.series ({
@@ -108,8 +111,7 @@ function release_mq_factory (q, factory, cb) {
       async.waterfall ([
         cb => get_mq_factory (MQ, factory_opts, cb),
         (factory, cb) => {
-          const q = factory.queue('test_queue_deadletter', {});
-          q.init (err => cb (err, q, factory))
+          const q = factory.queue('test_queue_deadletter', (err, q) => cb (err, q, factory))
         },
         (q, factory, cb) => {
           const stage = {};
@@ -177,14 +179,12 @@ function release_mq_factory (q, factory, cb) {
       async.waterfall ([
         cb => get_mq_factory (MQ, factory_opts, cb),
         (factory, cb) => {
-          const q = factory.queue('test_queue_deadletter', {});
-          q.init (err => cb (err, q, factory))
+          const q = factory.queue('test_queue_deadletter', (err, q) => cb (err, q, factory))
         },
         (q, factory, cb) => {
           const stage = {};
 
           async.series([
-            cb => q.init(cb),
             cb => q.push (pl, cb),
             cb => pop (q, stage, cb),
             cb => reject (q, stage, cb),

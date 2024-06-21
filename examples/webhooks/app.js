@@ -2,8 +2,8 @@ const express =    require ('express');
 const bodyParser = require ('body-parser');
 
 
-module.exports = (context) => {
-  var app = express();
+module.exports = context => {
+  const app = express();
 
   // parse everything as text. A more robust and generic solution shoudl use raw() and manage Buffers, though
   app.use (bodyParser.text ({type: () => true}));
