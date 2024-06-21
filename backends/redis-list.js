@@ -114,7 +114,7 @@ class Factory extends QFactory {
     
     const full_opts = {};
     _.merge(full_opts, this._opts, opts);
-    return cb (null, new RedisListQueue (name, this, full_opts, opts));
+    return setImmediate(() => cb (null, new RedisListQueue (name, this, full_opts, opts)));
   }
 
   close (cb) {
@@ -148,4 +148,3 @@ function creator (opts, cb) {
 }
 
 module.exports = creator;
-6
