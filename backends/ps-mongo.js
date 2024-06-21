@@ -36,7 +36,6 @@ class PersistentMongoQueue extends Queue {
   insert (entry, callback) {
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
     });
   }

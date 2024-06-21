@@ -342,8 +342,6 @@ class Queue {
   //////////////////////////////////
   // obtain element from queue
   pop (cid, opts, callback) {
-    // TODO fail if too many consumers?
-
     if (this._drained) return setImmediate (() => {
       debug ('%s: pop while drained, return error', this._name);
       if (callback) callback ('drain');
@@ -592,7 +590,6 @@ class Queue {
         }
       }
 
-      // TODO eat up errors?
       if (err) {
         // get/reserve in error
         debug ('%s - tid %s: getOrReserve_cb in error: err %o', this._name, consumer.tid, err);

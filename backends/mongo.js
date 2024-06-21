@@ -11,7 +11,6 @@ class SimpleMongoQueue extends Queue {
   //////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
-
     this._col = factory._db.collection (name);
 
     // TODO Move this to a separated init()
@@ -34,7 +33,6 @@ class SimpleMongoQueue extends Queue {
   insert (entry, callback) {
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
     });
   }

@@ -96,8 +96,6 @@ class Bucket {
         elem.mature = this._mature;
         elem._id = this.id () + ':' + i;
 
-        // TODO optimization: set this._b[i] = null
-
         if (is_reserve) {
           this._b_states[i] = State.Reserved;
           this._b_counts.Reserved++;
@@ -314,7 +312,6 @@ class BucketSet {
         if (bcket.exhausted ()) {
           debug ('bucket %s already exhausted, read another', bcket.id());
           this._active_bucket = null;
-          // TODO loop internally!!!!!
           cb ();
         }
         else {

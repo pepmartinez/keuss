@@ -69,7 +69,6 @@ class StreamMongoQueue extends Queue {
 
     this._col.insertOne (entry, {}, (err, result) => {
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.insertedId);
       this._groups_vector.forEach (i => this._stats.incr (`stream.${i}.put`));
     });

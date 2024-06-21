@@ -66,8 +66,6 @@ class PGQueue extends Queue {
 
     this._pool.query (`INSERT INTO ${this._tbl_name} VALUES($1, $2, $3, $4)`, [_id, pl, mature, tries], (err, res) => {
       if (err) return cb (err);
-
-      // TODO assert res.rowCount==1 ?
       cb (null, _id)
     })
   }

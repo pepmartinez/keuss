@@ -47,7 +47,6 @@ class IntraOrderedQueue extends Queue {
     this._col.updateOne (q, upd, opts, (err, result) => {
       debug ('insert: updateOne (%j, %j, %j) => (%j, %j)', q, upd, opts, err, result);
       if (err) return callback (err);
-      // TODO result.insertedCount must be 1
       callback (null, result.upsertedId || q._id);
     });
   }
