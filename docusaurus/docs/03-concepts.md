@@ -9,7 +9,7 @@ sidebar_label: Concepts
 A **Queue** is more of an interface, a definition of what it can do. Keuss queues are capable of:
 
 * Insert one element.
-* Schedule an element: insert one element with a not-before datetime; this means, the element will be affectively inserted in the queue, but any operation on the queue ofter that will not take that element into account before the not-before datetime.
+* Schedule an element: insert one element with a not-before datetime; this means, the element will be effectively inserted in the queue, but any operation on the queue after that will not take that element into account before the not-before datetime.
 * Get an element, and block for some specified time if no element is available.
 * Reserve an element, and block for some specified time if no element is available.
 * Commit (remove) or rollback (return back) a previously reserved element.
@@ -22,7 +22,7 @@ A **Queue** is more of an interface, a definition of what it can do. Keuss queue
 
 ## Bucket
 
-The initial idea for Keuss Queues, transtated the elements inserted in the queue into rows of the backed storage. This makes it easy to inspect the elements values directly in the backend, which is pretty useful when you need to debug things up. Buckets came later, as a way to pack more than one message into a single row of the backend to gain performance. See [Bucked-based backends](usage/buckets).
+The initial idea for Keuss Queues, translated the elements inserted in the queue into rows of the backed storage. This makes it easy to inspect the elements values directly in the backend, which is pretty useful when you need to debug things up. Buckets came later, as a way to pack more than one message into a single row of the backend to gain performance. See [Bucked-based backends](usage/buckets).
 
 ## Pipeline
 
@@ -41,7 +41,7 @@ A **processor** is an object tied to one or more queues, that controls the flow 
 
 ## Storage
 
-The **Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 7 backends, with various levels of features and performance:
+The **Storage** or **Backend** provides almost-complete queue primitives, fully functional and already usable as is. Keuss comes with 8 backends, with various levels of features and performance:
 
 * *`mongo`*, a mongodb-based backend that provides the full set of queue features, still with decent performance.
 * *`redis-oq`*, backed using an ordered queue on top of redis (made in turn with a sorted set, a hash and some lua). Provides all queue features including reserve-commit-rollback. Noticeable faster than mongodb.
@@ -50,11 +50,10 @@ The **Storage** or **Backend** provides almost-complete queue primitives, fully 
 * *`ps-mongo`*, a version of the *`mongo`* backend where elements are not physically deleted from the collection when extracted; instead, they are just marked as processed and later deleted automatically using a mongodb TTL index.
 * *`bucket-mongo-safe`*, an approach to storing more than one element on each mongodb record in order to break past mongodb I/O limitations, provides both scheduling and reserve support with staggering performance on a reasonable durability.
 * *`stream-mongo`*, a simple yet effective approximation to event streaming by adding more than one possible consumer to each
-  element in queue. This provides a good approximation to a real event streamer such as `kafka` or `nats-jetstream`, at a 
-  fraction fo the complexity
+  element in queue. This provides a good approximation to a real event streamer such as `kafka` or `nats-jetstream`, at a fraction of the complexity
 * *`postgres`* postgresql-db based backend. Provides queues on top of this database tables. Not as performant as the other backends (roughly 10%-20% of that of `mongo`), but it gains all the features of Postgresql as RDBMS
 
-As mentioned before, persistence and High Availability (HA) depends exclusively on the underliying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases. Postgres provides excellent durability and HA if correctly configured
+As mentioned before, persistence and High Availability (HA) depends exclusively on the underlying system: mongodb provides production-grade HA and persistence while using potentially gigantic queues, and with redis one can balance performance and simplicity over reliability and durability, by using standalone redis, redis sentinel or redis cluster. Keuss uses [ioredis](https://github.com/luin/ioredis) as redis driver, which supports all 3 cases. Postgres provides excellent durability and HA if correctly configured
 
 The following table shows the capabilities of each backend:
 
@@ -116,5 +115,5 @@ top of this
 * *`Queues`*, or rather clients to individual queues, are created using a *backend* as factory.
 * *`Backends`* need to be initialized before being used. Exact initialization details depend on each backend.
 * When creating a *`queue`*, a *`signaller`* and a *`stats`* are assigned to it. The actual class/type to be used can be specified at the queue's creation moment, or at the backend initialization moment. By default *`local`* and *`mem`*, respectively, are used for redis-based backends; for mongodb-based backends, *`mongo-capped`* and *`mongo`* are used intead as defaults
-* *`Queues`* are created on-demand, and are never destroyed as far as Keuss is concerned. They do exist as long as the underlying backend kepts them in existence: for example, redis queues dissapear as such when they become empty.
+* *`Queues`* are created on-demand, and are never destroyed as far as Keuss is concerned. They do exist as long as the underlying backend kept them in existence: for example, redis queues disappear as such when they become empty.
 * *`Pipelines`* are, strictly speaking, just enhanced queues; as such they behave and can be used as a queue. More info on pipelines [here](usage/pipelines/about)

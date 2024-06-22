@@ -124,7 +124,7 @@ const MQ = require ('keuss/backends/bucket-mongo-safe');
 
 ## Full producer and consumer loops
 
-This is a more convoluted example: a set of producers inserting messages, and another set of consumers consumig them, all in parallel. The queue stats (elements pushed, elements popped) are shown every second.
+This is a more convoluted example: a set of producers inserting messages, and another set of consumers consuming them, all in parallel. The queue stats (elements pushed, elements popped) are shown every second.
 
 Try and change the uncommented `const MQ = require('keuss/backends/...');`  to see the performance differences between backends.
 

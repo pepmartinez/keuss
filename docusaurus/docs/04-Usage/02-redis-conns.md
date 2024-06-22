@@ -4,7 +4,7 @@ title: Redis Connections
 sidebar_label: Redis Connections
 ---
 
-Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, keuss will create it from the opts object passed:
+Keuss relies on [ioredis](https://www.npmjs.com/package/ioredis) for connecting to redis. Anytime a redis connection is needed, Keuss will create it from the opts object passed:
 
 * If `opts` is a function, it is executed. It is expected to return a redis connection
 * If it's an object and contains a `Redis` field, this field is used to create a new [ioredis Redis object](https://github.com/luin/ioredis), as in *return new Redis (opts.Redis)*

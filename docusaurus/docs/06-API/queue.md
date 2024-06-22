@@ -83,7 +83,7 @@ q.paused ((err, is_paused) => {
 })
 ```
 
-Pauses/Resumes all consumers on this queue (calls to `pop()`). Producers are not afected (calls to `push()`).
+Pauses/Resumes all consumers on this queue (calls to `pop()`). Producers are not affected (calls to `push()`).
 
 The pause/resume condition is propagated via the signallers, so this affects all consumers, not only those local to the process, if a redis-pubsub or mongo-capped signaller is used.
 

@@ -6,9 +6,9 @@ sidebar_label: Bucket-based backends
 
 Up to version 1.4.X all backends worked in the same way, one element at a time: pushing and popping elements fired one or more operations per element on the underlying storage. This means the bottleneck would end up being the storage's I/O; redis and mongo both allow quite high I/O rates, enough to work at thousands of operations per second. Still, the limit was there.
 
-Starting with v1.5.2 keuss includes 2 backends that do not share this limitation: they work by packing many elements inside a single 'storage unit'. Sure enough, this adds some complexity and extra risks, but the throughput improvement is staggering: on mongodb it goes from 3-4 Ktps to 35-40Ktps, and the bottleneck shifted from mongod to the client's cpu, busy serializing and deserializing payloads.
+Starting with v1.5.2 Keuss includes 2 backends that do not share this limitation: they work by packing many elements inside a single 'storage unit'. Sure enough, this adds some complexity and extra risks, but the throughput improvement is staggering: on mongodb it goes from 3-4 Ktps to 35-40Ktps, and the bottleneck shifted from mongod to the client's cpu, busy serializing and deserializing payloads.
 
-Two bucked-based backends were added, both based on mongodb: [bucket-mongo](#bucket-mongo) and [bucket-mongo-safe](#bucket-mongo-safe). Both are usable, but there is little gain on using fhe first over the second: `bucket-mongo` was used as a prototyping area, and although perfectly usable, it turned out `bucket-mongo-safe` is better in almost every aspect: it provides better guarantees and more features, at about the same performance.
+Two bucked-based backends were added, both based on mongodb: [bucket-mongo](#bucket-mongo) and [bucket-mongo-safe](#bucket-mongo-safe). Both are usable, but there is little gain on using the first over the second: `bucket-mongo` was used as a prototyping area, and although perfectly usable, it turned out `bucket-mongo-safe` is better in almost every aspect: it provides better guarantees and more features, at about the same performance.
 
 Starting with v1.7.0, `bucket-mongo` has been removed: it provided virtually no benefit over `bucket-mongo-safe` and had some clear disadvantages; as a consequence, it was deemed unneeded and redundant
 
@@ -29,7 +29,7 @@ Bucket-mongo-safe works by packing many payloads in a single mongodb object:
 * At `pop/reserve` time full objects are read into mem, and then individual payloads returned from there. Both commits and pops are just marked in memory and then flushed every state_flush_period millisecs, or when the bucked is exhausted.
 * Buckets remain unmodified since they are created in terms of the payloads they contain: a `pop()` or `ko/ok` would only mark payloads inside buckets as read/not-anymore-available, but buckets are never splitted nor merged.
 
-Thus, it is important to call `drain()` on queues of this backend: this call ensures all pending write buckets are interted in mongodb, and also ensures all in-memory buckets left are completely read (served through pop/reserve).
+Thus, it is important to call `drain()` on queues of this backend: this call ensures all pending write buckets are inserted in mongodb, and also ensures all in-memory buckets left are completely read (served through pop/reserve).
 
 Also, there is little difference in performance and I/O between `pop` and `reserve/commit`; performance is no longer a reason to prefer one over the other.
 

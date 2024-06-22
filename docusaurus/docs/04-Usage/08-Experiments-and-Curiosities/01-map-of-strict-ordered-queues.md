@@ -7,14 +7,14 @@ sidebar_label: Map of Strict Ordered Queues
 ## The problem
 There is a real-life requirement that sometimes appears on systems using queues to deliver or receive asynchronous notifications: a certain local ordering is needed, so certain notifications must be delivered strictly after others, all of this while respecting asynchronicity on the larger scale
 
-A good example of that would be delivering state-change notifications on entities such as phone calls: one would rather keep strict order on events within a single call, so you would not receive, for example,  a 'caller-pushed-#7' event after receiving 'call-ended'. Also, any block of delay enforced by the orderng on call A should not impact, delay or block call B or any other call
+A good example of that would be delivering state-change notifications on entities such as phone calls: one would rather keep strict order on events within a single call, so you would not receive, for example,  a 'caller-pushed-#7' event after receiving 'call-ended'. Also, any block of delay enforced by the ordering on call A should not impact, delay or block call B or any other call
 
 ## Possible solutons
 This is a complex problem, since it is generally difficult - if not impossible - to ascertain whether you should wait longer for delayed events yet to appear. The general approach is usually a combination of any of these:
 
 1. retrofit delayed events arriving out of order, thus modifying state *post hoc*
 2. use strict sequence counters when the events are produced, so spotting a hole becomes easy
-3. add the needed *wait-and-reorder* of events at the consumer end; this usually invvolves setting a set of 
+3. add the needed *wait-and-reorder* of events at the consumer end; this usually involves setting a set of 
   strict-order queues, one per emitting entity
 
 None of those approaches is perfect, every each of them has its own problems:

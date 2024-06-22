@@ -8,11 +8,11 @@ Pipelines can be built in 3 ways:
 
 * By directly creating queues and processors, and bonding them together. This is rather low-level and is not the recommended way
 * By using a `PipelineBuilder`. This object provides a fluent API that's convenient and very simple. This is the recommended way to created pipelines in code
-* By using the method `pipelineFromRecipe` offered by the Queues Factories supporting pipelining. This allows a whole pipeline to be defined in a set of strings and therefore in external files; this makes pipelies portable, reproductible and totally cluster-ready
+* By using the method `pipelineFromRecipe` offered by the Queues Factories supporting pipelining. This allows a whole pipeline to be defined in a set of strings and therefore in external files; this makes pipelines portable, reproducible and totally cluster-ready
 
 ## Direct Pipeline Creation
 
-This is a quite simple approach: you create the queues, then you create the Processors that would glue them. Processors take i theit constructors the queues they use, so it's rather straightforward:
+This is a quite simple approach: you create the queues, then you create the Processors that would glue them. Processors take the constructors from the queues they use, so it's rather straightforward:
 
 ```javascript
 cosnt async = require ('async');
@@ -88,7 +88,7 @@ See [Processors](processors) for all the available options and features (such as
 * `directLink (name_src_q, name_dst_q, process_fn)`: creates a DirectLink linking queues src_q and dst_q (specified by name), using the process function `process_fn`
 * `choiceLink(name_src_q, [name_dst_q1, name_dst_q2, ...name_dst_qn], process_fn)`: creates a ChoiceLink linking src_q and the array of dst_q (specified by name), using the process function `process_fn`
 * `sink(name_src_q, process_fn)`: creates a Sink on queue src_q (specified by name), using the process function `process_fn`
-* `onError(fn)`: sets the `error` event handler for all processirs created in the pipeline. As with the error handler for Processors, `fn` will receive a single param with the error; in this case the error will be augmented by adding an extra field `processor`, which will be areference to the `Processor` object originating the error
+* `onError(fn)`: sets the `error` event handler for all processors created in the pipeline. As with the error handler for Processors, `fn` will receive a single param with the error; in this case the error will be augmented by adding an extra field `processor`, which will be a reference to the `Processor` object originating the error
 * `done(err, pipeline)`: finished the pipeline creation. No other calls can be done to the builder afterwards. In case of error, the error will be passed in `err`; if all went well `err` will be `null` and the newly created pipeline, an object of type `Pipeline`, will be passed in the `pipeline`; all further interactions with the pipeline will happen through this object
 
 ### Pipepine object
@@ -157,8 +157,8 @@ Factory.pipelineFromRecipe (
    * `builder`: an already initialized builder object, as in `factory.builder ().pipeline (name)`
    * `done`: a function to call when the pipeline is ready, or an error arises. Expects to be `fn (err, pipeline)`
 2. Each of the strings in the `array_of_bootstrap_code` is executed in the VM
-3. Each of the strings in the `array_of_setup_code` is executed in the VM. It is expected to eventually call `done` with the error or the finished pipeline (`done`is accesible in the context)
+3. Each of the strings in the `array_of_setup_code` is executed in the VM. It is expected to eventually call `done` with the error or the finished pipeline (`done`is accessible in the context)
 
-The whole idea is to prepare all the needed code for processors' functions in the `array_of_bootstrap_code`, then create the pipeline in the `array_of_setup_code`, calling the `done` function whith the created pipeline
+The whole idea is to prepare all the needed code for processors' functions in the `array_of_bootstrap_code`, then create the pipeline in the `array_of_setup_code`, calling the `done` function with the created pipeline
 
 You can find a full example [here](https://github.com/pepmartinez/keuss/tree/master/examples/pipelines/fromRecipe)

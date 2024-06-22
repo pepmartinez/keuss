@@ -14,7 +14,7 @@ correct LB/HA and scalability without the need for complex logic or locks in the
 There seems to be no such actual implementation out there, and the early tests on the obvious ways were all a dead end:
 
 * using a capped collection is OK for a general pub/sub with some history/replay capabilities, but it seems impossible to
-  correcty manage consumer groups
+  correctly manage consumer groups
 * using a regular collection also proved impossible to manage consumer groups in a general case: logic quickly turns 
   excessively complex and performance quickly degrades with a few groups
 * using more than one collection (one for data, one for group management) can't be correctly done without race conditions
@@ -30,7 +30,7 @@ The 'consumer markers' also provide all the machinery to do reserve-commit-rollb
 ## Creation options
 Creation of a Queue with backend `stream-mongo` takes 2 specific options:
 
-* `ttl`: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs.
+* `ttl`: time to keep consumed elements in the collection after being removed. Defaults to 3600 secs.
 * `groups`: string, comma-separated list of possible consumer groups to be used on push operations. Defaults to `A,B,C`
 * `group`: string, consumer group to be used on pop/reserve operations. Defaults to first element of `groups`
 
@@ -117,12 +117,12 @@ Queues of type `stream-mongo` generate extra stats, besides the standard ones:
 * `stream.<group>.rollback`:  number of elements rolled back, per consumer group
 
 ## Limitations
-There are a few minor limitations & glitches in `stream-mongo`, besides the obvious one about not being able to use an unlmited set of possible consumer groups:
+There are a few minor limitations & glitches in `stream-mongo`, besides the obvious one about not being able to use an unlimited set of possible consumer groups:
 
 * indexes: each possible consumer group in a queue carries the creation of a separated index on the mongodb collection, 
   so be aware of the potential impact on space usage and performance 
-* default stats: default queue stats (put, get, reserve...) are no longer meaingful. They still get recorded, though
+* default stats: default queue stats (put, get, reserve...) are no longer meaningful. They still get recorded, though
 * no delete: as it happens in a full-fledged stream system, deleting an item has no meaning. therefore, it is not implemented
-* arbirary defaults to groups and group: the fact that the default for groups is 'A,B,C' and the default for group is 'A' might
+* arbitrary defaults to groups and group: the fact that the default for groups is 'A,B,C' and the default for group is 'A' might
   seem arbitrary; it is just a set of values that make a default queue of `stream-mongo` work as a replacement for `ps-mongo`, 
   just for coherency (except for the delete operation)

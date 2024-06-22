@@ -30,9 +30,9 @@ sidebar_label: Changelog
 * v1.6.9
   * fix glitch in remove item on tape mongo (ps-mongo)
 * v1.6.8
-  * added remove-by-id support 
+  * added remove-by-id support
 * v1.6.7
-  * small fix on deadetter signalling   
+  * small fix on deadetter signalling
 * v1.6.6
   * added reserve, commit, rollback counters to stats
   * fixed mongo-driver deprecation

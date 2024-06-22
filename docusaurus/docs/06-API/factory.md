@@ -37,7 +37,7 @@ The following are backend-dependent values:
 * backends *redis-list* and *redis-oq*
   * `redis`: data to create a redis connection to the Redis acting as backend, see below.
 * backends *ps-mongo*, *stream-mongo*
-  * `ttl`: time to keep consumed elements in the collection after being removed. Defauls to 3600 secs.
+  * `ttl`: time to keep consumed elements in the collection after being removed. Defaults to 3600 secs.
 * backend *stream-mongo*
   * `groups`: string, comma-separated list of possible consumer groups to be used on push operations. Defaults to `A,B,C`
   * `group`: string, consumer group to be used on pop/reserve operations. Defaults to first element of `groups`
@@ -54,7 +54,7 @@ This alows cleaner and more concise initialization, using a sane default.
 
 The concept of *deadletter* is very common on queue middlewares: in case reserve/commit/rollback is used to consume, a maximum number of fails (reserve-rollback) can be set on each element; if an element sees more rollbacks than allowed, the element is moved to an special queue (dead letter queue) for later, offline inspection.
 
-By default, keuss uses no deadletter queue; it can be activated by passing a `deadletter` object at the time of factory creation, in the options:
+By default, Keuss uses no deadletter queue; it can be activated by passing a `deadletter` object at the time of factory creation, in the options:
 
 ```javascript
 const factory_opts = {

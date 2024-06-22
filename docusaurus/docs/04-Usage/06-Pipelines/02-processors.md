@@ -154,7 +154,7 @@ In addition to those of `BaseLink`:
 
 ### Process Function
 
-ChoiceLink expects an `res.dst` in the callback invocation, which must fullfill one of those conditions:
+ChoiceLink expects an `res.dst` in the callback invocation, which must fulfill one of those conditions:
 
 * be an integer and resolve to a valid element when applied as index to the array of destination queues
 * be a string and correspond to the name of one of the destination queues

@@ -25,7 +25,7 @@ MQ ({
 }
 ```
 
-You can create and use as many factories as desided, from the same or many backends
+You can create and use as many factories as desired, from the same or many backends
 
 ## Queue creation
 
@@ -109,7 +109,7 @@ q1.push (elem, {hdrs: headers}, (err, res) => {
 
 The easiest way to get elements from a queue is with a simple pop(). This would block until an element is ready, it would remove it from the queue and return it.
 
-This way of working is often referred to as *at-most-once* since it guarantees that each element in the queue will be processed no more than one time (it would be zero times, if something happens after `pop()` ands but before the element is actually managed)
+This way of working is often referred to as *at-most-once* since it guarantees that each element in the queue will be processed no more than one time (it would be zero times, if something happens after `pop()` but before the element is actually managed)
 
 ```javascript
 const consumer_label = 'consumer-1';
@@ -134,7 +134,7 @@ q1.pop (consumer_label, (err, res) => {
 
 ## Reserve-commit-rollback
 
-A safer way to consume from a queue is using reserve: elements are reserved, processed and only then committed (and removed from the queue). A reserved element can also be rolled back (returned to queue) if the processing failed and the element needs to be reprocessed in the future; also, any reserved element will auto-rollback after some tiem elapsed, if neither commit nor rollback is done. This is known as *at-least-once* cause it guarantees all elements wold be processed at least once
+A safer way to consume from a queue is using reserve: elements are reserved, processed and only then committed (and removed from the queue). A reserved element can also be rolled back (returned to queue) if the processing failed and the element needs to be reprocessed in the future; also, any reserved element will auto-rollback after some time elapsed, if neither commit nor rollback is done. This is known as *at-least-once* cause it guarantees all elements wold be processed at least once
 
 ```javascript
 const consumer_label = 'consumer-1';

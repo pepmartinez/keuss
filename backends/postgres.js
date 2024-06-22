@@ -10,7 +10,7 @@ const debug = require('debug')('keuss:Queue:postgres');
 class PGQueue extends Queue {
 
 
-	// TODO escape table name properly , as identifier
+	// TODO escape table name properly , as identifier, and check for reserved names using pg_get_keywords(), if the name is in select * from pg_get_keywords() where catdesc = 'R', then it should not be used
   //////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
@@ -99,6 +99,7 @@ class PGQueue extends Queue {
         try {
           pl.payload = Buffer.from (pl.payload, 'base64');
         } catch (e) {
+          // TODO maybe log some error/Statistic?
         }
       }
 
@@ -144,6 +145,7 @@ class PGQueue extends Queue {
         try {
           pl.payload = Buffer.from (pl.payload, 'base64');
         } catch (e) {
+          // TODO maybe log some error/Statistic?
         }
       }
 
