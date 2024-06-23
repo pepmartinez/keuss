@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkkeuss_docusaurus=self.webpackChunkkeuss_docusaurus||[]).push([[7114],{6036:s=>{s.exports=JSON.parse('{"label":"postgresql","permalink":"/keuss/blog/tags/postgresql","allTagsPath":"/keuss/blog/tags","count":1}')}}]);
