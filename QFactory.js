@@ -1,12 +1,13 @@
-var async = require ('async');
-var _ =     require ('lodash');
+const async = require ('async');
+const _ =     require ('lodash');
 
-var LocalSignal = require ('./signal/local');
-var MemStats =    require ('./stats/mem');
+const LocalSignal = require ('./signal/local');
+const MemStats =    require ('./stats/mem');
 
-var debug = require('debug')('keuss:QFactory');
+const debug = require('debug')('keuss:QFactory');
 
 
+/////////////////////////////////////////////////////////////////////////////
 class QFactory {
   constructor (opts) {
     this._opts = opts || {};
@@ -15,6 +16,8 @@ class QFactory {
     debug ('created QFactory %s with opts %o', this._name, this._opts);
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   async_init (cb) {
     if (!this._opts.stats)      this._opts.stats = {};
     if (!this._opts.stats.opts) this._opts.stats.opts = {};
@@ -22,8 +25,8 @@ class QFactory {
     if (!this._opts.signaller)      this._opts.signaller = {};
     if (!this._opts.signaller.opts) this._opts.signaller.opts = {};
 
-    var signal_provider = this._opts.signaller.provider || LocalSignal;
-    var stats_provider = this._opts.stats.provider || MemStats;
+    const signal_provider = this._opts.signaller.provider || LocalSignal;
+    const stats_provider = this._opts.stats.provider || MemStats;
 
     async.parallel ([
       cb => signal_provider (this._opts.signaller.opts, cb),
@@ -50,18 +53,26 @@ class QFactory {
     });
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   signaller_factory () {
     return this._signaller_factory;
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   stats_factory () {
     return this._stats_factory;
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   queue (name, opts, cb) {
     return cb ();
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   close (cb) {
     debug ('%s: closing', this._name);
     async.parallel ([
@@ -70,50 +81,66 @@ class QFactory {
     ], cb);
   }
 
+  
+  /////////////////////////////////////////////////////////////////////////////
   name () {
     return this._name;
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   type () {
     return 'none';
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   capabilities () {
     return {};
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   deadletter_queue () {
     return this._deadletter_queue;
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   max_ko () {
     return this._max_ko;
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   list (opts, cb) {
     // use stats factory
     this._stats_factory.queues (this.name (), opts, cb);
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   recreate_topology (cb) {
     debug ('%s: recreating topology', this._name);
 
     this.list ({full: true}, (err, ql) => {
       if (err) return cb (err);
 
-      var ret = {};
+      const tasks = {};
 
       _.each (ql, (v, k) => {
         debug ('%s: recreating topology: adding queue %s with opts %o', this._name, k, v.opts);
-        ret[k] = this.queue (k, v.opts);
+        ret[k] = cb => this.queue (k, v.opts, cb); // TODO fix to async
       });
 
-      cb (null, ret);
+      async.parallel (tasks, cb);
     });
   }
 
+
+  /////////////////////////////////////////////////////////////////////////////
   to_descriptor_obj () {
-    let obj = {
+    const obj = {
       name: this.name (),
       type: this.type (),
       opts: _.omit (this._opts, ['stats', 'signaller']),
