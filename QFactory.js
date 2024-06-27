@@ -130,7 +130,7 @@ class QFactory {
 
       _.each (ql, (v, k) => {
         debug ('%s: recreating topology: adding queue %s with opts %o', this._name, k, v.opts);
-        ret[k] = cb => this.queue (k, v.opts, cb); // TODO fix to async
+        tasks[k] = cb => this.queue (k, v.opts, cb);
       });
 
       async.parallel (tasks, cb);

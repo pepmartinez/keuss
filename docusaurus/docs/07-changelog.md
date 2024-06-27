@@ -3,6 +3,8 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v2.0.2
+  * fixed bug in QFactory.recreate_topology()
 * v2.0.1
   * fixed bug in QFactory.recreate_topology()
 * v2.0.0
