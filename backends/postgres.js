@@ -43,7 +43,16 @@ class PGQueue extends Queue {
       reserved TIMESTAMPTZ
     );
     CREATE INDEX IF NOT EXISTS idx_${this._tbl_name}_mature ON ${this._tbl_name} (mature);
-    `, err => cb (err));
+    `, err => {
+      if (err){
+        // ignore catalog issues on concurrent table creation
+        //   (duplicate key value violates unique constraint "pg_type_typname_nsp_index")
+        if (err.code == '23505') return cb()
+        return cb(err);
+      }
+
+      cb ();
+    });
   }
 
 

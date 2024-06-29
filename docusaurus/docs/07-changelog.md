@@ -3,6 +3,8 @@ id: changelog
 title: Changelog
 sidebar_label: Changelog
 ---
+* v2.0.3
+  * avoid bizarre concurrency bug on simultaneous table creation on postgres
 * v2.0.2
   * fixed bug in QFactory.recreate_topology()
 * v2.0.1
