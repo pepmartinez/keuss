@@ -10,12 +10,11 @@ const debug = require('debug')('keuss:Queue:postgres');
 class PGQueue extends Queue {
 
 
-	// TODO escape table name properly , as identifier, and check for reserved names using pg_get_keywords(), if the name is in select * from pg_get_keywords() where catdesc = 'R', then it should not be used
-  //////////////////////////////////////////////
+	//////////////////////////////////////////////
   constructor (name, factory, opts, orig_opts) {
     super (name, factory, opts, orig_opts);
     this._pool = factory._pool;
-    this._tbl_name = this._name; 
+    this._tbl_name = pg.escapeIdentifier(`_k_tbl_${this._name}`);
   }
 
 
@@ -42,7 +41,7 @@ class PGQueue extends Queue {
       tries    INTEGER DEFAULT 0 NOT NULL,
       reserved TIMESTAMPTZ
     );
-    CREATE INDEX IF NOT EXISTS idx_${this._tbl_name}_mature ON ${this._tbl_name} (mature);
+    CREATE INDEX IF NOT EXISTS ${pg.escapeIdentifier('idx_' + this._tbl_name + '_mature')} ON ${this._tbl_name} (mature);
     `, err => {
       if (err){
         // ignore catalog issues on concurrent table creation
