@@ -91,7 +91,7 @@ function release_mq_factory (q, factory, cb) {
       cb => {
         const pool = new pg.Pool({user: 'pg', password: 'pg', database: 'pg'});
 
-        pool.query ('DROP TABLE IF EXISTS test_queue_remove', err => {
+        pool.query ('DROP TABLE IF EXISTS _k_tbl_test_queue_remove', err => {
           if (err) return cb (err);
           pool.end (cb);
         });
