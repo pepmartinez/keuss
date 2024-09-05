@@ -1,6 +1,6 @@
 {
   "name": "keuss",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "keywords": [
     "queue",
     "persistent",
@@ -29,9 +29,9 @@
   "license": "MIT",
   "dependencies": {
     "@nodebb/mubsub": "~1.8.0",
-    "async": "~3.2.5",
+    "async": "~3.2.6",
     "async-lock": "~1.4.1",
-    "debug": "~4.3.5",
+    "debug": "~4.3.6",
     "ioredis": "~5.4.1",
     "lodash": "~4.17.21",
     "mitt": "~3.0.1",
@@ -40,11 +40,11 @@
     "pg": "~8.12.0"
   },
   "devDependencies": {
-    "chance": "~1.1.11",
-    "mocha": "~10.4.0",
+    "chance": "~1.1.12",
+    "mocha": "~10.7.3",
     "should": "~13.2.3",
-    "nyc": "~15.1.0",
-    "why-is-node-running": "^2.2.2"
+    "nyc": "~17.0.0",
+    "why-is-node-running": "~3.2.0"
   },
   "scripts": {
     "test": "docker compose up -d; sleep 5; mocha --reporter spec --check-leaks --no-timeouts --exit test/ ; docker compose down",
